@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
 using BuoyCalc.Windows.Models;
+using BuoyCalc.Windows.Services;
 
 namespace BuoyCalc.Windows.ViewModels;
 
@@ -11,7 +12,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     private bool _isEnabled = true;
     private string _kind = "Line";
     private string _title = "Участок линии";
-    private string _ropePresetId = "polyester_20";
+    private string _ropePresetId = "built-in:polyester_20";
     private string _connectorPresetId = "shackle_55";
     private string _lengthM = "10";
     private string _count = "1";
@@ -34,7 +35,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public event Action<AssemblyItemViewModel>? DuplicateRequested;
 
     public IReadOnlyList<string> KindOptions { get; } = new[] { "Line", "Connector", "Payload" };
-    public IReadOnlyList<string> RopePresetOptions { get; } = RopeCatalog.Presets.Select(x => x.Id).ToList();
+    public IReadOnlyList<string> RopePresetOptions => RopeLibraryStorage.LoadAllRopes().Select(x => x.Id).ToList();
     public IReadOnlyList<string> ConnectorPresetOptions { get; } = ConnectorCatalog.Presets.Select(x => x.Id).ToList();
 
     public ICommand RemoveCommand { get; }
@@ -189,6 +190,12 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         }
     }
 
+    public void RefreshLibraryOptions()
+    {
+        OnPropertyChanged(nameof(RopePresetOptions));
+        OnPropertyChanged(nameof(Summary));
+    }
+
     public AssemblyItemViewModel Clone()
     {
         return new AssemblyItemViewModel
@@ -216,7 +223,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             kind,
             Title,
             IsEnabled,
-            kind == AssemblyItemKind.Line ? RopeCatalog.ById(RopePresetId) : null,
+            kind == AssemblyItemKind.Line ? RopeLibraryStorage.ById(RopePresetId) : null,
             kind == AssemblyItemKind.Connector ? ConnectorCatalog.ById(ConnectorPresetId) : null,
             ParseDouble(LengthM),
             count,
