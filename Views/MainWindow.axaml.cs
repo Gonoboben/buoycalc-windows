@@ -29,6 +29,27 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void CalculateButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.RefreshSequencePreview();
+
+        var previewWindow = new SequencePreviewWindow
+        {
+            DataContext = viewModel
+        };
+
+        var confirmed = await previewWindow.ShowDialog<bool>(this);
+        if (confirmed)
+        {
+            viewModel.CalculateCommand.Execute(null);
+        }
+    }
+
     private sealed class AvaloniaProjectFileDialogService : IProjectFileDialogService
     {
         private readonly Window _owner;
