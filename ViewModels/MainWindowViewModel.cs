@@ -52,7 +52,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         CalculateCommand = new RelayCommand(Calculate);
         AddLineCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии", RopePresetStorageId = "built-in:polyester_20" }));
         AddConnectorCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Новый соединитель", ConnectorPresetStorageId = "built-in:shackle_55" }));
-        AddPayloadCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "Новый прибор", PayloadWeightAirKg = "10", PayloadProjectedAreaM2 = "0.02" }));
+        AddPayloadCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "Новый прибор", PayloadPresetStorageId = "built-in:adcp_40" }));
         NewProjectCommand = new RelayCommand(NewProject);
         SaveProjectCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: false));
         SaveProjectAsCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: true));
@@ -93,25 +93,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     public BuoyLibraryItem? SelectedBuoyPreset
     {
         get => _selectedBuoyPreset;
-        set
-        {
-            if (SetProperty(ref _selectedBuoyPreset, value))
-            {
-                ApplySelectedBuoyPreset();
-            }
-        }
+        set { if (SetProperty(ref _selectedBuoyPreset, value)) ApplySelectedBuoyPreset(); }
     }
 
     public AnchorLibraryItem? SelectedAnchorPreset
     {
         get => _selectedAnchorPreset;
-        set
-        {
-            if (SetProperty(ref _selectedAnchorPreset, value))
-            {
-                ApplySelectedAnchorPreset();
-            }
-        }
+        set { if (SetProperty(ref _selectedAnchorPreset, value)) ApplySelectedAnchorPreset(); }
     }
 
     public string BuoyVolume { get => _buoyVolume; set => SetProperty(ref _buoyVolume, value); }
@@ -141,11 +129,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void RefreshBuoyLibrary(string? selectedId)
     {
         BuoyPresets.Clear();
-        foreach (var buoy in BuoyLibraryStorage.LoadAllBuoys())
-        {
-            BuoyPresets.Add(buoy);
-        }
-
+        foreach (var buoy in BuoyLibraryStorage.LoadAllBuoys()) BuoyPresets.Add(buoy);
         SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == selectedId) ?? BuoyPresets.FirstOrDefault();
         BuoyLibraryStatusText = $"Библиотека: буёв {BuoyPresets.Count}, якорей {AnchorPresets.Count}.";
     }
@@ -153,32 +137,20 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void RefreshAnchorLibrary(string? selectedId)
     {
         AnchorPresets.Clear();
-        foreach (var anchor in AnchorLibraryStorage.LoadAllAnchors())
-        {
-            AnchorPresets.Add(anchor);
-        }
-
+        foreach (var anchor in AnchorLibraryStorage.LoadAllAnchors()) AnchorPresets.Add(anchor);
         SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == selectedId) ?? AnchorPresets.FirstOrDefault();
         BuoyLibraryStatusText = $"Библиотека: буёв {BuoyPresets.Count}, якорей {AnchorPresets.Count}.";
     }
 
     private void RefreshSequenceLibraryOptions()
     {
-        foreach (var item in AssemblyItems)
-        {
-            item.RefreshLibraryOptions();
-        }
-
+        foreach (var item in AssemblyItems) item.RefreshLibraryOptions();
         UpdateSequenceSummary();
     }
 
     private void ApplySelectedBuoyPreset()
     {
-        if (SelectedBuoyPreset is null)
-        {
-            return;
-        }
-
+        if (SelectedBuoyPreset is null) return;
         BuoyName = SelectedBuoyPreset.Name;
         BuoyVolume = FormatDouble(SelectedBuoyPreset.VolumeM3);
         BuoyWeight = FormatDouble(SelectedBuoyPreset.WeightKg);
@@ -188,11 +160,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void ApplySelectedAnchorPreset()
     {
-        if (SelectedAnchorPreset is null)
-        {
-            return;
-        }
-
+        if (SelectedAnchorPreset is null) return;
         AnchorName = SelectedAnchorPreset.Name;
         AnchorType = SelectedAnchorPreset.Type;
         AnchorMaterial = SelectedAnchorPreset.Material;
@@ -205,19 +173,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         var name = string.IsNullOrWhiteSpace(BuoyName) ? "Пользовательский буй" : BuoyName.Trim();
         var selectedUserId = SelectedBuoyPreset is { Source: "User" } ? SelectedBuoyPreset.Id : string.Empty;
-
-        var buoy = new BuoyLibraryItem
-        {
-            Id = selectedUserId,
-            Source = "User",
-            Name = name,
-            VolumeM3 = Parse(BuoyVolume),
-            WeightKg = Parse(BuoyWeight),
-            ProjectedAreaM2 = Parse(BuoyArea),
-            DragCoefficient = Parse(BuoyCd),
-            Note = "Сохранено пользователем из формы буя."
-        };
-
+        var buoy = new BuoyLibraryItem { Id = selectedUserId, Source = "User", Name = name, VolumeM3 = Parse(BuoyVolume), WeightKg = Parse(BuoyWeight), ProjectedAreaM2 = Parse(BuoyArea), DragCoefficient = Parse(BuoyCd), Note = "Сохранено пользователем из формы буя." };
         BuoyLibraryStorage.UpsertUserBuoy(buoy);
         RefreshLibraries();
         BuoyLibraryStatusText = $"Буй сохранён в библиотеку: {name}";
@@ -225,34 +181,17 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void DeleteSelectedBuoyPreset()
     {
-        if (SelectedBuoyPreset is null)
-        {
-            BuoyLibraryStatusText = "Выберите пользовательский буй для удаления.";
-            return;
-        }
-
-        if (SelectedBuoyPreset.Source != "User" || SelectedBuoyPreset.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
-        {
-            BuoyLibraryStatusText = "Встроенный буй удалить нельзя. Удалять можно только пользовательские буи.";
-            return;
-        }
-
+        if (SelectedBuoyPreset is null) { BuoyLibraryStatusText = "Выберите пользовательский буй для удаления."; return; }
+        if (SelectedBuoyPreset.Source != "User" || SelectedBuoyPreset.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) { BuoyLibraryStatusText = "Встроенный буй удалить нельзя. Удалять можно только пользовательские буи."; return; }
         var deletedName = SelectedBuoyPreset.Name;
         var deleted = BuoyLibraryStorage.DeleteUserBuoy(SelectedBuoyPreset.Id);
-
         RefreshLibraries();
-        BuoyLibraryStatusText = deleted
-            ? $"Удалён пользовательский буй: {deletedName}"
-            : "Пользовательский буй не найден в файле библиотеки.";
+        BuoyLibraryStatusText = deleted ? $"Удалён пользовательский буй: {deletedName}" : "Пользовательский буй не найден в файле библиотеки.";
     }
 
     private void AddAssemblyItem(AssemblyItemViewModel item)
     {
-        if (item.IsConnector)
-        {
-            item.Count = "1";
-        }
-
+        if (item.IsConnector) item.Count = "1";
         WireItem(item);
         AssemblyItems.Add(item);
         UpdateSequenceSummary();
@@ -268,7 +207,6 @@ public sealed class MainWindowViewModel : ViewModelBase
             item.MoveDownRequested -= MoveItemDown;
             item.DuplicateRequested -= DuplicateItem;
         }
-
         AssemblyItems.Clear();
     }
 
@@ -283,11 +221,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void OnAssemblyItemChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (sender is AssemblyItemViewModel { IsConnector: true } connector)
-        {
-            connector.Count = "1";
-        }
-
+        if (sender is AssemblyItemViewModel { IsConnector: true } connector) connector.Count = "1";
         UpdateSequenceSummary();
     }
 
@@ -305,11 +239,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void MoveItemUp(AssemblyItemViewModel item)
     {
         var index = AssemblyItems.IndexOf(item);
-        if (index <= 0)
-        {
-            return;
-        }
-
+        if (index <= 0) return;
         AssemblyItems.Move(index, index - 1);
         UpdateSequenceSummary();
     }
@@ -317,11 +247,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void MoveItemDown(AssemblyItemViewModel item)
     {
         var index = AssemblyItems.IndexOf(item);
-        if (index < 0 || index >= AssemblyItems.Count - 1)
-        {
-            return;
-        }
-
+        if (index < 0 || index >= AssemblyItems.Count - 1) return;
         AssemblyItems.Move(index, index + 1);
         UpdateSequenceSummary();
     }
@@ -331,16 +257,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var index = AssemblyItems.IndexOf(item);
         var copy = item.Clone();
         WireItem(copy);
-
-        if (index < 0 || index >= AssemblyItems.Count - 1)
-        {
-            AssemblyItems.Add(copy);
-        }
-        else
-        {
-            AssemblyItems.Insert(index + 1, copy);
-        }
-
+        if (index < 0 || index >= AssemblyItems.Count - 1) AssemblyItems.Add(copy); else AssemblyItems.Insert(index + 1, copy);
         UpdateSequenceSummary();
     }
 
@@ -369,7 +286,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Скоба под буем", ConnectorPresetStorageId = "built-in:shackle_55", Count = "1" });
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Верхний буйреп", RopePresetStorageId = "built-in:polyester_20", LengthM = "45" });
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Вертлюг", ConnectorPresetStorageId = "built-in:swivel_60", Count = "1" });
-        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "ADCP", PayloadWeightAirKg = "40", PayloadProjectedAreaM2 = "0.05", PayloadDragCoefficient = "1.0" });
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "ADCP", PayloadPresetStorageId = "built-in:adcp_40" });
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Нижняя цепь", RopePresetStorageId = "built-in:chain_10", LengthM = "10" });
 
         UpdateSequenceSummary();
@@ -380,61 +297,33 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             var targetPath = ProjectFilePath;
-
             if (promptForPath || string.IsNullOrWhiteSpace(targetPath))
             {
                 var suggestedFileName = MakeSafeFileName(ProjectName) + ".json";
-                targetPath = _fileDialogService is not null
-                    ? await _fileDialogService.PickSavePathAsync(suggestedFileName) ?? string.Empty
-                    : ProjectJsonStorage.DefaultProjectPath;
+                targetPath = _fileDialogService is not null ? await _fileDialogService.PickSavePathAsync(suggestedFileName) ?? string.Empty : ProjectJsonStorage.DefaultProjectPath;
             }
-
-            if (string.IsNullOrWhiteSpace(targetPath))
-            {
-                ProjectStatusText = "Сохранение отменено.";
-                return;
-            }
-
+            if (string.IsNullOrWhiteSpace(targetPath)) { ProjectStatusText = "Сохранение отменено."; return; }
             targetPath = ProjectJsonStorage.NormalizeJsonPath(targetPath);
             ProjectJsonStorage.Save(ToDto(), targetPath);
             ProjectFilePath = targetPath;
             ProjectStatusText = $"Проект сохранён: {targetPath}";
         }
-        catch (Exception ex)
-        {
-            ProjectStatusText = $"Ошибка сохранения: {ex.Message}";
-        }
+        catch (Exception ex) { ProjectStatusText = $"Ошибка сохранения: {ex.Message}"; }
     }
 
     private async Task LoadProjectAsync()
     {
         try
         {
-            var selectedPath = _fileDialogService is not null
-                ? await _fileDialogService.PickOpenPathAsync() ?? string.Empty
-                : ProjectFilePath;
-
-            if (string.IsNullOrWhiteSpace(selectedPath))
-            {
-                ProjectStatusText = "Загрузка отменена.";
-                return;
-            }
-
+            var selectedPath = _fileDialogService is not null ? await _fileDialogService.PickOpenPathAsync() ?? string.Empty : ProjectFilePath;
+            if (string.IsNullOrWhiteSpace(selectedPath)) { ProjectStatusText = "Загрузка отменена."; return; }
             var dto = ProjectJsonStorage.Load(selectedPath);
-            if (dto is null)
-            {
-                ProjectStatusText = $"Файл проекта не найден: {selectedPath}";
-                return;
-            }
-
+            if (dto is null) { ProjectStatusText = $"Файл проекта не найден: {selectedPath}"; return; }
             FromDto(dto);
             ProjectFilePath = selectedPath;
             ProjectStatusText = $"Проект загружен: {selectedPath}";
         }
-        catch (Exception ex)
-        {
-            ProjectStatusText = $"Ошибка загрузки: {ex.Message}";
-        }
+        catch (Exception ex) { ProjectStatusText = $"Ошибка загрузки: {ex.Message}"; }
     }
 
     private BuoyProjectDto ToDto()
@@ -468,6 +357,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 Title = x.Title,
                 RopePresetId = x.RopePresetStorageId,
                 ConnectorPresetId = x.ConnectorPresetStorageId,
+                PayloadPresetId = x.PayloadPresetStorageId,
                 LengthM = x.LengthM,
                 Count = x.IsConnector ? "1" : x.Count,
                 PayloadWeightAirKg = x.PayloadWeightAirKg,
@@ -501,7 +391,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         ReportText = "";
 
         ClearAssemblyItems();
-
         foreach (var item in dto.AssemblyItems)
         {
             AddAssemblyItem(new AssemblyItemViewModel
@@ -511,6 +400,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 Title = item.Title,
                 RopePresetStorageId = NormalizeRopeId(item.RopePresetId),
                 ConnectorPresetStorageId = NormalizeConnectorId(item.ConnectorPresetId),
+                PayloadPresetStorageId = NormalizePayloadId(item.PayloadPresetId),
                 LengthM = item.LengthM,
                 Count = item.Kind == "Connector" ? "1" : item.Count,
                 PayloadWeightAirKg = item.PayloadWeightAirKg,
@@ -519,44 +409,25 @@ public sealed class MainWindowViewModel : ViewModelBase
                 PayloadDragCoefficient = item.PayloadDragCoefficient
             });
         }
-
         UpdateSequenceSummary();
     }
 
     private void UpdateSequenceSummary()
     {
         var enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
-
-        var lineLengthM = enabledItems
-            .Where(x => x.Kind == AssemblyItemKind.Line)
-            .Sum(x => x.LengthM);
-
-        var connectorCount = enabledItems
-            .Count(x => x.Kind == AssemblyItemKind.Connector);
-
-        var payloadWeightKg = enabledItems
-            .Where(x => x.Kind == AssemblyItemKind.Payload)
-            .Sum(x => x.PayloadWeightAirKg);
-
+        var lineLengthM = enabledItems.Where(x => x.Kind == AssemblyItemKind.Line).Sum(x => x.LengthM);
+        var connectorCount = enabledItems.Count(x => x.Kind == AssemblyItemKind.Connector);
+        var payloadWeightKg = enabledItems.Where(x => x.Kind == AssemblyItemKind.Payload).Sum(x => x.PayloadWeightAirKg);
         SequenceSummary = $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы: {payloadWeightKg:0.##} кг";
     }
 
     private void Calculate()
     {
-        var environment = new EnvironmentInput(
-            Parse(WaterDensity),
-            Parse(Depth),
-            Parse(CurrentSpeed),
-            Parse(WaveHeight),
-            Parse(WavePeriod),
-            SeabedCatalog.ById("unknown"));
-
+        var environment = new EnvironmentInput(Parse(WaterDensity), Parse(Depth), Parse(CurrentSpeed), Parse(WaveHeight), Parse(WavePeriod), SeabedCatalog.ById("unknown"));
         var buoy = new BuoyInput(BuoyName, Parse(BuoyVolume), Parse(BuoyWeight), Parse(BuoyArea), Parse(BuoyCd));
         var anchor = new AnchorInput(AnchorName, AnchorType, AnchorMaterial, Parse(AnchorWeight), Parse(AnchorVolume), Parse(AnchorCoefficient));
         var items = AssemblyItems.Select(x => x.ToInput()).ToList();
-
         var result = BuoyCalculator.Calculate(environment, buoy, items, anchor, Parse(SafetyFactor));
-
         ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nЗапас якоря: {result.AnchorReserve:0.##}";
         ReportText = ReportBuilder.Build(ProjectName, environment, buoy, anchor, result);
         UpdateSequenceSummary();
@@ -568,62 +439,39 @@ public sealed class MainWindowViewModel : ViewModelBase
         return double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : 0;
     }
 
-    private static string FormatDouble(double value)
-    {
-        return value.ToString("0.###", CultureInfo.InvariantCulture);
-    }
+    private static string FormatDouble(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
     private static string NormalizeRopeId(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "built-in:polyester_20";
-        }
-
+        if (string.IsNullOrWhiteSpace(value)) return "built-in:polyester_20";
         var byDisplayName = RopeLibraryStorage.LoadAllRopes().FirstOrDefault(x => x.DisplayName == value);
-        if (byDisplayName is not null)
-        {
-            return byDisplayName.Id;
-        }
-
-        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
-        {
-            return value;
-        }
-
+        if (byDisplayName is not null) return byDisplayName.Id;
+        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) return value;
         return "built-in:" + value;
     }
 
     private static string NormalizeConnectorId(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "built-in:shackle_55";
-        }
-
+        if (string.IsNullOrWhiteSpace(value)) return "built-in:shackle_55";
         var byDisplayName = ConnectorLibraryStorage.LoadAllConnectors().FirstOrDefault(x => x.DisplayName == value);
-        if (byDisplayName is not null)
-        {
-            return byDisplayName.Id;
-        }
-
-        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
-        {
-            return value;
-        }
-
+        if (byDisplayName is not null) return byDisplayName.Id;
+        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) return value;
         return "built-in:" + value;
+    }
+
+    private static string NormalizePayloadId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "built-in:adcp_40";
+        var byDisplayName = PayloadLibraryStorage.LoadAllPayloads().FirstOrDefault(x => x.DisplayName == value);
+        if (byDisplayName is not null) return byDisplayName.Id;
+        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) return value;
+        return value;
     }
 
     private static string MakeSafeFileName(string value)
     {
         value = string.IsNullOrWhiteSpace(value) ? "BuoyCalc_Project" : value.Trim();
-
-        foreach (var invalidChar in Path.GetInvalidFileNameChars())
-        {
-            value = value.Replace(invalidChar, '_');
-        }
-
+        foreach (var invalidChar in Path.GetInvalidFileNameChars()) value = value.Replace(invalidChar, '_');
         return value.Replace(' ', '_');
     }
 }
