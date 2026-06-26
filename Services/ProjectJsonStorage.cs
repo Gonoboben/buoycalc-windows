@@ -7,22 +7,28 @@ namespace BuoyCalc.Windows.Services;
 
 public static class ProjectJsonStorage
 {
-    private const string FileName = "current-project.json";
+    private const string DefaultFileName = "current-project.json";
 
     public static string ProjectDirectory
     {
         get
         {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            return Path.Combine(appData, "BuoyCalc", "Windows");
+            var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            return Path.Combine(documents, "BuoyCalc", "Projects");
         }
     }
 
-    public static string ProjectPath => Path.Combine(ProjectDirectory, FileName);
+    public static string DefaultProjectPath => Path.Combine(ProjectDirectory, DefaultFileName);
 
-    public static void Save(BuoyProjectDto project)
+    public static void Save(BuoyProjectDto project, string path)
     {
-        Directory.CreateDirectory(ProjectDirectory);
+        path = NormalizeJsonPath(path);
+
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
 
         var options = new JsonSerializerOptions
         {
@@ -30,17 +36,29 @@ public static class ProjectJsonStorage
         };
 
         var json = JsonSerializer.Serialize(project, options);
-        File.WriteAllText(ProjectPath, json);
+        File.WriteAllText(path, json);
     }
 
-    public static BuoyProjectDto? Load()
+    public static BuoyProjectDto? Load(string path)
     {
-        if (!File.Exists(ProjectPath))
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
             return null;
         }
 
-        var json = File.ReadAllText(ProjectPath);
+        var json = File.ReadAllText(path);
         return JsonSerializer.Deserialize<BuoyProjectDto>(json);
+    }
+
+    public static string NormalizeJsonPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return DefaultProjectPath;
+        }
+
+        return Path.GetExtension(path).Equals(".json", StringComparison.OrdinalIgnoreCase)
+            ? path
+            : path + ".json";
     }
 }
