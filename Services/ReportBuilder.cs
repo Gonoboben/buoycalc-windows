@@ -27,6 +27,8 @@ public static class ReportBuilder
         sb.AppendLine($"- Течение: {environment.CurrentSpeedMS:0.####} м/с");
         sb.AppendLine($"- Волна: {environment.WaveHeightM:0.####} м / {environment.WavePeriodS:0.####} с");
         sb.AppendLine($"- Грунт: {environment.Seabed.Name}");
+        sb.AppendLine($"- Множитель грунта: {environment.Seabed.HoldingMultiplier:0.####}");
+        sb.AppendLine($"- Примечание по грунту: {environment.Seabed.Note}");
         sb.AppendLine();
 
         sb.AppendLine("## Буй");
@@ -43,7 +45,11 @@ public static class ReportBuilder
         sb.AppendLine($"- Материал: {anchor.Material}");
         sb.AppendLine($"- Масса: {anchor.WeightAirKg:0.####} кг");
         sb.AppendLine($"- Объём: {anchor.VolumeM3:0.####} м³");
-        sb.AppendLine($"- Коэф. удержания: {anchor.BaseHoldingCoefficient:0.####}");
+        sb.AppendLine($"- Вес якоря в воде: {result.AnchorWeightWaterKg:0.####} кг");
+        sb.AppendLine($"- Базовый коэф. удержания якоря: {result.AnchorBaseHoldingCoefficient:0.####}");
+        sb.AppendLine($"- Множитель типа якоря: {result.AnchorTypeMultiplier:0.####}");
+        sb.AppendLine($"- Множитель грунта: {result.SeabedHoldingMultiplier:0.####}");
+        sb.AppendLine($"- Формула удержания: вес в воде × K якоря × K типа × K грунта");
         sb.AppendLine();
 
         sb.AppendLine("## Итоги");
