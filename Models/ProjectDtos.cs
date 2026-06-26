@@ -38,6 +38,7 @@ public sealed class AssemblyItemDto
     public string Title { get; set; } = string.Empty;
     public string RopePresetId { get; set; } = string.Empty;
     public string ConnectorPresetId { get; set; } = string.Empty;
+    public string PayloadPresetId { get; set; } = string.Empty;
     public string LengthM { get; set; } = string.Empty;
     public string Count { get; set; } = string.Empty;
     public string PayloadWeightAirKg { get; set; } = string.Empty;
