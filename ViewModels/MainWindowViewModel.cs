@@ -47,6 +47,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _visualizationOffsetText = "Оценочный снос: после расчёта";
     private string _visualizationSlackRatioText = "L/Depth: 1.1";
     private string _visualizationStatusText = "OK: длина линии не меньше глубины";
+    private double _visualizationDepthM = 50;
+    private double _visualizationLineLengthM = 55;
+    private double _visualizationOffsetM;
 
     public MainWindowViewModel(IProjectFileDialogService? fileDialogService = null)
     {
@@ -156,6 +159,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string VisualizationOffsetText { get => _visualizationOffsetText; set => SetProperty(ref _visualizationOffsetText, value); }
     public string VisualizationSlackRatioText { get => _visualizationSlackRatioText; set => SetProperty(ref _visualizationSlackRatioText, value); }
     public string VisualizationStatusText { get => _visualizationStatusText; set => SetProperty(ref _visualizationStatusText, value); }
+    public double VisualizationDepthM { get => _visualizationDepthM; set => SetProperty(ref _visualizationDepthM, value); }
+    public double VisualizationLineLengthM { get => _visualizationLineLengthM; set => SetProperty(ref _visualizationLineLengthM, value); }
+    public double VisualizationOffsetM { get => _visualizationOffsetM; set => SetProperty(ref _visualizationOffsetM, value); }
 
     private void RefreshLibraries()
     {
@@ -493,7 +499,12 @@ public sealed class MainWindowViewModel : ViewModelBase
             .Sum(x => x.LengthM);
 
         var slackRatio = depthM > 0 ? lineLengthM / depthM : 0;
-        var offsetText = result is null ? "после расчёта" : $"{result.EstimatedOffsetM:0.##} м";
+        var offsetM = result?.EstimatedOffsetM ?? 0;
+        var offsetText = result is null ? "после расчёта" : $"{offsetM:0.##} м";
+
+        VisualizationDepthM = depthM;
+        VisualizationLineLengthM = lineLengthM;
+        VisualizationOffsetM = offsetM;
 
         VisualizationDepthText = $"Глубина: {depthM:0.##} м";
         VisualizationLineLengthText = $"Длина линии: {lineLengthM:0.##} м";
