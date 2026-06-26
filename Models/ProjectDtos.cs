@@ -19,6 +19,10 @@ public sealed class BuoyProjectDto
     public string BuoyArea { get; set; } = string.Empty;
     public string BuoyCd { get; set; } = string.Empty;
 
+    public string SelectedAnchorPresetId { get; set; } = string.Empty;
+    public string AnchorName { get; set; } = string.Empty;
+    public string AnchorType { get; set; } = string.Empty;
+    public string AnchorMaterial { get; set; } = string.Empty;
     public string AnchorWeight { get; set; } = string.Empty;
     public string AnchorVolume { get; set; } = string.Empty;
     public string AnchorCoefficient { get; set; } = string.Empty;
