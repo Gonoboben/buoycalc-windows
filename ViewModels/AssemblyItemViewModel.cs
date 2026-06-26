@@ -56,10 +56,17 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             if (SetProperty(ref _kind, value))
             {
                 OnPropertyChanged(nameof(KindDisplayName));
+                OnPropertyChanged(nameof(IsLine));
+                OnPropertyChanged(nameof(IsConnector));
+                OnPropertyChanged(nameof(IsPayload));
                 OnPropertyChanged(nameof(Summary));
             }
         }
     }
+
+    public bool IsLine => ParseKind(Kind) == AssemblyItemKind.Line;
+    public bool IsConnector => ParseKind(Kind) == AssemblyItemKind.Connector;
+    public bool IsPayload => ParseKind(Kind) == AssemblyItemKind.Payload;
 
     public string KindDisplayName => ParseKind(Kind) switch
     {
@@ -149,7 +156,13 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public string PayloadProjectedAreaM2
     {
         get => _payloadProjectedAreaM2;
-        set => SetProperty(ref _payloadProjectedAreaM2, value);
+        set
+        {
+            if (SetProperty(ref _payloadProjectedAreaM2, value))
+            {
+                OnPropertyChanged(nameof(Summary));
+            }
+        }
     }
 
     public string PayloadDragCoefficient
@@ -165,7 +178,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             return ParseKind(Kind) switch
             {
                 AssemblyItemKind.Connector => $"{ConnectorPresetId} · {Count} шт.",
-                AssemblyItemKind.Payload => $"{PayloadWeightAirKg} кг · A={PayloadProjectedAreaM2} м²",
+                AssemblyItemKind.Payload => $"{PayloadWeightAirKg} кг · A={PayloadProjectedAreaM2} м² · Cd={PayloadDragCoefficient}",
                 _ => $"{RopePresetId} · {LengthM} м"
             };
         }
