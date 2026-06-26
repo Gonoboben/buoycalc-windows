@@ -1,7 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using BuoyCalc.Windows.Models;
 using BuoyCalc.Windows.Services;
@@ -10,7 +12,10 @@ namespace BuoyCalc.Windows.ViewModels;
 
 public sealed class MainWindowViewModel : ViewModelBase
 {
+    private readonly IProjectFileDialogService? _fileDialogService;
+
     private string _projectName = "Тестовый проект";
+    private string _projectFilePath = ProjectJsonStorage.DefaultProjectPath;
     private string _waterDensity = "1025";
     private string _depth = "50";
     private string _currentSpeed = "0.5";
@@ -29,8 +34,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _sequenceSummary = "";
     private string _projectStatusText = "Проект ещё не сохранён.";
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(IProjectFileDialogService? fileDialogService = null)
     {
+        _fileDialogService = fileDialogService;
         AssemblyItems = new ObservableCollection<AssemblyItemViewModel>();
 
         CalculateCommand = new RelayCommand(Calculate);
@@ -38,8 +44,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         AddConnectorCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Новый соединитель" }));
         AddPayloadCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "Новый прибор", PayloadWeightAirKg = "10", PayloadProjectedAreaM2 = "0.02" }));
         NewProjectCommand = new RelayCommand(NewProject);
-        SaveProjectCommand = new RelayCommand(SaveProject);
-        LoadProjectCommand = new RelayCommand(LoadProject);
+        SaveProjectCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: false));
+        SaveProjectAsCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: true));
+        LoadProjectCommand = new RelayCommand(async () => await LoadProjectAsync());
 
         ResetToDefaultProject();
     }
@@ -51,9 +58,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand AddPayloadCommand { get; }
     public ICommand NewProjectCommand { get; }
     public ICommand SaveProjectCommand { get; }
+    public ICommand SaveProjectAsCommand { get; }
     public ICommand LoadProjectCommand { get; }
 
     public string ProjectName { get => _projectName; set => SetProperty(ref _projectName, value); }
+    public string ProjectFilePath { get => _projectFilePath; set => SetProperty(ref _projectFilePath, value); }
     public string WaterDensity { get => _waterDensity; set => SetProperty(ref _waterDensity, value); }
     public string Depth { get => _depth; set => SetProperty(ref _depth, value); }
     public string CurrentSpeed { get => _currentSpeed; set => SetProperty(ref _currentSpeed, value); }
@@ -74,6 +83,11 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void AddAssemblyItem(AssemblyItemViewModel item)
     {
+        if (item.IsConnector)
+        {
+            item.Count = "1";
+        }
+
         WireItem(item);
         AssemblyItems.Add(item);
         UpdateSequenceSummary();
@@ -104,6 +118,11 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void OnAssemblyItemChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (sender is AssemblyItemViewModel { IsConnector: true } connector)
+        {
+            connector.Count = "1";
+        }
+
         UpdateSequenceSummary();
     }
 
@@ -169,6 +188,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void ResetToDefaultProject()
     {
         ProjectName = "Тестовый проект";
+        ProjectFilePath = ProjectJsonStorage.DefaultProjectPath;
         WaterDensity = "1025";
         Depth = "50";
         CurrentSpeed = "0.5";
@@ -195,13 +215,30 @@ public sealed class MainWindowViewModel : ViewModelBase
         UpdateSequenceSummary();
     }
 
-    private void SaveProject()
+    private async Task SaveProjectAsync(bool promptForPath)
     {
         try
         {
-            var dto = ToDto();
-            ProjectJsonStorage.Save(dto);
-            ProjectStatusText = $"Проект сохранён: {ProjectJsonStorage.ProjectPath}";
+            var targetPath = ProjectFilePath;
+
+            if (promptForPath || string.IsNullOrWhiteSpace(targetPath))
+            {
+                var suggestedFileName = MakeSafeFileName(ProjectName) + ".json";
+                targetPath = _fileDialogService is not null
+                    ? await _fileDialogService.PickSavePathAsync(suggestedFileName) ?? string.Empty
+                    : ProjectJsonStorage.DefaultProjectPath;
+            }
+
+            if (string.IsNullOrWhiteSpace(targetPath))
+            {
+                ProjectStatusText = "Сохранение отменено.";
+                return;
+            }
+
+            targetPath = ProjectJsonStorage.NormalizeJsonPath(targetPath);
+            ProjectJsonStorage.Save(ToDto(), targetPath);
+            ProjectFilePath = targetPath;
+            ProjectStatusText = $"Проект сохранён: {targetPath}";
         }
         catch (Exception ex)
         {
@@ -209,19 +246,30 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void LoadProject()
+    private async Task LoadProjectAsync()
     {
         try
         {
-            var dto = ProjectJsonStorage.Load();
+            var selectedPath = _fileDialogService is not null
+                ? await _fileDialogService.PickOpenPathAsync() ?? string.Empty
+                : ProjectFilePath;
+
+            if (string.IsNullOrWhiteSpace(selectedPath))
+            {
+                ProjectStatusText = "Загрузка отменена.";
+                return;
+            }
+
+            var dto = ProjectJsonStorage.Load(selectedPath);
             if (dto is null)
             {
-                ProjectStatusText = $"Файл проекта не найден: {ProjectJsonStorage.ProjectPath}";
+                ProjectStatusText = $"Файл проекта не найден: {selectedPath}";
                 return;
             }
 
             FromDto(dto);
-            ProjectStatusText = $"Проект загружен: {ProjectJsonStorage.ProjectPath}";
+            ProjectFilePath = selectedPath;
+            ProjectStatusText = $"Проект загружен: {selectedPath}";
         }
         catch (Exception ex)
         {
@@ -255,7 +303,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 RopePresetId = x.RopePresetId,
                 ConnectorPresetId = x.ConnectorPresetId,
                 LengthM = x.LengthM,
-                Count = x.Count,
+                Count = x.IsConnector ? "1" : x.Count,
                 PayloadWeightAirKg = x.PayloadWeightAirKg,
                 PayloadVolumeM3 = x.PayloadVolumeM3,
                 PayloadProjectedAreaM2 = x.PayloadProjectedAreaM2,
@@ -295,7 +343,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 RopePresetId = item.RopePresetId,
                 ConnectorPresetId = item.ConnectorPresetId,
                 LengthM = item.LengthM,
-                Count = item.Count,
+                Count = item.Kind == "Connector" ? "1" : item.Count,
                 PayloadWeightAirKg = item.PayloadWeightAirKg,
                 PayloadVolumeM3 = item.PayloadVolumeM3,
                 PayloadProjectedAreaM2 = item.PayloadProjectedAreaM2,
@@ -315,14 +363,13 @@ public sealed class MainWindowViewModel : ViewModelBase
             .Sum(x => x.LengthM);
 
         var connectorCount = enabledItems
-            .Where(x => x.Kind == AssemblyItemKind.Connector)
-            .Sum(x => x.Count);
+            .Count(x => x.Kind == AssemblyItemKind.Connector);
 
         var payloadWeightKg = enabledItems
             .Where(x => x.Kind == AssemblyItemKind.Payload)
             .Sum(x => x.PayloadWeightAirKg);
 
-        SequenceSummary = $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} шт. · приборы: {payloadWeightKg:0.##} кг";
+        SequenceSummary = $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы: {payloadWeightKg:0.##} кг";
     }
 
     private void Calculate()
@@ -350,5 +397,17 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         value = (value ?? string.Empty).Replace(',', '.');
         return double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : 0;
+    }
+
+    private static string MakeSafeFileName(string value)
+    {
+        value = string.IsNullOrWhiteSpace(value) ? "BuoyCalc_Project" : value.Trim();
+
+        foreach (var invalidChar in Path.GetInvalidFileNameChars())
+        {
+            value = value.Replace(invalidChar, '_');
+        }
+
+        return value.Replace(' ', '_');
     }
 }
