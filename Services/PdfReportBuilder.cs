@@ -22,7 +22,10 @@ public static class PdfReportBuilder
         string resultText,
         IEnumerable<string> sequenceLines,
         IEnumerable<ElementCalculationDisplayRow> elementRows,
-        string reportText)
+        string reportText,
+        double visualizationDepthM,
+        double visualizationLineLengthM,
+        double visualizationOffsetM)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? ".");
 
@@ -32,27 +35,34 @@ public static class PdfReportBuilder
         using var boldTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? regularTypeface;
 
         var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
-        writer.BeginPage();
+        var sequence = sequenceLines.ToList();
 
+        writer.BeginPage();
         writer.Title("BuoyCalc Windows - предварительный отчёт");
         writer.Text($"Проект: {projectName}");
         writer.Space(12);
 
         writer.Section("Результат");
         writer.Multiline(resultText, 11);
-        writer.Space(10);
+        writer.EndPage();
 
-        writer.Section("Визуальная схема постановки");
-        foreach (var line in sequenceLines)
+        writer.BeginPage();
+        writer.Title("Схема постановки");
+        writer.Text("Геометрическая 2D-схема: поверхность воды, буй, линия, активные элементы, якорь, дно и оценочный снос.", 10);
+        writer.Space(10);
+        writer.MooringDiagram(sequence, visualizationDepthM, visualizationLineLengthM, visualizationOffsetM);
+        writer.Space(12);
+        writer.Section("Текстовая цепочка");
+        foreach (var line in sequence)
         {
-            writer.Text(line, 10);
+            writer.Text(line, 9.5f);
         }
-        writer.Space(10);
+        writer.EndPage();
 
-        writer.Section("Таблица элементов");
+        writer.BeginPage();
+        writer.Title("Таблица элементов");
         writer.ElementTable(elementRows.ToList());
         writer.Space(10);
-
         writer.Section("Полный текстовый отчёт");
         writer.Multiline(reportText, 8, maxLines: 180);
 
@@ -130,6 +140,98 @@ public static class PdfReportBuilder
             }
         }
 
+        public void MooringDiagram(IReadOnlyList<string> sequenceLines, double depthM, double lineLengthM, double offsetM)
+        {
+            const float diagramHeight = 360;
+            EnsureSpace(diagramHeight + 20);
+
+            var x = Margin;
+            var y = _y;
+            var width = PageWidth - 2 * Margin;
+            var surfaceY = y + 58;
+            var bottomY = y + 280;
+            var waterRect = new SKRect(x, surfaceY, x + width, bottomY);
+            var bottomRect = new SKRect(x, bottomY, x + width, bottomY + 28);
+
+            using var plotPaint = Fill("#F7F9FC");
+            using var waterPaint = Fill("#DCEBFF");
+            using var bottomPaint = Fill("#E7DED3");
+            using var borderPaint = Stroke("#D7DEE9", 1);
+            using var linePaint = Stroke("#315B9A", 3);
+            using var thinPaint = Stroke("#A7C7EE", 1);
+            using var buoyPaint = Fill("#F2A33A");
+            using var anchorPaint = Fill("#5C4634");
+            using var nodePaint = Fill("#FFFFFF");
+            using var nodeBorderPaint = Stroke("#315B9A", 1.3f);
+
+            _canvas!.DrawRect(new SKRect(x, y, x + width, y + diagramHeight), plotPaint);
+            _canvas.DrawRect(new SKRect(x, y, x + width, y + diagramHeight), borderPaint);
+            _canvas.DrawRect(waterRect, waterPaint);
+            _canvas.DrawRect(waterRect, borderPaint);
+            _canvas.DrawRect(bottomRect, bottomPaint);
+            _canvas.DrawRect(bottomRect, borderPaint);
+
+            DrawTextAt("поверхность воды", x + 14, surfaceY - 24, 10, true, SKColors.Black);
+            DrawTextAt(depthM > 0 ? $"глубина {depthM:0.##} м" : "глубина не задана", x + 14, surfaceY + 18, 9, false, new SKColor(80, 92, 112));
+            DrawTextAt(lineLengthM > 0 ? $"линия {lineLengthM:0.##} м" : "линия не задана", x + width - 120, surfaceY + 18, 9, false, new SKColor(80, 92, 112));
+            DrawTextAt("дно / грунт", x + 14, bottomY + 18, 10, true, new SKColor(92, 70, 52));
+
+            var safeDepth = Math.Max(1, depthM);
+            var safeOffset = Math.Max(0, offsetM);
+            var maxHorizontalMeters = Math.Max(safeDepth, Math.Max(safeOffset, 1));
+            var maxHorizontalPixels = width - 180;
+            var offsetPixels = safeOffset > 0 ? Math.Min(maxHorizontalPixels, (float)(safeOffset / maxHorizontalMeters * maxHorizontalPixels)) : 0;
+            var centerX = x + width / 2;
+            var buoyX = Math.Clamp(centerX - offsetPixels / 2, x + 80, x + width - 80);
+            var anchorX = Math.Clamp(centerX + offsetPixels / 2, x + 80, x + width - 80);
+            var buoyPoint = new SKPoint(buoyX, surfaceY + 38);
+            var anchorPoint = new SKPoint(anchorX, bottomY - 8);
+
+            _canvas.DrawLine(buoyPoint, anchorPoint, linePaint);
+            _canvas.DrawLine(new SKPoint(buoyPoint.X, surfaceY), buoyPoint, thinPaint);
+            _canvas.DrawLine(new SKPoint(anchorPoint.X, bottomY), anchorPoint, thinPaint);
+
+            var labels = sequenceLines.Where(v => !string.IsNullOrWhiteSpace(v) && v != "↓").ToList();
+            var buoyLabel = CleanLabel(labels.FirstOrDefault(), "Буй");
+            var anchorLabel = CleanLabel(labels.LastOrDefault(), "Якорь");
+            var nodes = labels.Skip(1).SkipLast(1).ToList();
+
+            _canvas.DrawCircle(buoyPoint, 13, buoyPaint);
+            _canvas.DrawCircle(buoyPoint, 13, nodeBorderPaint);
+            DrawTextAt(Shorten(buoyLabel, 26), buoyPoint.X + 18, buoyPoint.Y + 4, 9.5f, true, SKColors.Black);
+
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                var t = (i + 1f) / (nodes.Count + 1f);
+                var px = buoyPoint.X + (anchorPoint.X - buoyPoint.X) * t;
+                var py = buoyPoint.Y + (anchorPoint.Y - buoyPoint.Y) * t;
+                _canvas.DrawCircle(px, py, 5.8f, nodePaint);
+                _canvas.DrawCircle(px, py, 5.8f, nodeBorderPaint);
+
+                if (i < 5)
+                {
+                    DrawTextAt(Shorten(CleanLabel(nodes[i], "Элемент"), 32), px + 10, py + 3, 7.6f, false, new SKColor(80, 92, 112));
+                }
+            }
+
+            var anchorRect = new SKRect(anchorPoint.X - 18, anchorPoint.Y - 10, anchorPoint.X + 18, anchorPoint.Y + 10);
+            _canvas.DrawRect(anchorRect, anchorPaint);
+            DrawTextAt(Shorten(anchorLabel, 28), anchorPoint.X + 22, anchorPoint.Y + 4, 9.5f, true, SKColors.Black);
+
+            if (safeOffset > 0)
+            {
+                var offsetY = bottomY + 52;
+                _canvas.DrawLine(new SKPoint(buoyPoint.X, offsetY), new SKPoint(anchorPoint.X, offsetY), thinPaint);
+                DrawTextAt($"снос {safeOffset:0.##} м", Math.Min(buoyPoint.X, anchorPoint.X) + 8, offsetY - 8, 9, false, new SKColor(80, 92, 112));
+            }
+            else
+            {
+                DrawTextAt("снос: 0 м / после расчёта", x + width - 160, bottomY + 52, 9, false, new SKColor(80, 92, 112));
+            }
+
+            _y += diagramHeight + 10;
+        }
+
         public void ElementTable(IReadOnlyList<ElementCalculationDisplayRow> rows)
         {
             var headers = new[] { "№", "Тип", "Элемент", "Вес", "Сила", "Запас", "Статус" };
@@ -190,11 +292,22 @@ public static class PdfReportBuilder
             _y += size + LineGap;
         }
 
+        private void DrawTextAt(string text, float x, float y, float size, bool bold, SKColor color)
+        {
+            using var paint = CreatePaint(size, bold, color);
+            _canvas!.DrawText(text ?? string.Empty, x, y, paint);
+        }
+
         private SKPaint CreatePaint(float size, bool bold)
+        {
+            return CreatePaint(size, bold, SKColors.Black);
+        }
+
+        private SKPaint CreatePaint(float size, bool bold, SKColor color)
         {
             return new SKPaint
             {
-                Color = SKColors.Black,
+                Color = color,
                 IsAntialias = true,
                 TextSize = size,
                 Typeface = bold ? _boldTypeface : _regularTypeface
@@ -254,9 +367,29 @@ public static class PdfReportBuilder
             }
         }
 
+        private static SKPaint Fill(string color)
+        {
+            return new SKPaint { Color = SKColor.Parse(color), IsAntialias = true, Style = SKPaintStyle.Fill };
+        }
+
+        private static SKPaint Stroke(string color, float width)
+        {
+            return new SKPaint { Color = SKColor.Parse(color), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = width };
+        }
+
         private static IEnumerable<string> SplitLines(string text)
         {
             return (text ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        }
+
+        private static string CleanLabel(string? value, string fallback)
+        {
+            value ??= fallback;
+            value = value.Replace("● Буй:", string.Empty)
+                .Replace("■ Якорь:", string.Empty)
+                .Replace("○", string.Empty)
+                .Trim();
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
         }
 
         private static string Shorten(string value, int maxLength)
