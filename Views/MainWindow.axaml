@@ -1,12 +1,12 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="BuoyCalc.Windows.Views.MainWindow"
-        Width="1280"
-        Height="820"
-        MinWidth="1080"
-        MinHeight="720"
+        Width="1360"
+        Height="860"
+        MinWidth="1160"
+        MinHeight="760"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.10">
+        Title="BuoyCalc Windows v0.11.1">
 
   <Grid RowDefinitions="Auto,*">
     <Border Grid.Row="0" Background="#172033" Padding="20,16">
@@ -19,12 +19,12 @@
           <Button Click="OpenLibraryButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
             <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Библиотека элементов..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
           </Button>
-          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center"><TextBlock Text="v0.10 payload library" Foreground="#C7D2E5" FontSize="13" /></Border>
+          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center"><TextBlock Text="v0.11.1 resizable table" Foreground="#C7D2E5" FontSize="13" /></Border>
         </StackPanel>
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="360,*,360" ColumnSpacing="16" Margin="18">
+    <Grid Grid.Row="1" ColumnDefinitions="360,*,460" ColumnSpacing="16" Margin="18">
       <ScrollViewer Grid.Column="0">
         <StackPanel Spacing="14">
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
@@ -53,9 +53,52 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Column="2" RowDefinitions="260,*" RowSpacing="16">
-        <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Результат" FontSize="20" FontWeight="Bold" /><TextBlock Text="Ключевые показатели после расчёта" FontSize="12" Foreground="#697386" /></StackPanel><TextBox Grid.Row="1" Text="{Binding ResultText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontSize="14" TextWrapping="Wrap" Margin="0,12,0,0" /></Grid></Border>
-        <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Отчёт" FontSize="20" FontWeight="Bold" /><TextBlock Text="Markdown-текст для копирования или будущего экспорта" FontSize="12" Foreground="#697386" /></StackPanel><TextBox Grid.Row="1" Text="{Binding ReportText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0" /></Grid></Border>
+      <Grid Grid.Column="2" RowDefinitions="210,310,*" RowSpacing="16">
+        <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+          <Grid RowDefinitions="Auto,*">
+            <StackPanel Spacing="4"><TextBlock Text="Результат" FontSize="20" FontWeight="Bold" /><TextBlock Text="Ключевые показатели после расчёта" FontSize="12" Foreground="#697386" /></StackPanel>
+            <TextBox Grid.Row="1" Text="{Binding ResultText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontSize="13" TextWrapping="Wrap" Margin="0,12,0,0" />
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+          <Grid RowDefinitions="Auto,*" RowSpacing="10">
+            <StackPanel Spacing="4"><TextBlock Text="Таблица элементов" FontSize="20" FontWeight="Bold" /><TextBlock Text="Колонки можно растягивать мышью. Для длинной таблицы используйте горизонтальную прокрутку." FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></StackPanel>
+            <DataGrid Grid.Row="1"
+                      ItemsSource="{Binding ElementRows}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserResizeColumns="True"
+                      GridLinesVisibility="All"
+                      HeadersVisibility="Column"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45" />
+                <DataGridTextColumn Header="Тип" Binding="{Binding Kind}" Width="100" />
+                <DataGridTextColumn Header="Элемент" Binding="{Binding Title}" Width="160" />
+                <DataGridTextColumn Header="Пресет" Binding="{Binding PresetName}" Width="180" />
+                <DataGridTextColumn Header="L, м" Binding="{Binding LengthM}" Width="70" />
+                <DataGridTextColumn Header="Кол." Binding="{Binding Count}" Width="60" />
+                <DataGridTextColumn Header="Вес в воде, кг" Binding="{Binding WeightWaterKg}" Width="110" />
+                <DataGridTextColumn Header="A, м²" Binding="{Binding ProjectedAreaM2}" Width="90" />
+                <DataGridTextColumn Header="Cd" Binding="{Binding DragCoefficient}" Width="60" />
+                <DataGridTextColumn Header="Сила, Н" Binding="{Binding CurrentForceN}" Width="90" />
+                <DataGridTextColumn Header="MBL, кН" Binding="{Binding BreakingLoadKn}" Width="90" />
+                <DataGridTextColumn Header="WLL, кН" Binding="{Binding WorkingLoadKn}" Width="90" />
+                <DataGridTextColumn Header="Запас" Binding="{Binding Reserve}" Width="80" />
+                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="170" />
+              </DataGrid.Columns>
+            </DataGrid>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+          <Grid RowDefinitions="Auto,*">
+            <StackPanel Spacing="4"><TextBlock Text="Отчёт" FontSize="20" FontWeight="Bold" /><TextBlock Text="Markdown-текст для копирования или будущего экспорта" FontSize="12" Foreground="#697386" /></StackPanel>
+            <TextBox Grid.Row="1" Text="{Binding ReportText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0" />
+          </Grid>
+        </Border>
       </Grid>
     </Grid>
   </Grid>
