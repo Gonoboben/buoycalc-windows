@@ -3,53 +3,24 @@
         xmlns:views="clr-namespace:BuoyCalc.Windows.Views"
         x:Class="BuoyCalc.Windows.Views.Mooring2DWindow"
         Width="860"
-        Height="760"
+        Height="640"
         MinWidth="720"
-        MinHeight="620"
+        MinHeight="520"
         Background="#F3F6FA"
-        Title="2D-схема постановки v0.17.1">
+        Title="2D-схема постановки v0.17.2">
 
-  <Grid RowDefinitions="Auto,*,Auto" Margin="18" RowSpacing="14">
-    <Border Background="#172033" CornerRadius="16" Padding="18">
-      <StackPanel Spacing="4">
-        <TextBlock Text="2D-схема постановки" FontSize="24" FontWeight="Bold" Foreground="White" />
-        <TextBlock Text="Отдельное окно только для графики: поверхность воды, буй, линия, элементы, якорь, дно, глубина и снос." FontSize="13" Foreground="#C7D2E5" />
-      </StackPanel>
-    </Border>
-
-    <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-      <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-          <StackPanel Spacing="4">
-            <TextBlock Text="Графическая схема" FontSize="20" FontWeight="Bold" />
-            <TextBlock Text="Текстовая проверка цепочки вынесена в отдельное окно перед расчётом. Здесь остаётся только 2D-графика и инженерные параметры." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
-          </StackPanel>
-          <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Top">
-            <TextBlock Text="v0.17.1 graph only" FontSize="12" Foreground="#263653" FontWeight="Bold" />
-          </Border>
-        </Grid>
-
-        <Border Grid.Row="1" Background="#F7F9FC" BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="14" Padding="12">
-          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
-            <Border Background="White" CornerRadius="10" Padding="10"><TextBlock Text="{Binding VisualizationDepthText}" FontSize="12" FontWeight="Bold" TextWrapping="Wrap" /></Border>
-            <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="10"><TextBlock Text="{Binding VisualizationLineLengthText}" FontSize="12" FontWeight="Bold" TextWrapping="Wrap" /></Border>
-            <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="10"><TextBlock Text="{Binding VisualizationOffsetText}" FontSize="12" FontWeight="Bold" TextWrapping="Wrap" /></Border>
-            <Border Grid.Row="1" Grid.Column="1" Background="White" CornerRadius="10" Padding="10"><TextBlock Text="{Binding VisualizationSlackRatioText}" FontSize="12" FontWeight="Bold" TextWrapping="Wrap" /></Border>
-            <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#FFF7E6" BorderBrush="#E6C36A" BorderThickness="1" CornerRadius="10" Padding="10"><TextBlock Text="{Binding VisualizationStatusText}" FontSize="12" FontWeight="Bold" TextWrapping="Wrap" /></Border>
-          </Grid>
-        </Border>
-
-        <Border Grid.Row="2" Background="#F7F9FC" BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="16" Padding="14">
-          <views:Mooring2DCanvas />
-        </Border>
-      </Grid>
-    </Border>
-
-    <Border Grid.Row="2" Background="White" CornerRadius="16" Padding="14" BoxShadow="0 2 12 #18000000">
+  <Border Background="White" CornerRadius="16" Padding="16" Margin="18" BoxShadow="0 2 12 #18000000">
+    <Grid RowDefinitions="Auto,*" RowSpacing="12">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-        <TextBlock Text="Проверка текстовой последовательности открывается отдельным окном при нажатии «Проверить схему и рассчитать»." FontSize="12" Foreground="#697386" TextWrapping="Wrap" VerticalAlignment="Center" />
-        <Button Grid.Column="1" Content="Закрыть" Click="CloseButton_Click" Padding="18,10" />
+        <TextBlock Text="2D-схема постановки" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" />
+        <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Center">
+          <TextBlock Text="v0.17.2" FontSize="12" Foreground="#263653" FontWeight="Bold" />
+        </Border>
       </Grid>
-    </Border>
-  </Grid>
+
+      <Border Grid.Row="1" Background="#F7F9FC" BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="16" Padding="14">
+        <views:Mooring2DCanvas />
+      </Border>
+    </Grid>
+  </Border>
 </Window>
