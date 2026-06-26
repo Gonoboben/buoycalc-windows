@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="BuoyCalc.Windows.Views.SequencePreviewWindow"
+        Width="620"
+        Height="720"
+        MinWidth="520"
+        MinHeight="560"
+        Background="#F3F6FA"
+        Title="Проверка схемы постановки">
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="18" RowSpacing="14">
+    <Border Background="#172033" CornerRadius="16" Padding="18">
+      <StackPanel Spacing="4">
+        <TextBlock Text="Проверьте схему постановки" FontSize="24" FontWeight="Bold" Foreground="White" />
+        <TextBlock Text="Расчёт будет выполнен только после подтверждения." FontSize="13" Foreground="#C7D2E5" />
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+      <Grid RowDefinitions="Auto,*" RowSpacing="12">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Визуальная схема" FontSize="20" FontWeight="Bold" />
+          <TextBlock Text="Проверьте порядок сверху вниз: буй, активные элементы последовательности и якорь." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding SequenceDiagramLines}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="#F7F9FC" BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="12" Padding="10" Margin="0,0,0,8">
+                  <TextBlock Text="{Binding}" FontSize="13" TextWrapping="Wrap" />
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="2" Background="White" CornerRadius="16" Padding="14" BoxShadow="0 2 12 #18000000">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+        <TextBlock Text="Если порядок элементов неверный, вернитесь и исправьте последовательность." FontSize="12" Foreground="#697386" TextWrapping="Wrap" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Content="Вернуться" Click="BackButton_Click" Padding="18,10" />
+        <Button Grid.Column="2" Content="Всё верно, рассчитать" Click="ConfirmButton_Click" Padding="18,10" FontWeight="Bold" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
