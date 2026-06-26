@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Input;
 using BuoyCalc.Windows.Models;
 
 namespace BuoyCalc.Windows.ViewModels;
@@ -16,6 +20,28 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     private string _payloadProjectedAreaM2 = "0";
     private string _payloadDragCoefficient = "1.0";
 
+    public AssemblyItemViewModel()
+    {
+        RemoveCommand = new RelayCommand(() => RemoveRequested?.Invoke(this));
+        MoveUpCommand = new RelayCommand(() => MoveUpRequested?.Invoke(this));
+        MoveDownCommand = new RelayCommand(() => MoveDownRequested?.Invoke(this));
+        DuplicateCommand = new RelayCommand(() => DuplicateRequested?.Invoke(this));
+    }
+
+    public event Action<AssemblyItemViewModel>? RemoveRequested;
+    public event Action<AssemblyItemViewModel>? MoveUpRequested;
+    public event Action<AssemblyItemViewModel>? MoveDownRequested;
+    public event Action<AssemblyItemViewModel>? DuplicateRequested;
+
+    public IReadOnlyList<string> KindOptions { get; } = new[] { "Line", "Connector", "Payload" };
+    public IReadOnlyList<string> RopePresetOptions { get; } = RopeCatalog.Presets.Select(x => x.Id).ToList();
+    public IReadOnlyList<string> ConnectorPresetOptions { get; } = ConnectorCatalog.Presets.Select(x => x.Id).ToList();
+
+    public ICommand RemoveCommand { get; }
+    public ICommand MoveUpCommand { get; }
+    public ICommand MoveDownCommand { get; }
+    public ICommand DuplicateCommand { get; }
+
     public bool IsEnabled
     {
         get => _isEnabled;
@@ -25,43 +51,93 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public string Kind
     {
         get => _kind;
-        set => SetProperty(ref _kind, value);
+        set
+        {
+            if (SetProperty(ref _kind, value))
+            {
+                OnPropertyChanged(nameof(KindDisplayName));
+                OnPropertyChanged(nameof(Summary));
+            }
+        }
     }
+
+    public string KindDisplayName => ParseKind(Kind) switch
+    {
+        AssemblyItemKind.Connector => "Соединитель",
+        AssemblyItemKind.Payload => "Прибор / нагрузка",
+        _ => "Буйреп / линия"
+    };
 
     public string Title
     {
         get => _title;
-        set => SetProperty(ref _title, value);
+        set
+        {
+            if (SetProperty(ref _title, value))
+            {
+                OnPropertyChanged(nameof(Summary));
+            }
+        }
     }
 
     public string RopePresetId
     {
         get => _ropePresetId;
-        set => SetProperty(ref _ropePresetId, value);
+        set
+        {
+            if (SetProperty(ref _ropePresetId, value))
+            {
+                OnPropertyChanged(nameof(Summary));
+            }
+        }
     }
 
     public string ConnectorPresetId
     {
         get => _connectorPresetId;
-        set => SetProperty(ref _connectorPresetId, value);
+        set
+        {
+            if (SetProperty(ref _connectorPresetId, value))
+            {
+                OnPropertyChanged(nameof(Summary));
+            }
+        }
     }
 
     public string LengthM
     {
         get => _lengthM;
-        set => SetProperty(ref _lengthM, value);
+        set
+        {
+            if (SetProperty(ref _lengthM, value))
+            {
+                OnPropertyChanged(nameof(Summary));
+            }
+        }
     }
 
     public string Count
     {
         get => _count;
-        set => SetProperty(ref _count, value);
+        set
+        {
+            if (SetProperty(ref _count, value))
+            {
+                OnPropertyChanged(nameof(Summary));
+            }
+        }
     }
 
     public string PayloadWeightAirKg
     {
         get => _payloadWeightAirKg;
-        set => SetProperty(ref _payloadWeightAirKg, value);
+        set
+        {
+            if (SetProperty(ref _payloadWeightAirKg, value))
+            {
+                OnPropertyChanged(nameof(Summary));
+            }
+        }
     }
 
     public string PayloadVolumeM3
@@ -80,6 +156,37 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     {
         get => _payloadDragCoefficient;
         set => SetProperty(ref _payloadDragCoefficient, value);
+    }
+
+    public string Summary
+    {
+        get
+        {
+            return ParseKind(Kind) switch
+            {
+                AssemblyItemKind.Connector => $"{ConnectorPresetId} · {Count} шт.",
+                AssemblyItemKind.Payload => $"{PayloadWeightAirKg} кг · A={PayloadProjectedAreaM2} м²",
+                _ => $"{RopePresetId} · {LengthM} м"
+            };
+        }
+    }
+
+    public AssemblyItemViewModel Clone()
+    {
+        return new AssemblyItemViewModel
+        {
+            IsEnabled = IsEnabled,
+            Kind = Kind,
+            Title = $"{Title} копия",
+            RopePresetId = RopePresetId,
+            ConnectorPresetId = ConnectorPresetId,
+            LengthM = LengthM,
+            Count = Count,
+            PayloadWeightAirKg = PayloadWeightAirKg,
+            PayloadVolumeM3 = PayloadVolumeM3,
+            PayloadProjectedAreaM2 = PayloadProjectedAreaM2,
+            PayloadDragCoefficient = PayloadDragCoefficient
+        };
     }
 
     public AssemblyItemInput ToInput()
