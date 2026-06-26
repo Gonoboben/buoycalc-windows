@@ -17,26 +17,48 @@ public sealed class ElementLibraryViewModel : ViewModelBase
     private string _buoyArea = "0";
     private string _buoyCd = "0";
     private string _buoyNote = string.Empty;
+
+    private RopeLibraryItem? _selectedRope;
+    private string _ropeName = string.Empty;
+    private string _ropeMaterial = string.Empty;
+    private string _ropeDiameter = "0";
+    private string _ropeBreakingLoad = "0";
+    private string _ropeWeightWater = "0";
+    private string _ropeCd = "1.2";
+    private string _ropeNote = string.Empty;
+
     private string _statusText = string.Empty;
 
     public ElementLibraryViewModel()
     {
         Buoys = new ObservableCollection<BuoyLibraryItem>();
+        Ropes = new ObservableCollection<RopeLibraryItem>();
 
         NewBuoyCommand = new RelayCommand(NewBuoy);
         SaveBuoyCommand = new RelayCommand(SaveBuoy);
         DeleteBuoyCommand = new RelayCommand(DeleteBuoy);
-        RefreshCommand = new RelayCommand(() => RefreshBuoys(null));
 
-        RefreshBuoys(null);
-        StatusText = "Библиотека элементов открыта. Сейчас доступен раздел буёв.";
+        NewRopeCommand = new RelayCommand(NewRope);
+        SaveRopeCommand = new RelayCommand(SaveRope);
+        DeleteRopeCommand = new RelayCommand(DeleteRope);
+
+        RefreshCommand = new RelayCommand(RefreshAll);
+
+        RefreshAll();
+        StatusText = "Библиотека элементов открыта. Доступны разделы: буи и линии.";
     }
 
     public ObservableCollection<BuoyLibraryItem> Buoys { get; }
+    public ObservableCollection<RopeLibraryItem> Ropes { get; }
 
     public ICommand NewBuoyCommand { get; }
     public ICommand SaveBuoyCommand { get; }
     public ICommand DeleteBuoyCommand { get; }
+
+    public ICommand NewRopeCommand { get; }
+    public ICommand SaveRopeCommand { get; }
+    public ICommand DeleteRopeCommand { get; }
+
     public ICommand RefreshCommand { get; }
 
     public BuoyLibraryItem? SelectedBuoy
@@ -51,18 +73,44 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         }
     }
 
+    public RopeLibraryItem? SelectedRope
+    {
+        get => _selectedRope;
+        set
+        {
+            if (SetProperty(ref _selectedRope, value))
+            {
+                LoadSelectedRopeIntoForm();
+            }
+        }
+    }
+
     public string BuoyName { get => _buoyName; set => SetProperty(ref _buoyName, value); }
     public string BuoyVolume { get => _buoyVolume; set => SetProperty(ref _buoyVolume, value); }
     public string BuoyWeight { get => _buoyWeight; set => SetProperty(ref _buoyWeight, value); }
     public string BuoyArea { get => _buoyArea; set => SetProperty(ref _buoyArea, value); }
     public string BuoyCd { get => _buoyCd; set => SetProperty(ref _buoyCd, value); }
     public string BuoyNote { get => _buoyNote; set => SetProperty(ref _buoyNote, value); }
+
+    public string RopeName { get => _ropeName; set => SetProperty(ref _ropeName, value); }
+    public string RopeMaterial { get => _ropeMaterial; set => SetProperty(ref _ropeMaterial, value); }
+    public string RopeDiameter { get => _ropeDiameter; set => SetProperty(ref _ropeDiameter, value); }
+    public string RopeBreakingLoad { get => _ropeBreakingLoad; set => SetProperty(ref _ropeBreakingLoad, value); }
+    public string RopeWeightWater { get => _ropeWeightWater; set => SetProperty(ref _ropeWeightWater, value); }
+    public string RopeCd { get => _ropeCd; set => SetProperty(ref _ropeCd, value); }
+    public string RopeNote { get => _ropeNote; set => SetProperty(ref _ropeNote, value); }
+
     public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
+
+    private void RefreshAll()
+    {
+        RefreshBuoys(SelectedBuoy?.Id);
+        RefreshRopes(SelectedRope?.Id);
+        StatusText = $"Библиотека обновлена. Буёв: {Buoys.Count}. Линий: {Ropes.Count}.";
+    }
 
     private void RefreshBuoys(string? selectedId)
     {
-        selectedId ??= SelectedBuoy?.Id;
-
         Buoys.Clear();
         foreach (var buoy in BuoyLibraryStorage.LoadAllBuoys())
         {
@@ -70,7 +118,17 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         }
 
         SelectedBuoy = Buoys.FirstOrDefault(x => x.Id == selectedId) ?? Buoys.FirstOrDefault();
-        StatusText = $"Буёв в списке: {Buoys.Count}. Файл пользователя: {BuoyLibraryStorage.LibraryPath}";
+    }
+
+    private void RefreshRopes(string? selectedId)
+    {
+        Ropes.Clear();
+        foreach (var rope in RopeLibraryStorage.LoadAllRopes())
+        {
+            Ropes.Add(rope);
+        }
+
+        SelectedRope = Ropes.FirstOrDefault(x => x.Id == selectedId) ?? Ropes.FirstOrDefault();
     }
 
     private void LoadSelectedBuoyIntoForm()
@@ -86,6 +144,22 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         BuoyArea = FormatDouble(SelectedBuoy.ProjectedAreaM2);
         BuoyCd = FormatDouble(SelectedBuoy.DragCoefficient);
         BuoyNote = SelectedBuoy.Note;
+    }
+
+    private void LoadSelectedRopeIntoForm()
+    {
+        if (SelectedRope is null)
+        {
+            return;
+        }
+
+        RopeName = SelectedRope.Name;
+        RopeMaterial = SelectedRope.Material;
+        RopeDiameter = FormatDouble(SelectedRope.DiameterMm);
+        RopeBreakingLoad = FormatDouble(SelectedRope.BreakingLoadKn);
+        RopeWeightWater = FormatDouble(SelectedRope.WeightWaterKgM);
+        RopeCd = FormatDouble(SelectedRope.DragCoefficient);
+        RopeNote = SelectedRope.Note;
     }
 
     private void NewBuoy()
@@ -142,6 +216,64 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         StatusText = deleted
             ? $"Удалён пользовательский буй: {deletedName}"
             : "Пользовательский буй не найден в файле библиотеки.";
+    }
+
+    private void NewRope()
+    {
+        SelectedRope = null;
+        RopeName = "Новая линия";
+        RopeMaterial = "Polyester / Полиэстер";
+        RopeDiameter = "20";
+        RopeBreakingLoad = "70";
+        RopeWeightWater = "0.15";
+        RopeCd = "1.2";
+        RopeNote = "";
+        StatusText = "Заполните параметры новой линии и нажмите «Сохранить».";
+    }
+
+    private void SaveRope()
+    {
+        var name = string.IsNullOrWhiteSpace(RopeName) ? "Пользовательская линия" : RopeName.Trim();
+        var id = SelectedRope is { Source: "User" } ? SelectedRope.Id : string.Empty;
+
+        var rope = new RopeLibraryItem
+        {
+            Id = id,
+            Source = "User",
+            Name = name,
+            Material = RopeMaterial,
+            DiameterMm = Parse(RopeDiameter),
+            BreakingLoadKn = Parse(RopeBreakingLoad),
+            WeightWaterKgM = Parse(RopeWeightWater),
+            DragCoefficient = Parse(RopeCd),
+            Note = RopeNote
+        };
+
+        RopeLibraryStorage.UpsertUserRope(rope);
+        RefreshRopes(rope.Id);
+        StatusText = $"Сохранена пользовательская линия: {name}";
+    }
+
+    private void DeleteRope()
+    {
+        if (SelectedRope is null)
+        {
+            StatusText = "Выберите пользовательскую линию для удаления.";
+            return;
+        }
+
+        if (SelectedRope.Source != "User" || SelectedRope.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
+        {
+            StatusText = "Встроенную линию удалить нельзя. Удалять можно только пользовательские линии.";
+            return;
+        }
+
+        var deletedName = SelectedRope.Name;
+        var deleted = RopeLibraryStorage.DeleteUserRope(SelectedRope.Id);
+        RefreshRopes(null);
+        StatusText = deleted
+            ? $"Удалена пользовательская линия: {deletedName}"
+            : "Пользовательская линия не найдена в файле библиотеки.";
     }
 
     private static double Parse(string value)
