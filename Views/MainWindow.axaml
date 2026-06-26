@@ -6,7 +6,7 @@
         MinWidth="1160"
         MinHeight="760"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.11.1">
+        Title="BuoyCalc Windows v0.11.2">
 
   <Grid RowDefinitions="Auto,*">
     <Border Grid.Row="0" Background="#172033" Padding="20,16">
@@ -17,9 +17,13 @@
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
           <Button Click="OpenLibraryButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
-            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Библиотека элементов..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
+            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8">
+              <TextBlock Text="Библиотека элементов..." Foreground="White" FontSize="13" FontWeight="SemiBold" />
+            </Border>
           </Button>
-          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center"><TextBlock Text="v0.11.1 resizable table" Foreground="#C7D2E5" FontSize="13" /></Border>
+          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
+            <TextBlock Text="v0.11.2 stable table" Foreground="#C7D2E5" FontSize="13" />
+          </Border>
         </StackPanel>
       </Grid>
     </Border>
@@ -63,33 +67,53 @@
 
         <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
           <Grid RowDefinitions="Auto,*" RowSpacing="10">
-            <StackPanel Spacing="4"><TextBlock Text="Таблица элементов" FontSize="20" FontWeight="Bold" /><TextBlock Text="Колонки можно растягивать мышью. Для длинной таблицы используйте горизонтальную прокрутку." FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></StackPanel>
-            <DataGrid Grid.Row="1"
-                      ItemsSource="{Binding ElementRows}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      CanUserResizeColumns="True"
-                      GridLinesVisibility="All"
-                      HeadersVisibility="Column"
-                      HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="№" Binding="{Binding Number}" Width="45" />
-                <DataGridTextColumn Header="Тип" Binding="{Binding Kind}" Width="100" />
-                <DataGridTextColumn Header="Элемент" Binding="{Binding Title}" Width="160" />
-                <DataGridTextColumn Header="Пресет" Binding="{Binding PresetName}" Width="180" />
-                <DataGridTextColumn Header="L, м" Binding="{Binding LengthM}" Width="70" />
-                <DataGridTextColumn Header="Кол." Binding="{Binding Count}" Width="60" />
-                <DataGridTextColumn Header="Вес в воде, кг" Binding="{Binding WeightWaterKg}" Width="110" />
-                <DataGridTextColumn Header="A, м²" Binding="{Binding ProjectedAreaM2}" Width="90" />
-                <DataGridTextColumn Header="Cd" Binding="{Binding DragCoefficient}" Width="60" />
-                <DataGridTextColumn Header="Сила, Н" Binding="{Binding CurrentForceN}" Width="90" />
-                <DataGridTextColumn Header="MBL, кН" Binding="{Binding BreakingLoadKn}" Width="90" />
-                <DataGridTextColumn Header="WLL, кН" Binding="{Binding WorkingLoadKn}" Width="90" />
-                <DataGridTextColumn Header="Запас" Binding="{Binding Reserve}" Width="80" />
-                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="170" />
-              </DataGrid.Columns>
-            </DataGrid>
+            <StackPanel Spacing="4"><TextBlock Text="Таблица элементов" FontSize="20" FontWeight="Bold" /><TextBlock Text="Стабильная таблица без внешних пакетов. Для длинной таблицы используйте горизонтальную прокрутку." FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></StackPanel>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+              <StackPanel MinWidth="1510">
+                <Border Background="#E9EFFA" BorderBrush="#D7DEE9" BorderThickness="1" Padding="6">
+                  <Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150">
+                    <TextBlock Grid.Column="0" Text="№" FontWeight="Bold" />
+                    <TextBlock Grid.Column="1" Text="Тип" FontWeight="Bold" />
+                    <TextBlock Grid.Column="2" Text="Элемент" FontWeight="Bold" />
+                    <TextBlock Grid.Column="3" Text="Пресет" FontWeight="Bold" />
+                    <TextBlock Grid.Column="4" Text="L, м" FontWeight="Bold" />
+                    <TextBlock Grid.Column="5" Text="Кол." FontWeight="Bold" />
+                    <TextBlock Grid.Column="6" Text="Вес в воде" FontWeight="Bold" />
+                    <TextBlock Grid.Column="7" Text="A, м²" FontWeight="Bold" />
+                    <TextBlock Grid.Column="8" Text="Cd" FontWeight="Bold" />
+                    <TextBlock Grid.Column="9" Text="Сила, Н" FontWeight="Bold" />
+                    <TextBlock Grid.Column="10" Text="MBL" FontWeight="Bold" />
+                    <TextBlock Grid.Column="11" Text="WLL" FontWeight="Bold" />
+                    <TextBlock Grid.Column="12" Text="Запас" FontWeight="Bold" />
+                    <TextBlock Grid.Column="13" Text="Статус" FontWeight="Bold" />
+                  </Grid>
+                </Border>
+                <ItemsControl ItemsSource="{Binding ElementRows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border BorderBrush="#D7DEE9" BorderThickness="0,0,1,1" Padding="6">
+                        <Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150">
+                          <TextBlock Grid.Column="0" Text="{Binding Number}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="1" Text="{Binding Kind}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="2" Text="{Binding Title}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="3" Text="{Binding PresetName}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="4" Text="{Binding LengthM}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="5" Text="{Binding Count}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="6" Text="{Binding WeightWaterKg}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="7" Text="{Binding ProjectedAreaM2}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="8" Text="{Binding DragCoefficient}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="9" Text="{Binding CurrentForceN}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="10" Text="{Binding BreakingLoadKn}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="11" Text="{Binding WorkingLoadKn}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="12" Text="{Binding Reserve}" TextWrapping="NoWrap" />
+                          <TextBlock Grid.Column="13" Text="{Binding Status}" TextWrapping="NoWrap" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
           </Grid>
         </Border>
 
