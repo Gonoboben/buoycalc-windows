@@ -1,30 +1,31 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:BuoyCalc.Windows.Views"
         x:Class="BuoyCalc.Windows.Views.Mooring2DWindow"
-        Width="780"
-        Height="880"
-        MinWidth="640"
-        MinHeight="660"
+        Width="820"
+        Height="900"
+        MinWidth="680"
+        MinHeight="700"
         Background="#F3F6FA"
-        Title="2D-схема постановки v0.16">
+        Title="2D-схема постановки v0.17">
 
   <Grid RowDefinitions="Auto,*,Auto" Margin="18" RowSpacing="14">
     <Border Background="#172033" CornerRadius="16" Padding="18">
       <StackPanel Spacing="4">
         <TextBlock Text="2D-схема постановки" FontSize="24" FontWeight="Bold" Foreground="White" />
-        <TextBlock Text="Схематичный вид сбоку с инженерными параметрами: глубина, длина линии, снос и L/Depth." FontSize="13" Foreground="#C7D2E5" />
+        <TextBlock Text="Геометрический вид сбоку: поверхность воды, буй, линия, элементы, якорь, дно, глубина и снос." FontSize="13" Foreground="#C7D2E5" />
       </StackPanel>
     </Border>
 
     <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-      <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+      <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
           <StackPanel Spacing="4">
             <TextBlock Text="Вид сбоку" FontSize="20" FontWeight="Bold" />
-            <TextBlock Text="Схема показывает порядок элементов и основные масштабные параметры. Геометрическая прорисовка линии будет уточняться дальше." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+            <TextBlock Text="Схема строится по глубине и оценочному сносу. Узлы элементов распределены вдоль линии постановки." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
           </StackPanel>
           <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Top">
-            <TextBlock Text="v0.16 scaled 2D" FontSize="12" Foreground="#263653" FontWeight="Bold" />
+            <TextBlock Text="v0.17 geometric 2D" FontSize="12" Foreground="#263653" FontWeight="Bold" />
           </Border>
         </Grid>
 
@@ -39,58 +40,26 @@
         </Border>
 
         <Border Grid.Row="2" Background="#F7F9FC" BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="16" Padding="14">
-          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
-            <Border Background="#DCEBFF" BorderBrush="#A7C7EE" BorderThickness="1" CornerRadius="12" Padding="12">
-              <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="2">
-                  <TextBlock Text="Поверхность воды" FontSize="13" FontWeight="Bold" Foreground="#24466D" />
-                  <TextBlock Text="Буй находится в верхней части схемы" FontSize="11" Foreground="#697386" />
-                </StackPanel>
-                <TextBlock Grid.Column="1" Text="~~~~~~~" FontSize="18" Foreground="#315B9A" VerticalAlignment="Center" />
-              </Grid>
-            </Border>
+          <views:Mooring2DCanvas MinHeight="390" />
+        </Border>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <Grid ColumnDefinitions="110,*,110">
-                <Border Grid.Column="0" Background="#EEF5FF" CornerRadius="12" Padding="10" VerticalAlignment="Stretch">
-                  <StackPanel Spacing="8" VerticalAlignment="Center">
-                    <TextBlock Text="Глубина" FontSize="13" FontWeight="Bold" Foreground="#315B9A" HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding VisualizationDepthText}" FontSize="11" Foreground="#697386" HorizontalAlignment="Center" TextWrapping="Wrap" />
-                    <TextBlock Text="↓" FontSize="24" Foreground="#315B9A" HorizontalAlignment="Center" />
-                  </StackPanel>
-                </Border>
-
-                <Border Grid.Column="1" Background="White" BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="14" Padding="16" Margin="10,0">
-                  <ItemsControl ItemsSource="{Binding SequenceDiagramLines}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Border Background="#F7F9FC" BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="12" Padding="10" Margin="0,0,0,8" HorizontalAlignment="Stretch">
-                          <TextBlock Text="{Binding}" FontSize="13" TextWrapping="Wrap" HorizontalAlignment="Center" />
-                        </Border>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </Border>
-
-                <Border Grid.Column="2" Background="#EEF5FF" CornerRadius="12" Padding="10" VerticalAlignment="Stretch">
-                  <StackPanel Spacing="8" VerticalAlignment="Center">
-                    <TextBlock Text="Снос" FontSize="13" FontWeight="Bold" Foreground="#315B9A" HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding VisualizationOffsetText}" FontSize="11" Foreground="#697386" HorizontalAlignment="Center" TextWrapping="Wrap" />
-                    <TextBlock Text="→" FontSize="24" Foreground="#315B9A" HorizontalAlignment="Center" />
-                  </StackPanel>
-                </Border>
-              </Grid>
+        <Border Grid.Row="3" Background="#F7F9FC" BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="14" Padding="12">
+          <Grid RowDefinitions="Auto,*" RowSpacing="8">
+            <StackPanel Spacing="3">
+              <TextBlock Text="Цепочка элементов" FontSize="15" FontWeight="Bold" />
+              <TextBlock Text="Текстовая последовательность остаётся ниже как проверочный список." FontSize="11" Foreground="#697386" TextWrapping="Wrap" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" MaxHeight="160" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding SequenceDiagramLines}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="White" BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,0,6" HorizontalAlignment="Stretch">
+                      <TextBlock Text="{Binding}" FontSize="12" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </ScrollViewer>
-
-            <Border Grid.Row="2" Background="#E7DED3" BorderBrush="#C9B8A8" BorderThickness="1" CornerRadius="12" Padding="12">
-              <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="2">
-                  <TextBlock Text="Дно / грунт" FontSize="13" FontWeight="Bold" Foreground="#5C4634" />
-                  <TextBlock Text="Якорь находится в нижней части схемы" FontSize="11" Foreground="#697386" />
-                </StackPanel>
-                <TextBlock Grid.Column="1" Text="▰▰▰" FontSize="18" Foreground="#5C4634" VerticalAlignment="Center" />
-              </Grid>
-            </Border>
           </Grid>
         </Border>
       </Grid>
@@ -98,7 +67,7 @@
 
     <Border Grid.Row="2" Background="White" CornerRadius="16" Padding="14" BoxShadow="0 2 12 #18000000">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-        <TextBlock Text="Следующий этап: прорисовать линию геометрически по глубине, длине линии, сносу и положению приборов." FontSize="12" Foreground="#697386" TextWrapping="Wrap" VerticalAlignment="Center" />
+        <TextBlock Text="Следующий этап: добавить эту геометрическую 2D-схему в PDF и затем подготовить простую 3D/isometric-визуализацию." FontSize="12" Foreground="#697386" TextWrapping="Wrap" VerticalAlignment="Center" />
         <Button Grid.Column="1" Content="Закрыть" Click="CloseButton_Click" Padding="18,10" />
       </Grid>
     </Border>
