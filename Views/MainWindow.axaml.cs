@@ -101,7 +101,10 @@ public partial class MainWindow : Window
                 viewModel.ResultText,
                 viewModel.SequenceDiagramLines,
                 viewModel.ElementRows,
-                viewModel.ReportText);
+                viewModel.ReportText,
+                viewModel.VisualizationDepthM,
+                viewModel.VisualizationLineLengthM,
+                viewModel.VisualizationOffsetM);
 
             viewModel.ProjectStatusText = $"PDF сохранён: {path}";
         }
