@@ -6,7 +6,7 @@
         MinWidth="1080"
         MinHeight="720"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.3.1">
+        Title="BuoyCalc Windows v0.4">
 
   <Grid RowDefinitions="Auto,*">
 
@@ -28,7 +28,7 @@
                 CornerRadius="12"
                 Padding="14,8"
                 VerticalAlignment="Center">
-          <TextBlock Text="v0.3.1 cleaner cards"
+          <TextBlock Text="v0.4 JSON project save"
                      Foreground="#C7D2E5"
                      FontSize="13" />
         </Border>
@@ -48,8 +48,21 @@
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
             <StackPanel Spacing="10">
               <TextBlock Text="Проект" FontSize="18" FontWeight="Bold" />
-              <TextBlock Text="Название и исходная настройка расчёта" FontSize="12" Foreground="#697386" />
+              <TextBlock Text="Название, сохранение и загрузка расчёта" FontSize="12" Foreground="#697386" />
               <TextBox Text="{Binding ProjectName}" Watermark="Название проекта" />
+
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button Content="Новый" Command="{Binding NewProjectCommand}" />
+                <Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveProjectCommand}" />
+                <Button Grid.Column="2" Content="Загрузить" Command="{Binding LoadProjectCommand}" />
+              </Grid>
+
+              <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
+                <TextBlock Text="{Binding ProjectStatusText}"
+                           FontSize="12"
+                           Foreground="#697386"
+                           TextWrapping="Wrap" />
+              </Border>
             </StackPanel>
           </Border>
 
