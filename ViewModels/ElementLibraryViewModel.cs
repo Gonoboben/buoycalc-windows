@@ -37,6 +37,15 @@ public sealed class ElementLibraryViewModel : ViewModelBase
     private string _connectorCd = "1.2";
     private string _connectorNote = string.Empty;
 
+    private AnchorLibraryItem? _selectedAnchor;
+    private string _anchorName = string.Empty;
+    private string _anchorType = string.Empty;
+    private string _anchorMaterial = string.Empty;
+    private string _anchorWeightAir = "0";
+    private string _anchorVolume = "0";
+    private string _anchorHoldingCoefficient = "1.0";
+    private string _anchorNote = string.Empty;
+
     private string _statusText = string.Empty;
 
     public ElementLibraryViewModel()
@@ -44,6 +53,7 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         Buoys = new ObservableCollection<BuoyLibraryItem>();
         Ropes = new ObservableCollection<RopeLibraryItem>();
         Connectors = new ObservableCollection<ConnectorLibraryItem>();
+        Anchors = new ObservableCollection<AnchorLibraryItem>();
 
         NewBuoyCommand = new RelayCommand(NewBuoy);
         SaveBuoyCommand = new RelayCommand(SaveBuoy);
@@ -57,64 +67,57 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         SaveConnectorCommand = new RelayCommand(SaveConnector);
         DeleteConnectorCommand = new RelayCommand(DeleteConnector);
 
+        NewAnchorCommand = new RelayCommand(NewAnchor);
+        SaveAnchorCommand = new RelayCommand(SaveAnchor);
+        DeleteAnchorCommand = new RelayCommand(DeleteAnchor);
+
         RefreshCommand = new RelayCommand(RefreshAll);
 
         RefreshAll();
-        StatusText = "Библиотека элементов открыта. Доступны разделы: буи, линии и соединители.";
+        StatusText = "Библиотека элементов открыта. Доступны разделы: буи, линии, соединители и якоря.";
     }
 
     public ObservableCollection<BuoyLibraryItem> Buoys { get; }
     public ObservableCollection<RopeLibraryItem> Ropes { get; }
     public ObservableCollection<ConnectorLibraryItem> Connectors { get; }
+    public ObservableCollection<AnchorLibraryItem> Anchors { get; }
 
     public ICommand NewBuoyCommand { get; }
     public ICommand SaveBuoyCommand { get; }
     public ICommand DeleteBuoyCommand { get; }
-
     public ICommand NewRopeCommand { get; }
     public ICommand SaveRopeCommand { get; }
     public ICommand DeleteRopeCommand { get; }
-
     public ICommand NewConnectorCommand { get; }
     public ICommand SaveConnectorCommand { get; }
     public ICommand DeleteConnectorCommand { get; }
-
+    public ICommand NewAnchorCommand { get; }
+    public ICommand SaveAnchorCommand { get; }
+    public ICommand DeleteAnchorCommand { get; }
     public ICommand RefreshCommand { get; }
 
     public BuoyLibraryItem? SelectedBuoy
     {
         get => _selectedBuoy;
-        set
-        {
-            if (SetProperty(ref _selectedBuoy, value))
-            {
-                LoadSelectedBuoyIntoForm();
-            }
-        }
+        set { if (SetProperty(ref _selectedBuoy, value)) LoadSelectedBuoyIntoForm(); }
     }
 
     public RopeLibraryItem? SelectedRope
     {
         get => _selectedRope;
-        set
-        {
-            if (SetProperty(ref _selectedRope, value))
-            {
-                LoadSelectedRopeIntoForm();
-            }
-        }
+        set { if (SetProperty(ref _selectedRope, value)) LoadSelectedRopeIntoForm(); }
     }
 
     public ConnectorLibraryItem? SelectedConnector
     {
         get => _selectedConnector;
-        set
-        {
-            if (SetProperty(ref _selectedConnector, value))
-            {
-                LoadSelectedConnectorIntoForm();
-            }
-        }
+        set { if (SetProperty(ref _selectedConnector, value)) LoadSelectedConnectorIntoForm(); }
+    }
+
+    public AnchorLibraryItem? SelectedAnchor
+    {
+        get => _selectedAnchor;
+        set { if (SetProperty(ref _selectedAnchor, value)) LoadSelectedAnchorIntoForm(); }
     }
 
     public string BuoyName { get => _buoyName; set => SetProperty(ref _buoyName, value); }
@@ -141,6 +144,14 @@ public sealed class ElementLibraryViewModel : ViewModelBase
     public string ConnectorCd { get => _connectorCd; set => SetProperty(ref _connectorCd, value); }
     public string ConnectorNote { get => _connectorNote; set => SetProperty(ref _connectorNote, value); }
 
+    public string AnchorName { get => _anchorName; set => SetProperty(ref _anchorName, value); }
+    public string AnchorType { get => _anchorType; set => SetProperty(ref _anchorType, value); }
+    public string AnchorMaterial { get => _anchorMaterial; set => SetProperty(ref _anchorMaterial, value); }
+    public string AnchorWeightAir { get => _anchorWeightAir; set => SetProperty(ref _anchorWeightAir, value); }
+    public string AnchorVolume { get => _anchorVolume; set => SetProperty(ref _anchorVolume, value); }
+    public string AnchorHoldingCoefficient { get => _anchorHoldingCoefficient; set => SetProperty(ref _anchorHoldingCoefficient, value); }
+    public string AnchorNote { get => _anchorNote; set => SetProperty(ref _anchorNote, value); }
+
     public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
 
     private void RefreshAll()
@@ -148,49 +159,41 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         RefreshBuoys(SelectedBuoy?.Id);
         RefreshRopes(SelectedRope?.Id);
         RefreshConnectors(SelectedConnector?.Id);
-        StatusText = $"Библиотека обновлена. Буёв: {Buoys.Count}. Линий: {Ropes.Count}. Соединителей: {Connectors.Count}.";
+        RefreshAnchors(SelectedAnchor?.Id);
+        StatusText = $"Библиотека обновлена. Буёв: {Buoys.Count}. Линий: {Ropes.Count}. Соединителей: {Connectors.Count}. Якорей: {Anchors.Count}.";
     }
 
     private void RefreshBuoys(string? selectedId)
     {
         Buoys.Clear();
-        foreach (var buoy in BuoyLibraryStorage.LoadAllBuoys())
-        {
-            Buoys.Add(buoy);
-        }
-
+        foreach (var buoy in BuoyLibraryStorage.LoadAllBuoys()) Buoys.Add(buoy);
         SelectedBuoy = Buoys.FirstOrDefault(x => x.Id == selectedId) ?? Buoys.FirstOrDefault();
     }
 
     private void RefreshRopes(string? selectedId)
     {
         Ropes.Clear();
-        foreach (var rope in RopeLibraryStorage.LoadAllRopes())
-        {
-            Ropes.Add(rope);
-        }
-
+        foreach (var rope in RopeLibraryStorage.LoadAllRopes()) Ropes.Add(rope);
         SelectedRope = Ropes.FirstOrDefault(x => x.Id == selectedId) ?? Ropes.FirstOrDefault();
     }
 
     private void RefreshConnectors(string? selectedId)
     {
         Connectors.Clear();
-        foreach (var connector in ConnectorLibraryStorage.LoadAllConnectors())
-        {
-            Connectors.Add(connector);
-        }
-
+        foreach (var connector in ConnectorLibraryStorage.LoadAllConnectors()) Connectors.Add(connector);
         SelectedConnector = Connectors.FirstOrDefault(x => x.Id == selectedId) ?? Connectors.FirstOrDefault();
+    }
+
+    private void RefreshAnchors(string? selectedId)
+    {
+        Anchors.Clear();
+        foreach (var anchor in AnchorLibraryStorage.LoadAllAnchors()) Anchors.Add(anchor);
+        SelectedAnchor = Anchors.FirstOrDefault(x => x.Id == selectedId) ?? Anchors.FirstOrDefault();
     }
 
     private void LoadSelectedBuoyIntoForm()
     {
-        if (SelectedBuoy is null)
-        {
-            return;
-        }
-
+        if (SelectedBuoy is null) return;
         BuoyName = SelectedBuoy.Name;
         BuoyVolume = FormatDouble(SelectedBuoy.VolumeM3);
         BuoyWeight = FormatDouble(SelectedBuoy.WeightKg);
@@ -201,11 +204,7 @@ public sealed class ElementLibraryViewModel : ViewModelBase
 
     private void LoadSelectedRopeIntoForm()
     {
-        if (SelectedRope is null)
-        {
-            return;
-        }
-
+        if (SelectedRope is null) return;
         RopeName = SelectedRope.Name;
         RopeMaterial = SelectedRope.Material;
         RopeDiameter = FormatDouble(SelectedRope.DiameterMm);
@@ -217,11 +216,7 @@ public sealed class ElementLibraryViewModel : ViewModelBase
 
     private void LoadSelectedConnectorIntoForm()
     {
-        if (SelectedConnector is null)
-        {
-            return;
-        }
-
+        if (SelectedConnector is null) return;
         ConnectorName = SelectedConnector.Name;
         ConnectorType = SelectedConnector.Type;
         ConnectorWeightAir = FormatDouble(SelectedConnector.WeightAirKg);
@@ -230,6 +225,18 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         ConnectorArea = FormatDouble(SelectedConnector.ProjectedAreaM2);
         ConnectorCd = FormatDouble(SelectedConnector.DragCoefficient);
         ConnectorNote = SelectedConnector.Note;
+    }
+
+    private void LoadSelectedAnchorIntoForm()
+    {
+        if (SelectedAnchor is null) return;
+        AnchorName = SelectedAnchor.Name;
+        AnchorType = SelectedAnchor.Type;
+        AnchorMaterial = SelectedAnchor.Material;
+        AnchorWeightAir = FormatDouble(SelectedAnchor.WeightAirKg);
+        AnchorVolume = FormatDouble(SelectedAnchor.VolumeM3);
+        AnchorHoldingCoefficient = FormatDouble(SelectedAnchor.BaseHoldingCoefficient);
+        AnchorNote = SelectedAnchor.Note;
     }
 
     private void NewBuoy()
@@ -248,19 +255,7 @@ public sealed class ElementLibraryViewModel : ViewModelBase
     {
         var name = string.IsNullOrWhiteSpace(BuoyName) ? "Пользовательский буй" : BuoyName.Trim();
         var id = SelectedBuoy is { Source: "User" } ? SelectedBuoy.Id : string.Empty;
-
-        var buoy = new BuoyLibraryItem
-        {
-            Id = id,
-            Source = "User",
-            Name = name,
-            VolumeM3 = Parse(BuoyVolume),
-            WeightKg = Parse(BuoyWeight),
-            ProjectedAreaM2 = Parse(BuoyArea),
-            DragCoefficient = Parse(BuoyCd),
-            Note = BuoyNote
-        };
-
+        var buoy = new BuoyLibraryItem { Id = id, Source = "User", Name = name, VolumeM3 = Parse(BuoyVolume), WeightKg = Parse(BuoyWeight), ProjectedAreaM2 = Parse(BuoyArea), DragCoefficient = Parse(BuoyCd), Note = BuoyNote };
         BuoyLibraryStorage.UpsertUserBuoy(buoy);
         RefreshBuoys(buoy.Id);
         StatusText = $"Сохранён пользовательский буй: {name}";
@@ -268,24 +263,12 @@ public sealed class ElementLibraryViewModel : ViewModelBase
 
     private void DeleteBuoy()
     {
-        if (SelectedBuoy is null)
-        {
-            StatusText = "Выберите пользовательский буй для удаления.";
-            return;
-        }
-
-        if (SelectedBuoy.Source != "User" || SelectedBuoy.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
-        {
-            StatusText = "Встроенный буй удалить нельзя. Удалять можно только пользовательские буи.";
-            return;
-        }
-
+        if (SelectedBuoy is null) { StatusText = "Выберите пользовательский буй для удаления."; return; }
+        if (SelectedBuoy.Source != "User" || SelectedBuoy.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) { StatusText = "Встроенный буй удалить нельзя. Удалять можно только пользовательские буи."; return; }
         var deletedName = SelectedBuoy.Name;
         var deleted = BuoyLibraryStorage.DeleteUserBuoy(SelectedBuoy.Id);
         RefreshBuoys(null);
-        StatusText = deleted
-            ? $"Удалён пользовательский буй: {deletedName}"
-            : "Пользовательский буй не найден в файле библиотеки.";
+        StatusText = deleted ? $"Удалён пользовательский буй: {deletedName}" : "Пользовательский буй не найден в файле библиотеки.";
     }
 
     private void NewRope()
@@ -305,20 +288,7 @@ public sealed class ElementLibraryViewModel : ViewModelBase
     {
         var name = string.IsNullOrWhiteSpace(RopeName) ? "Пользовательская линия" : RopeName.Trim();
         var id = SelectedRope is { Source: "User" } ? SelectedRope.Id : string.Empty;
-
-        var rope = new RopeLibraryItem
-        {
-            Id = id,
-            Source = "User",
-            Name = name,
-            Material = RopeMaterial,
-            DiameterMm = Parse(RopeDiameter),
-            BreakingLoadKn = Parse(RopeBreakingLoad),
-            WeightWaterKgM = Parse(RopeWeightWater),
-            DragCoefficient = Parse(RopeCd),
-            Note = RopeNote
-        };
-
+        var rope = new RopeLibraryItem { Id = id, Source = "User", Name = name, Material = RopeMaterial, DiameterMm = Parse(RopeDiameter), BreakingLoadKn = Parse(RopeBreakingLoad), WeightWaterKgM = Parse(RopeWeightWater), DragCoefficient = Parse(RopeCd), Note = RopeNote };
         RopeLibraryStorage.UpsertUserRope(rope);
         RefreshRopes(rope.Id);
         StatusText = $"Сохранена пользовательская линия: {name}";
@@ -326,24 +296,12 @@ public sealed class ElementLibraryViewModel : ViewModelBase
 
     private void DeleteRope()
     {
-        if (SelectedRope is null)
-        {
-            StatusText = "Выберите пользовательскую линию для удаления.";
-            return;
-        }
-
-        if (SelectedRope.Source != "User" || SelectedRope.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
-        {
-            StatusText = "Встроенную линию удалить нельзя. Удалять можно только пользовательские линии.";
-            return;
-        }
-
+        if (SelectedRope is null) { StatusText = "Выберите пользовательскую линию для удаления."; return; }
+        if (SelectedRope.Source != "User" || SelectedRope.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) { StatusText = "Встроенную линию удалить нельзя. Удалять можно только пользовательские линии."; return; }
         var deletedName = SelectedRope.Name;
         var deleted = RopeLibraryStorage.DeleteUserRope(SelectedRope.Id);
         RefreshRopes(null);
-        StatusText = deleted
-            ? $"Удалена пользовательская линия: {deletedName}"
-            : "Пользовательская линия не найдена в файле библиотеки.";
+        StatusText = deleted ? $"Удалена пользовательская линия: {deletedName}" : "Пользовательская линия не найдена в файле библиотеки.";
     }
 
     private void NewConnector()
@@ -364,21 +322,7 @@ public sealed class ElementLibraryViewModel : ViewModelBase
     {
         var name = string.IsNullOrWhiteSpace(ConnectorName) ? "Пользовательский соединитель" : ConnectorName.Trim();
         var id = SelectedConnector is { Source: "User" } ? SelectedConnector.Id : string.Empty;
-
-        var connector = new ConnectorLibraryItem
-        {
-            Id = id,
-            Source = "User",
-            Name = name,
-            Type = ConnectorType,
-            WeightAirKg = Parse(ConnectorWeightAir),
-            VolumeM3 = Parse(ConnectorVolume),
-            BreakingLoadKn = Parse(ConnectorBreakingLoad),
-            ProjectedAreaM2 = Parse(ConnectorArea),
-            DragCoefficient = Parse(ConnectorCd),
-            Note = ConnectorNote
-        };
-
+        var connector = new ConnectorLibraryItem { Id = id, Source = "User", Name = name, Type = ConnectorType, WeightAirKg = Parse(ConnectorWeightAir), VolumeM3 = Parse(ConnectorVolume), BreakingLoadKn = Parse(ConnectorBreakingLoad), ProjectedAreaM2 = Parse(ConnectorArea), DragCoefficient = Parse(ConnectorCd), Note = ConnectorNote };
         ConnectorLibraryStorage.UpsertUserConnector(connector);
         RefreshConnectors(connector.Id);
         StatusText = $"Сохранён пользовательский соединитель: {name}";
@@ -386,24 +330,45 @@ public sealed class ElementLibraryViewModel : ViewModelBase
 
     private void DeleteConnector()
     {
-        if (SelectedConnector is null)
-        {
-            StatusText = "Выберите пользовательский соединитель для удаления.";
-            return;
-        }
-
-        if (SelectedConnector.Source != "User" || SelectedConnector.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
-        {
-            StatusText = "Встроенный соединитель удалить нельзя. Удалять можно только пользовательские соединители.";
-            return;
-        }
-
+        if (SelectedConnector is null) { StatusText = "Выберите пользовательский соединитель для удаления."; return; }
+        if (SelectedConnector.Source != "User" || SelectedConnector.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) { StatusText = "Встроенный соединитель удалить нельзя. Удалять можно только пользовательские соединители."; return; }
         var deletedName = SelectedConnector.Name;
         var deleted = ConnectorLibraryStorage.DeleteUserConnector(SelectedConnector.Id);
         RefreshConnectors(null);
-        StatusText = deleted
-            ? $"Удалён пользовательский соединитель: {deletedName}"
-            : "Пользовательский соединитель не найден в файле библиотеки.";
+        StatusText = deleted ? $"Удалён пользовательский соединитель: {deletedName}" : "Пользовательский соединитель не найден в файле библиотеки.";
+    }
+
+    private void NewAnchor()
+    {
+        SelectedAnchor = null;
+        AnchorName = "Новый якорь";
+        AnchorType = "Deadweight";
+        AnchorMaterial = "Concrete / Бетон";
+        AnchorWeightAir = "500";
+        AnchorVolume = "0.2";
+        AnchorHoldingCoefficient = "1.0";
+        AnchorNote = "";
+        StatusText = "Заполните параметры нового якоря и нажмите «Сохранить».";
+    }
+
+    private void SaveAnchor()
+    {
+        var name = string.IsNullOrWhiteSpace(AnchorName) ? "Пользовательский якорь" : AnchorName.Trim();
+        var id = SelectedAnchor is { Source: "User" } ? SelectedAnchor.Id : string.Empty;
+        var anchor = new AnchorLibraryItem { Id = id, Source = "User", Name = name, Type = AnchorType, Material = AnchorMaterial, WeightAirKg = Parse(AnchorWeightAir), VolumeM3 = Parse(AnchorVolume), BaseHoldingCoefficient = Parse(AnchorHoldingCoefficient), Note = AnchorNote };
+        AnchorLibraryStorage.UpsertUserAnchor(anchor);
+        RefreshAnchors(anchor.Id);
+        StatusText = $"Сохранён пользовательский якорь: {name}";
+    }
+
+    private void DeleteAnchor()
+    {
+        if (SelectedAnchor is null) { StatusText = "Выберите пользовательский якорь для удаления."; return; }
+        if (SelectedAnchor.Source != "User" || SelectedAnchor.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) { StatusText = "Встроенный якорь удалить нельзя. Удалять можно только пользовательские якоря."; return; }
+        var deletedName = SelectedAnchor.Name;
+        var deleted = AnchorLibraryStorage.DeleteUserAnchor(SelectedAnchor.Id);
+        RefreshAnchors(null);
+        StatusText = deleted ? $"Удалён пользовательский якорь: {deletedName}" : "Пользовательский якорь не найден в файле библиотеки.";
     }
 
     private static double Parse(string value)
