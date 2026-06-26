@@ -14,11 +14,12 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     private string _title = "Участок линии";
     private string _ropePresetStorageId = "built-in:polyester_20";
     private string _connectorPresetStorageId = "built-in:shackle_55";
+    private string _payloadPresetStorageId = "built-in:adcp_40";
     private string _lengthM = "10";
     private string _count = "1";
-    private string _payloadWeightAirKg = "0";
-    private string _payloadVolumeM3 = "0";
-    private string _payloadProjectedAreaM2 = "0";
+    private string _payloadWeightAirKg = "40";
+    private string _payloadVolumeM3 = "0.015";
+    private string _payloadProjectedAreaM2 = "0.05";
     private string _payloadDragCoefficient = "1.0";
 
     public AssemblyItemViewModel()
@@ -37,17 +38,14 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public IReadOnlyList<string> KindOptions { get; } = new[] { "Line", "Connector", "Payload" };
     public IReadOnlyList<string> RopePresetOptions => RopeLibraryStorage.LoadAllRopes().Select(x => x.DisplayName).ToList();
     public IReadOnlyList<string> ConnectorPresetOptions => ConnectorLibraryStorage.LoadAllConnectors().Select(x => x.DisplayName).ToList();
+    public IReadOnlyList<string> PayloadPresetOptions => PayloadLibraryStorage.LoadAllPayloads().Select(x => x.DisplayName).ToList();
 
     public ICommand RemoveCommand { get; }
     public ICommand MoveUpCommand { get; }
     public ICommand MoveDownCommand { get; }
     public ICommand DuplicateCommand { get; }
 
-    public bool IsEnabled
-    {
-        get => _isEnabled;
-        set => SetProperty(ref _isEnabled, value);
-    }
+    public bool IsEnabled { get => _isEnabled; set => SetProperty(ref _isEnabled, value); }
 
     public string Kind
     {
@@ -56,11 +54,8 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         {
             if (SetProperty(ref _kind, value))
             {
-                if (IsConnector)
-                {
-                    Count = "1";
-                }
-
+                if (IsConnector) Count = "1";
+                if (IsPayload) ApplyPayloadPreset();
                 OnPropertyChanged(nameof(KindDisplayName));
                 OnPropertyChanged(nameof(IsLine));
                 OnPropertyChanged(nameof(IsConnector));
@@ -84,13 +79,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public string Title
     {
         get => _title;
-        set
-        {
-            if (SetProperty(ref _title, value))
-            {
-                OnPropertyChanged(nameof(Summary));
-            }
-        }
+        set { if (SetProperty(ref _title, value)) OnPropertyChanged(nameof(Summary)); }
     }
 
     public string RopePresetId
@@ -149,65 +138,42 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         }
     }
 
-    public string LengthM
+    public string PayloadPresetId
     {
-        get => _lengthM;
+        get => GetPayloadDisplayName(_payloadPresetStorageId);
         set
         {
-            if (SetProperty(ref _lengthM, value))
+            var nextId = ResolvePayloadId(value);
+            if (SetProperty(ref _payloadPresetStorageId, nextId))
             {
+                ApplyPayloadPreset();
+                OnPropertyChanged(nameof(PayloadPresetId));
                 OnPropertyChanged(nameof(Summary));
             }
         }
     }
 
-    public string Count
+    public string PayloadPresetStorageId
     {
-        get => _count;
+        get => _payloadPresetStorageId;
         set
         {
-            if (SetProperty(ref _count, value))
+            var nextId = ResolvePayloadId(value);
+            if (SetProperty(ref _payloadPresetStorageId, nextId))
             {
+                ApplyPayloadPreset();
+                OnPropertyChanged(nameof(PayloadPresetId));
                 OnPropertyChanged(nameof(Summary));
             }
         }
     }
 
-    public string PayloadWeightAirKg
-    {
-        get => _payloadWeightAirKg;
-        set
-        {
-            if (SetProperty(ref _payloadWeightAirKg, value))
-            {
-                OnPropertyChanged(nameof(Summary));
-            }
-        }
-    }
-
-    public string PayloadVolumeM3
-    {
-        get => _payloadVolumeM3;
-        set => SetProperty(ref _payloadVolumeM3, value);
-    }
-
-    public string PayloadProjectedAreaM2
-    {
-        get => _payloadProjectedAreaM2;
-        set
-        {
-            if (SetProperty(ref _payloadProjectedAreaM2, value))
-            {
-                OnPropertyChanged(nameof(Summary));
-            }
-        }
-    }
-
-    public string PayloadDragCoefficient
-    {
-        get => _payloadDragCoefficient;
-        set => SetProperty(ref _payloadDragCoefficient, value);
-    }
+    public string LengthM { get => _lengthM; set { if (SetProperty(ref _lengthM, value)) OnPropertyChanged(nameof(Summary)); } }
+    public string Count { get => _count; set { if (SetProperty(ref _count, value)) OnPropertyChanged(nameof(Summary)); } }
+    public string PayloadWeightAirKg { get => _payloadWeightAirKg; set { if (SetProperty(ref _payloadWeightAirKg, value)) OnPropertyChanged(nameof(Summary)); } }
+    public string PayloadVolumeM3 { get => _payloadVolumeM3; set => SetProperty(ref _payloadVolumeM3, value); }
+    public string PayloadProjectedAreaM2 { get => _payloadProjectedAreaM2; set { if (SetProperty(ref _payloadProjectedAreaM2, value)) OnPropertyChanged(nameof(Summary)); } }
+    public string PayloadDragCoefficient { get => _payloadDragCoefficient; set { if (SetProperty(ref _payloadDragCoefficient, value)) OnPropertyChanged(nameof(Summary)); } }
 
     public string Summary
     {
@@ -216,7 +182,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             return ParseKind(Kind) switch
             {
                 AssemblyItemKind.Connector => $"{GetConnectorDisplayName(_connectorPresetStorageId)} · 1 элемент",
-                AssemblyItemKind.Payload => $"{PayloadWeightAirKg} кг · A={PayloadProjectedAreaM2} м² · Cd={PayloadDragCoefficient}",
+                AssemblyItemKind.Payload => $"{GetPayloadDisplayName(_payloadPresetStorageId)} · {PayloadWeightAirKg} кг",
                 _ => $"{GetRopeDisplayName(_ropePresetStorageId)} · {LengthM} м"
             };
         }
@@ -228,6 +194,8 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(RopePresetId));
         OnPropertyChanged(nameof(ConnectorPresetOptions));
         OnPropertyChanged(nameof(ConnectorPresetId));
+        OnPropertyChanged(nameof(PayloadPresetOptions));
+        OnPropertyChanged(nameof(PayloadPresetId));
         OnPropertyChanged(nameof(Summary));
     }
 
@@ -240,6 +208,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             Title = $"{Title} копия",
             RopePresetStorageId = RopePresetStorageId,
             ConnectorPresetStorageId = ConnectorPresetStorageId,
+            PayloadPresetStorageId = PayloadPresetStorageId,
             LengthM = LengthM,
             Count = IsConnector ? "1" : Count,
             PayloadWeightAirKg = PayloadWeightAirKg,
@@ -268,6 +237,19 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             ParseDouble(PayloadDragCoefficient));
     }
 
+    private void ApplyPayloadPreset()
+    {
+        var payload = PayloadLibraryStorage.ById(_payloadPresetStorageId);
+        PayloadWeightAirKg = FormatDouble(payload.WeightAirKg);
+        PayloadVolumeM3 = FormatDouble(payload.VolumeM3);
+        PayloadProjectedAreaM2 = FormatDouble(payload.ProjectedAreaM2);
+        PayloadDragCoefficient = FormatDouble(payload.DragCoefficient);
+        if (string.IsNullOrWhiteSpace(Title) || Title is "Новый прибор" or "Прибор / нагрузка")
+        {
+            Title = payload.Name;
+        }
+    }
+
     private static string GetRopeDisplayName(string id)
     {
         var rope = RopeLibraryStorage.LoadAllRopes().FirstOrDefault(x => x.Id == id || x.Id == "built-in:" + id);
@@ -276,23 +258,10 @@ public sealed class AssemblyItemViewModel : ViewModelBase
 
     private static string ResolveRopeId(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "built-in:polyester_20";
-        }
-
-        var ropes = RopeLibraryStorage.LoadAllRopes();
-        var byDisplayName = ropes.FirstOrDefault(x => x.DisplayName == value);
-        if (byDisplayName is not null)
-        {
-            return byDisplayName.Id;
-        }
-
-        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
-        {
-            return value;
-        }
-
+        if (string.IsNullOrWhiteSpace(value)) return "built-in:polyester_20";
+        var byDisplayName = RopeLibraryStorage.LoadAllRopes().FirstOrDefault(x => x.DisplayName == value);
+        if (byDisplayName is not null) return byDisplayName.Id;
+        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) return value;
         var builtIn = RopeCatalog.Presets.FirstOrDefault(x => x.Id == value);
         return builtIn is not null ? "built-in:" + value : value;
     }
@@ -305,25 +274,27 @@ public sealed class AssemblyItemViewModel : ViewModelBase
 
     private static string ResolveConnectorId(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "built-in:shackle_55";
-        }
-
-        var connectors = ConnectorLibraryStorage.LoadAllConnectors();
-        var byDisplayName = connectors.FirstOrDefault(x => x.DisplayName == value);
-        if (byDisplayName is not null)
-        {
-            return byDisplayName.Id;
-        }
-
-        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
-        {
-            return value;
-        }
-
+        if (string.IsNullOrWhiteSpace(value)) return "built-in:shackle_55";
+        var byDisplayName = ConnectorLibraryStorage.LoadAllConnectors().FirstOrDefault(x => x.DisplayName == value);
+        if (byDisplayName is not null) return byDisplayName.Id;
+        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) return value;
         var builtIn = ConnectorCatalog.Presets.FirstOrDefault(x => x.Id == value);
         return builtIn is not null ? "built-in:" + value : value;
+    }
+
+    private static string GetPayloadDisplayName(string id)
+    {
+        var payload = PayloadLibraryStorage.LoadAllPayloads().FirstOrDefault(x => x.Id == id || x.Id == "built-in:" + id);
+        return payload?.DisplayName ?? id;
+    }
+
+    private static string ResolvePayloadId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "built-in:adcp_40";
+        var byDisplayName = PayloadLibraryStorage.LoadAllPayloads().FirstOrDefault(x => x.DisplayName == value);
+        if (byDisplayName is not null) return byDisplayName.Id;
+        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) return value;
+        return value;
     }
 
     private static AssemblyItemKind ParseKind(string value)
@@ -339,13 +310,16 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     private static double ParseDouble(string value)
     {
         value = (value ?? string.Empty).Replace(',', '.');
-        return double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var result)
-            ? result
-            : 0;
+        return double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : 0;
     }
 
     private static int ParseInt(string value)
     {
         return int.TryParse(value, out var result) ? result : 0;
+    }
+
+    private static string FormatDouble(double value)
+    {
+        return value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
     }
 }
