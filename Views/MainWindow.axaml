@@ -6,7 +6,7 @@
         MinWidth="1080"
         MinHeight="720"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.5">
+        Title="BuoyCalc Windows v0.5.1">
 
   <Grid RowDefinitions="Auto,*">
 
@@ -17,7 +17,7 @@
           <TextBlock Text="Предварительный инженерный расчёт буйковой постановки" FontSize="13" Foreground="#C7D2E5" />
         </StackPanel>
         <Border Grid.Column="1" Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
-          <TextBlock Text="v0.5 buoy library" Foreground="#C7D2E5" FontSize="13" />
+          <TextBlock Text="v0.5.1 auto buoy selection" Foreground="#C7D2E5" FontSize="13" />
         </Border>
       </Grid>
     </Border>
@@ -108,14 +108,14 @@
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <TextBlock Text="Библиотека буёв" FontSize="12" Foreground="#697386" />
-                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Можно выбрать встроенный пресет буя или сохранить текущие значения как пользовательский буй. Пользовательская библиотека хранится в Документы\BuoyCalc\Libraries\user-buoys.json." />
+                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Выберите встроенный или пользовательский буй. Выбранный буй сразу заполняет поля ниже. Пользовательская библиотека хранится в Документы\BuoyCalc\Libraries\user-buoys.json." />
                 </StackPanel>
                 <ComboBox ItemsSource="{Binding BuoyPresets}" SelectedItem="{Binding SelectedBuoyPreset}" HorizontalAlignment="Stretch" />
               </StackPanel>
 
               <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
-                <Button Content="Применить" Command="{Binding ApplyBuoyPresetCommand}" />
-                <Button Grid.Column="1" Content="Сохранить буй" Command="{Binding SaveBuoyPresetCommand}" />
+                <Button Content="Сохранить буй" Command="{Binding SaveBuoyPresetCommand}" />
+                <Button Grid.Column="1" Content="Удалить буй" Command="{Binding DeleteBuoyPresetCommand}" />
                 <Button Grid.Column="2" Content="Обновить" Command="{Binding RefreshBuoyLibraryCommand}" />
               </Grid>
 
