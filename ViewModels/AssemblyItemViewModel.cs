@@ -55,6 +55,11 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         {
             if (SetProperty(ref _kind, value))
             {
+                if (IsConnector)
+                {
+                    Count = "1";
+                }
+
                 OnPropertyChanged(nameof(KindDisplayName));
                 OnPropertyChanged(nameof(IsLine));
                 OnPropertyChanged(nameof(IsConnector));
@@ -177,7 +182,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         {
             return ParseKind(Kind) switch
             {
-                AssemblyItemKind.Connector => $"{ConnectorPresetId} · {Count} шт.",
+                AssemblyItemKind.Connector => $"{ConnectorPresetId} · 1 элемент",
                 AssemblyItemKind.Payload => $"{PayloadWeightAirKg} кг · A={PayloadProjectedAreaM2} м² · Cd={PayloadDragCoefficient}",
                 _ => $"{RopePresetId} · {LengthM} м"
             };
@@ -194,7 +199,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             RopePresetId = RopePresetId,
             ConnectorPresetId = ConnectorPresetId,
             LengthM = LengthM,
-            Count = Count,
+            Count = IsConnector ? "1" : Count,
             PayloadWeightAirKg = PayloadWeightAirKg,
             PayloadVolumeM3 = PayloadVolumeM3,
             PayloadProjectedAreaM2 = PayloadProjectedAreaM2,
@@ -205,6 +210,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public AssemblyItemInput ToInput()
     {
         var kind = ParseKind(Kind);
+        var count = kind == AssemblyItemKind.Connector ? 1 : ParseInt(Count);
 
         return new AssemblyItemInput(
             kind,
@@ -213,7 +219,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             kind == AssemblyItemKind.Line ? RopeCatalog.ById(RopePresetId) : null,
             kind == AssemblyItemKind.Connector ? ConnectorCatalog.ById(ConnectorPresetId) : null,
             ParseDouble(LengthM),
-            ParseInt(Count),
+            count,
             ParseDouble(PayloadWeightAirKg),
             ParseDouble(PayloadVolumeM3),
             ParseDouble(PayloadProjectedAreaM2),
