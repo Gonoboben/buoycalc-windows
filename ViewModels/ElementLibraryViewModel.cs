@@ -27,12 +27,23 @@ public sealed class ElementLibraryViewModel : ViewModelBase
     private string _ropeCd = "1.2";
     private string _ropeNote = string.Empty;
 
+    private ConnectorLibraryItem? _selectedConnector;
+    private string _connectorName = string.Empty;
+    private string _connectorType = string.Empty;
+    private string _connectorWeightAir = "0";
+    private string _connectorVolume = "0";
+    private string _connectorBreakingLoad = "0";
+    private string _connectorArea = "0";
+    private string _connectorCd = "1.2";
+    private string _connectorNote = string.Empty;
+
     private string _statusText = string.Empty;
 
     public ElementLibraryViewModel()
     {
         Buoys = new ObservableCollection<BuoyLibraryItem>();
         Ropes = new ObservableCollection<RopeLibraryItem>();
+        Connectors = new ObservableCollection<ConnectorLibraryItem>();
 
         NewBuoyCommand = new RelayCommand(NewBuoy);
         SaveBuoyCommand = new RelayCommand(SaveBuoy);
@@ -42,14 +53,19 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         SaveRopeCommand = new RelayCommand(SaveRope);
         DeleteRopeCommand = new RelayCommand(DeleteRope);
 
+        NewConnectorCommand = new RelayCommand(NewConnector);
+        SaveConnectorCommand = new RelayCommand(SaveConnector);
+        DeleteConnectorCommand = new RelayCommand(DeleteConnector);
+
         RefreshCommand = new RelayCommand(RefreshAll);
 
         RefreshAll();
-        StatusText = "Библиотека элементов открыта. Доступны разделы: буи и линии.";
+        StatusText = "Библиотека элементов открыта. Доступны разделы: буи, линии и соединители.";
     }
 
     public ObservableCollection<BuoyLibraryItem> Buoys { get; }
     public ObservableCollection<RopeLibraryItem> Ropes { get; }
+    public ObservableCollection<ConnectorLibraryItem> Connectors { get; }
 
     public ICommand NewBuoyCommand { get; }
     public ICommand SaveBuoyCommand { get; }
@@ -58,6 +74,10 @@ public sealed class ElementLibraryViewModel : ViewModelBase
     public ICommand NewRopeCommand { get; }
     public ICommand SaveRopeCommand { get; }
     public ICommand DeleteRopeCommand { get; }
+
+    public ICommand NewConnectorCommand { get; }
+    public ICommand SaveConnectorCommand { get; }
+    public ICommand DeleteConnectorCommand { get; }
 
     public ICommand RefreshCommand { get; }
 
@@ -85,6 +105,18 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         }
     }
 
+    public ConnectorLibraryItem? SelectedConnector
+    {
+        get => _selectedConnector;
+        set
+        {
+            if (SetProperty(ref _selectedConnector, value))
+            {
+                LoadSelectedConnectorIntoForm();
+            }
+        }
+    }
+
     public string BuoyName { get => _buoyName; set => SetProperty(ref _buoyName, value); }
     public string BuoyVolume { get => _buoyVolume; set => SetProperty(ref _buoyVolume, value); }
     public string BuoyWeight { get => _buoyWeight; set => SetProperty(ref _buoyWeight, value); }
@@ -100,13 +132,23 @@ public sealed class ElementLibraryViewModel : ViewModelBase
     public string RopeCd { get => _ropeCd; set => SetProperty(ref _ropeCd, value); }
     public string RopeNote { get => _ropeNote; set => SetProperty(ref _ropeNote, value); }
 
+    public string ConnectorName { get => _connectorName; set => SetProperty(ref _connectorName, value); }
+    public string ConnectorType { get => _connectorType; set => SetProperty(ref _connectorType, value); }
+    public string ConnectorWeightAir { get => _connectorWeightAir; set => SetProperty(ref _connectorWeightAir, value); }
+    public string ConnectorVolume { get => _connectorVolume; set => SetProperty(ref _connectorVolume, value); }
+    public string ConnectorBreakingLoad { get => _connectorBreakingLoad; set => SetProperty(ref _connectorBreakingLoad, value); }
+    public string ConnectorArea { get => _connectorArea; set => SetProperty(ref _connectorArea, value); }
+    public string ConnectorCd { get => _connectorCd; set => SetProperty(ref _connectorCd, value); }
+    public string ConnectorNote { get => _connectorNote; set => SetProperty(ref _connectorNote, value); }
+
     public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
 
     private void RefreshAll()
     {
         RefreshBuoys(SelectedBuoy?.Id);
         RefreshRopes(SelectedRope?.Id);
-        StatusText = $"Библиотека обновлена. Буёв: {Buoys.Count}. Линий: {Ropes.Count}.";
+        RefreshConnectors(SelectedConnector?.Id);
+        StatusText = $"Библиотека обновлена. Буёв: {Buoys.Count}. Линий: {Ropes.Count}. Соединителей: {Connectors.Count}.";
     }
 
     private void RefreshBuoys(string? selectedId)
@@ -129,6 +171,17 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         }
 
         SelectedRope = Ropes.FirstOrDefault(x => x.Id == selectedId) ?? Ropes.FirstOrDefault();
+    }
+
+    private void RefreshConnectors(string? selectedId)
+    {
+        Connectors.Clear();
+        foreach (var connector in ConnectorLibraryStorage.LoadAllConnectors())
+        {
+            Connectors.Add(connector);
+        }
+
+        SelectedConnector = Connectors.FirstOrDefault(x => x.Id == selectedId) ?? Connectors.FirstOrDefault();
     }
 
     private void LoadSelectedBuoyIntoForm()
@@ -160,6 +213,23 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         RopeWeightWater = FormatDouble(SelectedRope.WeightWaterKgM);
         RopeCd = FormatDouble(SelectedRope.DragCoefficient);
         RopeNote = SelectedRope.Note;
+    }
+
+    private void LoadSelectedConnectorIntoForm()
+    {
+        if (SelectedConnector is null)
+        {
+            return;
+        }
+
+        ConnectorName = SelectedConnector.Name;
+        ConnectorType = SelectedConnector.Type;
+        ConnectorWeightAir = FormatDouble(SelectedConnector.WeightAirKg);
+        ConnectorVolume = FormatDouble(SelectedConnector.VolumeM3);
+        ConnectorBreakingLoad = FormatDouble(SelectedConnector.BreakingLoadKn);
+        ConnectorArea = FormatDouble(SelectedConnector.ProjectedAreaM2);
+        ConnectorCd = FormatDouble(SelectedConnector.DragCoefficient);
+        ConnectorNote = SelectedConnector.Note;
     }
 
     private void NewBuoy()
@@ -274,6 +344,66 @@ public sealed class ElementLibraryViewModel : ViewModelBase
         StatusText = deleted
             ? $"Удалена пользовательская линия: {deletedName}"
             : "Пользовательская линия не найдена в файле библиотеки.";
+    }
+
+    private void NewConnector()
+    {
+        SelectedConnector = null;
+        ConnectorName = "Новый соединитель";
+        ConnectorType = "Скоба";
+        ConnectorWeightAir = "1.2";
+        ConnectorVolume = "0.00008";
+        ConnectorBreakingLoad = "55";
+        ConnectorArea = "0.004";
+        ConnectorCd = "1.2";
+        ConnectorNote = "";
+        StatusText = "Заполните параметры нового соединителя и нажмите «Сохранить».";
+    }
+
+    private void SaveConnector()
+    {
+        var name = string.IsNullOrWhiteSpace(ConnectorName) ? "Пользовательский соединитель" : ConnectorName.Trim();
+        var id = SelectedConnector is { Source: "User" } ? SelectedConnector.Id : string.Empty;
+
+        var connector = new ConnectorLibraryItem
+        {
+            Id = id,
+            Source = "User",
+            Name = name,
+            Type = ConnectorType,
+            WeightAirKg = Parse(ConnectorWeightAir),
+            VolumeM3 = Parse(ConnectorVolume),
+            BreakingLoadKn = Parse(ConnectorBreakingLoad),
+            ProjectedAreaM2 = Parse(ConnectorArea),
+            DragCoefficient = Parse(ConnectorCd),
+            Note = ConnectorNote
+        };
+
+        ConnectorLibraryStorage.UpsertUserConnector(connector);
+        RefreshConnectors(connector.Id);
+        StatusText = $"Сохранён пользовательский соединитель: {name}";
+    }
+
+    private void DeleteConnector()
+    {
+        if (SelectedConnector is null)
+        {
+            StatusText = "Выберите пользовательский соединитель для удаления.";
+            return;
+        }
+
+        if (SelectedConnector.Source != "User" || SelectedConnector.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
+        {
+            StatusText = "Встроенный соединитель удалить нельзя. Удалять можно только пользовательские соединители.";
+            return;
+        }
+
+        var deletedName = SelectedConnector.Name;
+        var deleted = ConnectorLibraryStorage.DeleteUserConnector(SelectedConnector.Id);
+        RefreshConnectors(null);
+        StatusText = deleted
+            ? $"Удалён пользовательский соединитель: {deletedName}"
+            : "Пользовательский соединитель не найден в файле библиотеки.";
     }
 
     private static double Parse(string value)
