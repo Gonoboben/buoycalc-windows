@@ -52,8 +52,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         SaveProjectCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: false));
         SaveProjectAsCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: true));
         LoadProjectCommand = new RelayCommand(async () => await LoadProjectAsync());
-        ApplyBuoyPresetCommand = new RelayCommand(ApplySelectedBuoyPreset);
         SaveBuoyPresetCommand = new RelayCommand(SaveCurrentBuoyToLibrary);
+        DeleteBuoyPresetCommand = new RelayCommand(DeleteSelectedBuoyPreset);
         RefreshBuoyLibraryCommand = new RelayCommand(() => RefreshBuoyLibrary(null));
 
         RefreshBuoyLibrary(null);
@@ -71,8 +71,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand SaveProjectCommand { get; }
     public ICommand SaveProjectAsCommand { get; }
     public ICommand LoadProjectCommand { get; }
-    public ICommand ApplyBuoyPresetCommand { get; }
     public ICommand SaveBuoyPresetCommand { get; }
+    public ICommand DeleteBuoyPresetCommand { get; }
     public ICommand RefreshBuoyLibraryCommand { get; }
 
     public string ProjectName { get => _projectName; set => SetProperty(ref _projectName, value); }
@@ -83,7 +83,19 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string WaveHeight { get => _waveHeight; set => SetProperty(ref _waveHeight, value); }
     public string WavePeriod { get => _wavePeriod; set => SetProperty(ref _wavePeriod, value); }
     public string BuoyName { get => _buoyName; set => SetProperty(ref _buoyName, value); }
-    public BuoyLibraryItem? SelectedBuoyPreset { get => _selectedBuoyPreset; set => SetProperty(ref _selectedBuoyPreset, value); }
+
+    public BuoyLibraryItem? SelectedBuoyPreset
+    {
+        get => _selectedBuoyPreset;
+        set
+        {
+            if (SetProperty(ref _selectedBuoyPreset, value))
+            {
+                ApplySelectedBuoyPreset();
+            }
+        }
+    }
+
     public string BuoyVolume { get => _buoyVolume; set => SetProperty(ref _buoyVolume, value); }
     public string BuoyWeight { get => _buoyWeight; set => SetProperty(ref _buoyWeight, value); }
     public string BuoyArea { get => _buoyArea; set => SetProperty(ref _buoyArea, value); }
@@ -116,7 +128,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         if (SelectedBuoyPreset is null)
         {
-            BuoyLibraryStatusText = "Выберите буй из библиотеки.";
             return;
         }
 
@@ -125,7 +136,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         BuoyWeight = FormatDouble(SelectedBuoyPreset.WeightKg);
         BuoyArea = FormatDouble(SelectedBuoyPreset.ProjectedAreaM2);
         BuoyCd = FormatDouble(SelectedBuoyPreset.DragCoefficient);
-        BuoyLibraryStatusText = $"Применён буй: {SelectedBuoyPreset.DisplayName}";
+        BuoyLibraryStatusText = $"Выбран буй: {SelectedBuoyPreset.DisplayName}";
     }
 
     private void SaveCurrentBuoyToLibrary()
@@ -148,6 +159,29 @@ public sealed class MainWindowViewModel : ViewModelBase
         BuoyLibraryStorage.UpsertUserBuoy(buoy);
         RefreshBuoyLibrary(buoy.Id);
         BuoyLibraryStatusText = $"Буй сохранён в библиотеку: {name}";
+    }
+
+    private void DeleteSelectedBuoyPreset()
+    {
+        if (SelectedBuoyPreset is null)
+        {
+            BuoyLibraryStatusText = "Выберите пользовательский буй для удаления.";
+            return;
+        }
+
+        if (SelectedBuoyPreset.Source != "User" || SelectedBuoyPreset.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
+        {
+            BuoyLibraryStatusText = "Встроенный буй удалить нельзя. Удалять можно только пользовательские буи.";
+            return;
+        }
+
+        var deletedName = SelectedBuoyPreset.Name;
+        var deleted = BuoyLibraryStorage.DeleteUserBuoy(SelectedBuoyPreset.Id);
+
+        RefreshBuoyLibrary(null);
+        BuoyLibraryStatusText = deleted
+            ? $"Удалён пользовательский буй: {deletedName}"
+            : "Пользовательский буй не найден в файле библиотеки.";
     }
 
     private void AddAssemblyItem(AssemblyItemViewModel item)
