@@ -6,7 +6,7 @@
         MinWidth="1080"
         MinHeight="720"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.5.1">
+        Title="BuoyCalc Windows v0.6">
 
   <Grid RowDefinitions="Auto,*">
 
@@ -17,7 +17,7 @@
           <TextBlock Text="Предварительный инженерный расчёт буйковой постановки" FontSize="13" Foreground="#C7D2E5" />
         </StackPanel>
         <Border Grid.Column="1" Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
-          <TextBlock Text="v0.5.1 auto buoy selection" Foreground="#C7D2E5" FontSize="13" />
+          <TextBlock Text="v0.6 element library window" Foreground="#C7D2E5" FontSize="13" />
         </Border>
       </Grid>
     </Border>
@@ -107,16 +107,15 @@
 
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                  <TextBlock Text="Библиотека буёв" FontSize="12" Foreground="#697386" />
-                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Выберите встроенный или пользовательский буй. Выбранный буй сразу заполняет поля ниже. Пользовательская библиотека хранится в Документы\BuoyCalc\Libraries\user-buoys.json." />
+                  <TextBlock Text="Выбранный буй" FontSize="12" Foreground="#697386" />
+                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="В главном окне выбирается только готовый буй. Создание, редактирование и удаление вынесены в отдельное окно «Библиотека элементов»." />
                 </StackPanel>
                 <ComboBox ItemsSource="{Binding BuoyPresets}" SelectedItem="{Binding SelectedBuoyPreset}" HorizontalAlignment="Stretch" />
               </StackPanel>
 
-              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
-                <Button Content="Сохранить буй" Command="{Binding SaveBuoyPresetCommand}" />
-                <Button Grid.Column="1" Content="Удалить буй" Command="{Binding DeleteBuoyPresetCommand}" />
-                <Button Grid.Column="2" Content="Обновить" Command="{Binding RefreshBuoyLibraryCommand}" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Content="Библиотека..." Click="OpenLibraryButton_Click" />
+                <Button Grid.Column="1" Content="Обновить список" Command="{Binding RefreshBuoyLibraryCommand}" />
               </Grid>
 
               <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
@@ -124,44 +123,41 @@
               </Border>
 
               <StackPanel Spacing="4">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <TextBlock Text="Название буя" FontSize="12" Foreground="#697386" />
-                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Имя буя используется в отчёте и при сохранении пользовательского пресета." />
-                </StackPanel>
-                <TextBox Text="{Binding BuoyName}" Watermark="Название буя" />
+                <TextBlock Text="Название буя" FontSize="12" Foreground="#697386" />
+                <TextBox Text="{Binding BuoyName}" IsReadOnly="True" />
               </StackPanel>
 
               <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
                 <StackPanel Spacing="4">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
-                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Вытесненный объём буя. По нему оценивается полная плавучесть: объём × плотность воды. Берётся из паспорта буя или рассчитывается по геометрии." />
+                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Вытесненный объём выбранного буя. Редактируется в окне библиотеки." />
                   </StackPanel>
-                  <TextBox Text="{Binding BuoyVolume}" />
+                  <TextBox Text="{Binding BuoyVolume}" IsReadOnly="True" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Spacing="4">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
-                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Масса буя в воздухе. Берётся из паспорта производителя или измеряется при подготовке постановки." />
+                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Масса выбранного буя в воздухе. Редактируется в окне библиотеки." />
                   </StackPanel>
-                  <TextBox Text="{Binding BuoyWeight}" />
+                  <TextBox Text="{Binding BuoyWeight}" IsReadOnly="True" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Spacing="4">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" />
-                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Проецируемая площадь буя на поток. Используется в формуле сопротивления. Для предварительной оценки берётся площадь силуэта буя перпендикулярно течению." />
+                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Проецируемая площадь выбранного буя. Редактируется в окне библиотеки." />
                   </StackPanel>
-                  <TextBox Text="{Binding BuoyArea}" />
+                  <TextBox Text="{Binding BuoyArea}" IsReadOnly="True" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock Text="Cd" FontSize="12" Foreground="#697386" />
-                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Коэффициент сопротивления формы. Нужен для расчёта силы потока. Берётся из паспорта, справочника, испытаний или инженерной оценки: для сферы обычно ниже, для цилиндра выше." />
+                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Коэффициент сопротивления формы выбранного буя. Редактируется в окне библиотеки." />
                   </StackPanel>
-                  <TextBox Text="{Binding BuoyCd}" />
+                  <TextBox Text="{Binding BuoyCd}" IsReadOnly="True" />
                 </StackPanel>
               </Grid>
             </StackPanel>
