@@ -133,8 +133,8 @@ public static class BuoyCalculator
         var tensionN = Math.Sqrt(horizontalForce * horizontalForce + verticalForceN * verticalForceN);
         var tensionKn = tensionN / 1000.0;
 
-        var elementRows = BuildElementRows(enabledItems, environment, safetyFactor, tensionKn);
-        var structuralRows = elementRows.Where(x => x.BreakingLoadKn > 0).ToList();
+        var assemblyRows = BuildAssemblyRows(enabledItems, environment, safetyFactor, tensionKn);
+        var structuralRows = assemblyRows.Where(x => x.BreakingLoadKn > 0).ToList();
         var weakRow = structuralRows.OrderBy(x => x.BreakingLoadKn).FirstOrDefault();
         var weakLinkKn = weakRow?.BreakingLoadKn ?? 0;
         var weakLinkName = weakRow is null ? "Не определено" : $"{weakRow.Title} / {weakRow.PresetName}";
@@ -147,6 +147,16 @@ public static class BuoyCalculator
         var requiredHoldingKg = horizontalForce / 9.80665;
         var anchorReserve = requiredHoldingKg > 0 ? anchorHoldingKg / requiredHoldingKg : 0;
 
+        var elementRows = BuildSystemRows(
+            buoy,
+            anchor,
+            environment,
+            assemblyRows,
+            buoyancyKg,
+            buoyCurrentForce,
+            anchorWeightWater,
+            anchorReserve);
+
         var estimatedOffset = verticalForceN > 0 ? horizontalForce / verticalForceN * environment.DepthM : 0;
 
         var checks = new List<string>
@@ -158,7 +168,7 @@ public static class BuoyCalculator
             anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря"
         };
 
-        if (elementRows.Any(x => x.Status.StartsWith("WARNING")))
+        if (assemblyRows.Any(x => x.Status.StartsWith("WARNING")))
         {
             checks.Add("WARNING: один или несколько элементов имеют малый индивидуальный запас");
         }
@@ -189,7 +199,7 @@ public static class BuoyCalculator
             checks);
     }
 
-    private static IReadOnlyList<ElementCalculationRow> BuildElementRows(IReadOnlyList<AssemblyItemInput> enabledItems, EnvironmentInput environment, double safetyFactor, double tensionKn)
+    private static IReadOnlyList<ElementCalculationRow> BuildAssemblyRows(IReadOnlyList<AssemblyItemInput> enabledItems, EnvironmentInput environment, double safetyFactor, double tensionKn)
     {
         var rows = new List<ElementCalculationRow>();
         var number = 1;
@@ -239,6 +249,59 @@ public static class BuoyCalculator
 
             rows.Add(new ElementCalculationRow(number++, kind, item.Title, presetName, lengthM, count, weightWaterKg, areaM2, cd, currentForceN, breakingLoadKn, workingLoadKn, reserve, status));
         }
+
+        return rows;
+    }
+
+    private static IReadOnlyList<ElementCalculationRow> BuildSystemRows(
+        BuoyInput buoy,
+        AnchorInput anchor,
+        EnvironmentInput environment,
+        IReadOnlyList<ElementCalculationRow> assemblyRows,
+        double buoyancyKg,
+        double buoyCurrentForceN,
+        double anchorWeightWaterKg,
+        double anchorReserve)
+    {
+        var rows = new List<ElementCalculationRow>();
+        var number = 1;
+
+        rows.Add(new ElementCalculationRow(
+            number++,
+            "Буй",
+            buoy.Name,
+            "Выбранный буй",
+            0,
+            1,
+            buoy.WeightKg - buoyancyKg,
+            buoy.ProjectedAreaM2,
+            buoy.DragCoefficient,
+            buoyCurrentForceN,
+            0,
+            0,
+            0,
+            "INFO: источник плавучести"));
+
+        foreach (var row in assemblyRows)
+        {
+            rows.Add(row with { Number = number++ });
+        }
+
+        rows.Add(new ElementCalculationRow(
+            number,
+            "Якорь",
+            anchor.Name,
+            anchor.Type,
+            0,
+            1,
+            anchorWeightWaterKg,
+            0,
+            0,
+            0,
+            0,
+            0,
+            anchorReserve,
+            anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря"));
 
         return rows;
     }
