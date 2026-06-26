@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows.Input;
 using BuoyCalc.Windows.Models;
@@ -24,22 +25,24 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _safetyFactor = "5";
     private string _resultText = "Нажмите «Рассчитать».";
     private string _reportText = "";
+    private string _sequenceSummary = "";
 
     public MainWindowViewModel()
     {
-        AssemblyItems = new ObservableCollection<AssemblyItemViewModel>
-        {
-            new() { Kind = "Connector", Title = "Скоба под буем", ConnectorPresetId = "shackle_55", Count = "1" },
-            new() { Kind = "Line", Title = "Верхний буйреп", RopePresetId = "polyester_20", LengthM = "45" },
-            new() { Kind = "Connector", Title = "Вертлюг", ConnectorPresetId = "swivel_60", Count = "1" },
-            new() { Kind = "Payload", Title = "ADCP", PayloadWeightAirKg = "40", PayloadProjectedAreaM2 = "0.05", PayloadDragCoefficient = "1.0" },
-            new() { Kind = "Line", Title = "Нижняя цепь", RopePresetId = "chain_10", LengthM = "10" }
-        };
+        AssemblyItems = new ObservableCollection<AssemblyItemViewModel>();
+
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Скоба под буем", ConnectorPresetId = "shackle_55", Count = "1" });
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Верхний буйреп", RopePresetId = "polyester_20", LengthM = "45" });
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Вертлюг", ConnectorPresetId = "swivel_60", Count = "1" });
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "ADCP", PayloadWeightAirKg = "40", PayloadProjectedAreaM2 = "0.05", PayloadDragCoefficient = "1.0" });
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Нижняя цепь", RopePresetId = "chain_10", LengthM = "10" });
 
         CalculateCommand = new RelayCommand(Calculate);
-        AddLineCommand = new RelayCommand(() => AssemblyItems.Add(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии" }));
-        AddConnectorCommand = new RelayCommand(() => AssemblyItems.Add(new AssemblyItemViewModel { Kind = "Connector", Title = "Новый соединитель" }));
-        AddPayloadCommand = new RelayCommand(() => AssemblyItems.Add(new AssemblyItemViewModel { Kind = "Payload", Title = "Новый прибор", PayloadWeightAirKg = "10", PayloadProjectedAreaM2 = "0.02" }));
+        AddLineCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии" }));
+        AddConnectorCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Новый соединитель" }));
+        AddPayloadCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "Новый прибор", PayloadWeightAirKg = "10", PayloadProjectedAreaM2 = "0.02" }));
+
+        UpdateSequenceSummary();
     }
 
     public ObservableCollection<AssemblyItemViewModel> AssemblyItems { get; }
@@ -64,6 +67,96 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string SafetyFactor { get => _safetyFactor; set => SetProperty(ref _safetyFactor, value); }
     public string ResultText { get => _resultText; set => SetProperty(ref _resultText, value); }
     public string ReportText { get => _reportText; set => SetProperty(ref _reportText, value); }
+    public string SequenceSummary { get => _sequenceSummary; set => SetProperty(ref _sequenceSummary, value); }
+
+    private void AddAssemblyItem(AssemblyItemViewModel item)
+    {
+        WireItem(item);
+        AssemblyItems.Add(item);
+        UpdateSequenceSummary();
+    }
+
+    private void WireItem(AssemblyItemViewModel item)
+    {
+        item.RemoveRequested += RemoveItem;
+        item.MoveUpRequested += MoveItemUp;
+        item.MoveDownRequested += MoveItemDown;
+        item.DuplicateRequested += DuplicateItem;
+        item.PropertyChanged += OnAssemblyItemChanged;
+    }
+
+    private void OnAssemblyItemChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        UpdateSequenceSummary();
+    }
+
+    private void RemoveItem(AssemblyItemViewModel item)
+    {
+        item.PropertyChanged -= OnAssemblyItemChanged;
+        AssemblyItems.Remove(item);
+        UpdateSequenceSummary();
+    }
+
+    private void MoveItemUp(AssemblyItemViewModel item)
+    {
+        var index = AssemblyItems.IndexOf(item);
+        if (index <= 0)
+        {
+            return;
+        }
+
+        AssemblyItems.Move(index, index - 1);
+        UpdateSequenceSummary();
+    }
+
+    private void MoveItemDown(AssemblyItemViewModel item)
+    {
+        var index = AssemblyItems.IndexOf(item);
+        if (index < 0 || index >= AssemblyItems.Count - 1)
+        {
+            return;
+        }
+
+        AssemblyItems.Move(index, index + 1);
+        UpdateSequenceSummary();
+    }
+
+    private void DuplicateItem(AssemblyItemViewModel item)
+    {
+        var index = AssemblyItems.IndexOf(item);
+        var copy = item.Clone();
+        WireItem(copy);
+
+        if (index < 0 || index >= AssemblyItems.Count - 1)
+        {
+            AssemblyItems.Add(copy);
+        }
+        else
+        {
+            AssemblyItems.Insert(index + 1, copy);
+        }
+
+        UpdateSequenceSummary();
+    }
+
+    private void UpdateSequenceSummary()
+    {
+        var enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
+
+        var lineLengthM = enabledItems
+            .Where(x => x.Kind == AssemblyItemKind.Line)
+            .Sum(x => x.LengthM);
+
+        var connectorCount = enabledItems
+            .Where(x => x.Kind == AssemblyItemKind.Connector)
+            .Sum(x => x.Count);
+
+        var payloadWeightKg = enabledItems
+            .Where(x => x.Kind == AssemblyItemKind.Payload)
+            .Sum(x => x.PayloadWeightAirKg);
+
+        SequenceSummary = $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} шт. · приборы: {payloadWeightKg:0.##} кг";
+    }
 
     private void Calculate()
     {
@@ -83,6 +176,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nЗапас якоря: {result.AnchorReserve:0.##}";
         ReportText = ReportBuilder.Build(ProjectName, environment, buoy, anchor, result);
+        UpdateSequenceSummary();
     }
 
     private static double Parse(string value)
