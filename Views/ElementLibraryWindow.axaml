@@ -11,12 +11,18 @@
   <Grid RowDefinitions="Auto,*" Margin="18" RowSpacing="16">
 
     <Border Background="#172033" CornerRadius="16" Padding="18">
-      <StackPanel Spacing="4">
-        <TextBlock Text="Библиотека элементов" FontSize="24" FontWeight="Bold" Foreground="White" />
-        <TextBlock Text="Создание, редактирование и удаление элементов вынесены из главного окна проекта"
-                   FontSize="13"
-                   Foreground="#C7D2E5" />
-      </StackPanel>
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Библиотека элементов" FontSize="24" FontWeight="Bold" Foreground="White" />
+          <TextBlock Text="Создание, редактирование и удаление элементов вынесены из главного окна проекта"
+                     FontSize="13"
+                     Foreground="#C7D2E5" />
+        </StackPanel>
+
+        <Border Grid.Column="1" Background="#263653" CornerRadius="12" Padding="12,8" VerticalAlignment="Center">
+          <TextBlock Text="Буи" Foreground="#C7D2E5" FontSize="13" />
+        </Border>
+      </Grid>
     </Border>
 
     <Grid Grid.Row="1" ColumnDefinitions="340,*" ColumnSpacing="16">
@@ -48,34 +54,52 @@
             <StackPanel Spacing="12">
 
               <StackPanel Spacing="4">
-                <TextBlock Text="Название" FontSize="12" Foreground="#697386" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Название" FontSize="12" Foreground="#697386" />
+                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Короткое понятное имя буя. Оно будет отображаться в списке, главном окне и отчёте." />
+                </StackPanel>
                 <TextBox Text="{Binding BuoyName}" Watermark="Название буя" />
               </StackPanel>
 
               <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
                 <StackPanel Spacing="4">
-                  <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
+                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Вытесненный объём буя. Используется для расчёта полной плавучести: объём × плотность воды. Берётся из паспорта буя или считается по геометрии." />
+                  </StackPanel>
                   <TextBox Text="{Binding BuoyVolume}" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Spacing="4">
-                  <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
+                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Масса буя в воздухе. Обычно берётся из паспорта производителя или измеряется перед постановкой." />
+                  </StackPanel>
                   <TextBox Text="{Binding BuoyWeight}" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Spacing="4">
-                  <TextBlock Text="Проецируемая площадь, м²" FontSize="12" Foreground="#697386" />
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="Проецируемая площадь, м²" FontSize="12" Foreground="#697386" />
+                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Площадь силуэта буя, перпендикулярная потоку. Используется в расчёте сопротивления течению." />
+                  </StackPanel>
                   <TextBox Text="{Binding BuoyArea}" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
-                  <TextBlock Text="Cd" FontSize="12" Foreground="#697386" />
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="Cd" FontSize="12" Foreground="#697386" />
+                    <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Коэффициент сопротивления формы. Берётся из паспорта, справочника, испытаний или задаётся инженерной оценкой для формы буя." />
+                  </StackPanel>
                   <TextBox Text="{Binding BuoyCd}" />
                 </StackPanel>
               </Grid>
 
               <StackPanel Spacing="4">
-                <TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" />
+                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Укажите источник данных: паспорт производителя, расчёт по геометрии, измерение, справочник или временный тестовый пресет." />
+                </StackPanel>
                 <TextBox Text="{Binding BuoyNote}"
                          Watermark="Например: паспорт производителя, расчёт по геометрии, тестовый пресет"
                          AcceptsReturn="True"
