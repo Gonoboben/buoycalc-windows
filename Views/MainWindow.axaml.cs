@@ -36,8 +36,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        viewModel.RefreshSequencePreview();
-
         var previewWindow = new SequencePreviewWindow
         {
             DataContext = viewModel
