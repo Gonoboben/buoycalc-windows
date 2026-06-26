@@ -46,6 +46,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         _fileDialogService = fileDialogService;
         AssemblyItems = new ObservableCollection<AssemblyItemViewModel>();
+        ElementRows = new ObservableCollection<ElementCalculationRow>();
         BuoyPresets = new ObservableCollection<BuoyLibraryItem>();
         AnchorPresets = new ObservableCollection<AnchorLibraryItem>();
 
@@ -66,6 +67,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     public ObservableCollection<AssemblyItemViewModel> AssemblyItems { get; }
+    public ObservableCollection<ElementCalculationRow> ElementRows { get; }
     public ObservableCollection<BuoyLibraryItem> BuoyPresets { get; }
     public ObservableCollection<AnchorLibraryItem> AnchorPresets { get; }
 
@@ -281,6 +283,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         SafetyFactor = "5";
         ResultText = "Нажмите «Рассчитать».";
         ReportText = "";
+        ElementRows.Clear();
 
         ClearAssemblyItems();
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Скоба под буем", ConnectorPresetStorageId = "built-in:shackle_55", Count = "1" });
@@ -389,6 +392,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         SafetyFactor = dto.SafetyFactor;
         ResultText = "Проект загружен. Нажмите «Рассчитать».";
         ReportText = "";
+        ElementRows.Clear();
 
         ClearAssemblyItems();
         foreach (var item in dto.AssemblyItems)
@@ -428,7 +432,14 @@ public sealed class MainWindowViewModel : ViewModelBase
         var anchor = new AnchorInput(AnchorName, AnchorType, AnchorMaterial, Parse(AnchorWeight), Parse(AnchorVolume), Parse(AnchorCoefficient));
         var items = AssemblyItems.Select(x => x.ToInput()).ToList();
         var result = BuoyCalculator.Calculate(environment, buoy, items, anchor, Parse(SafetyFactor));
-        ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nЗапас якоря: {result.AnchorReserve:0.##}";
+
+        ElementRows.Clear();
+        foreach (var row in result.ElementRows)
+        {
+            ElementRows.Add(row);
+        }
+
+        ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nСлабое звено: {result.WeakLinkName}\nЗапас слабого звена: {result.TensionReserve:0.##}\nЗапас якоря: {result.AnchorReserve:0.##}";
         ReportText = ReportBuilder.Build(ProjectName, environment, buoy, anchor, result);
         UpdateSequenceSummary();
     }
