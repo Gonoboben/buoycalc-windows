@@ -13,7 +13,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     private string _kind = "Line";
     private string _title = "Участок линии";
     private string _ropePresetStorageId = "built-in:polyester_20";
-    private string _connectorPresetId = "shackle_55";
+    private string _connectorPresetStorageId = "built-in:shackle_55";
     private string _lengthM = "10";
     private string _count = "1";
     private string _payloadWeightAirKg = "0";
@@ -36,7 +36,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
 
     public IReadOnlyList<string> KindOptions { get; } = new[] { "Line", "Connector", "Payload" };
     public IReadOnlyList<string> RopePresetOptions => RopeLibraryStorage.LoadAllRopes().Select(x => x.DisplayName).ToList();
-    public IReadOnlyList<string> ConnectorPresetOptions { get; } = ConnectorCatalog.Presets.Select(x => x.Id).ToList();
+    public IReadOnlyList<string> ConnectorPresetOptions => ConnectorLibraryStorage.LoadAllConnectors().Select(x => x.DisplayName).ToList();
 
     public ICommand RemoveCommand { get; }
     public ICommand MoveUpCommand { get; }
@@ -123,11 +123,27 @@ public sealed class AssemblyItemViewModel : ViewModelBase
 
     public string ConnectorPresetId
     {
-        get => _connectorPresetId;
+        get => GetConnectorDisplayName(_connectorPresetStorageId);
         set
         {
-            if (SetProperty(ref _connectorPresetId, value))
+            var nextId = ResolveConnectorId(value);
+            if (SetProperty(ref _connectorPresetStorageId, nextId))
             {
+                OnPropertyChanged(nameof(ConnectorPresetId));
+                OnPropertyChanged(nameof(Summary));
+            }
+        }
+    }
+
+    public string ConnectorPresetStorageId
+    {
+        get => _connectorPresetStorageId;
+        set
+        {
+            var nextId = ResolveConnectorId(value);
+            if (SetProperty(ref _connectorPresetStorageId, nextId))
+            {
+                OnPropertyChanged(nameof(ConnectorPresetId));
                 OnPropertyChanged(nameof(Summary));
             }
         }
@@ -199,7 +215,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         {
             return ParseKind(Kind) switch
             {
-                AssemblyItemKind.Connector => $"{ConnectorPresetId} · 1 элемент",
+                AssemblyItemKind.Connector => $"{GetConnectorDisplayName(_connectorPresetStorageId)} · 1 элемент",
                 AssemblyItemKind.Payload => $"{PayloadWeightAirKg} кг · A={PayloadProjectedAreaM2} м² · Cd={PayloadDragCoefficient}",
                 _ => $"{GetRopeDisplayName(_ropePresetStorageId)} · {LengthM} м"
             };
@@ -210,6 +226,8 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(RopePresetOptions));
         OnPropertyChanged(nameof(RopePresetId));
+        OnPropertyChanged(nameof(ConnectorPresetOptions));
+        OnPropertyChanged(nameof(ConnectorPresetId));
         OnPropertyChanged(nameof(Summary));
     }
 
@@ -221,7 +239,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             Kind = Kind,
             Title = $"{Title} копия",
             RopePresetStorageId = RopePresetStorageId,
-            ConnectorPresetId = ConnectorPresetId,
+            ConnectorPresetStorageId = ConnectorPresetStorageId,
             LengthM = LengthM,
             Count = IsConnector ? "1" : Count,
             PayloadWeightAirKg = PayloadWeightAirKg,
@@ -241,7 +259,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             Title,
             IsEnabled,
             kind == AssemblyItemKind.Line ? RopeLibraryStorage.ById(RopePresetStorageId) : null,
-            kind == AssemblyItemKind.Connector ? ConnectorCatalog.ById(ConnectorPresetId) : null,
+            kind == AssemblyItemKind.Connector ? ConnectorLibraryStorage.ById(ConnectorPresetStorageId) : null,
             ParseDouble(LengthM),
             count,
             ParseDouble(PayloadWeightAirKg),
@@ -276,6 +294,35 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         }
 
         var builtIn = RopeCatalog.Presets.FirstOrDefault(x => x.Id == value);
+        return builtIn is not null ? "built-in:" + value : value;
+    }
+
+    private static string GetConnectorDisplayName(string id)
+    {
+        var connector = ConnectorLibraryStorage.LoadAllConnectors().FirstOrDefault(x => x.Id == id || x.Id == "built-in:" + id);
+        return connector?.DisplayName ?? id;
+    }
+
+    private static string ResolveConnectorId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "built-in:shackle_55";
+        }
+
+        var connectors = ConnectorLibraryStorage.LoadAllConnectors();
+        var byDisplayName = connectors.FirstOrDefault(x => x.DisplayName == value);
+        if (byDisplayName is not null)
+        {
+            return byDisplayName.Id;
+        }
+
+        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        var builtIn = ConnectorCatalog.Presets.FirstOrDefault(x => x.Id == value);
         return builtIn is not null ? "built-in:" + value : value;
     }
 
