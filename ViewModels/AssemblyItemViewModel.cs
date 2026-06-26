@@ -35,7 +35,9 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public event Action<AssemblyItemViewModel>? DuplicateRequested;
 
     public IReadOnlyList<string> KindOptions { get; } = new[] { "Line", "Connector", "Payload" };
-    public IReadOnlyList<string> RopePresetOptions => RopeLibraryStorage.LoadAllRopes().Select(x => x.Id).ToList();
+    public IReadOnlyList<LibraryOption> RopePresetOptions => RopeLibraryStorage.LoadAllRopes()
+        .Select(x => new LibraryOption(x.Id, x.DisplayName))
+        .ToList();
     public IReadOnlyList<string> ConnectorPresetOptions { get; } = ConnectorCatalog.Presets.Select(x => x.Id).ToList();
 
     public ICommand RemoveCommand { get; }
@@ -100,7 +102,20 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         {
             if (SetProperty(ref _ropePresetId, value))
             {
+                OnPropertyChanged(nameof(SelectedRopePresetOption));
                 OnPropertyChanged(nameof(Summary));
+            }
+        }
+    }
+
+    public LibraryOption? SelectedRopePresetOption
+    {
+        get => RopePresetOptions.FirstOrDefault(x => x.Id == RopePresetId) ?? RopePresetOptions.FirstOrDefault();
+        set
+        {
+            if (value is not null)
+            {
+                RopePresetId = value.Id;
             }
         }
     }
@@ -185,7 +200,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             {
                 AssemblyItemKind.Connector => $"{ConnectorPresetId} · 1 элемент",
                 AssemblyItemKind.Payload => $"{PayloadWeightAirKg} кг · A={PayloadProjectedAreaM2} м² · Cd={PayloadDragCoefficient}",
-                _ => $"{RopePresetId} · {LengthM} м"
+                _ => $"{SelectedRopePresetOption?.DisplayName ?? RopePresetId} · {LengthM} м"
             };
         }
     }
@@ -193,6 +208,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public void RefreshLibraryOptions()
     {
         OnPropertyChanged(nameof(RopePresetOptions));
+        OnPropertyChanged(nameof(SelectedRopePresetOption));
         OnPropertyChanged(nameof(Summary));
     }
 
