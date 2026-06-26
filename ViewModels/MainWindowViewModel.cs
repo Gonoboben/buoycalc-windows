@@ -46,7 +46,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         CalculateCommand = new RelayCommand(Calculate);
         AddLineCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии", RopePresetStorageId = "built-in:polyester_20" }));
-        AddConnectorCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Новый соединитель" }));
+        AddConnectorCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Новый соединитель", ConnectorPresetStorageId = "built-in:shackle_55" }));
         AddPayloadCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "Новый прибор", PayloadWeightAirKg = "10", PayloadProjectedAreaM2 = "0.02" }));
         NewProjectCommand = new RelayCommand(NewProject);
         SaveProjectCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: false));
@@ -322,9 +322,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         ReportText = "";
 
         ClearAssemblyItems();
-        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Скоба под буем", ConnectorPresetId = "shackle_55", Count = "1" });
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Скоба под буем", ConnectorPresetStorageId = "built-in:shackle_55", Count = "1" });
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Верхний буйреп", RopePresetStorageId = "built-in:polyester_20", LengthM = "45" });
-        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Вертлюг", ConnectorPresetId = "swivel_60", Count = "1" });
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Вертлюг", ConnectorPresetStorageId = "built-in:swivel_60", Count = "1" });
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "ADCP", PayloadWeightAirKg = "40", PayloadProjectedAreaM2 = "0.05", PayloadDragCoefficient = "1.0" });
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Нижняя цепь", RopePresetStorageId = "built-in:chain_10", LengthM = "10" });
 
@@ -419,7 +419,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 Kind = x.Kind,
                 Title = x.Title,
                 RopePresetId = x.RopePresetStorageId,
-                ConnectorPresetId = x.ConnectorPresetId,
+                ConnectorPresetId = x.ConnectorPresetStorageId,
                 LengthM = x.LengthM,
                 Count = x.IsConnector ? "1" : x.Count,
                 PayloadWeightAirKg = x.PayloadWeightAirKg,
@@ -461,7 +461,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 Kind = item.Kind,
                 Title = item.Title,
                 RopePresetStorageId = NormalizeRopeId(item.RopePresetId),
-                ConnectorPresetId = item.ConnectorPresetId,
+                ConnectorPresetStorageId = NormalizeConnectorId(item.ConnectorPresetId),
                 LengthM = item.LengthM,
                 Count = item.Kind == "Connector" ? "1" : item.Count,
                 PayloadWeightAirKg = item.PayloadWeightAirKg,
@@ -532,6 +532,27 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         var byDisplayName = RopeLibraryStorage.LoadAllRopes().FirstOrDefault(x => x.DisplayName == value);
+        if (byDisplayName is not null)
+        {
+            return byDisplayName.Id;
+        }
+
+        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        return "built-in:" + value;
+    }
+
+    private static string NormalizeConnectorId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "built-in:shackle_55";
+        }
+
+        var byDisplayName = ConnectorLibraryStorage.LoadAllConnectors().FirstOrDefault(x => x.DisplayName == value);
         if (byDisplayName is not null)
         {
             return byDisplayName.Id;
