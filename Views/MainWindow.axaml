@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="BuoyCalc.Windows.Views.MainWindow"
+        Width="1200"
+        Height="760"
+        Title="BuoyCalc Windows v0.1">
+  <Grid ColumnDefinitions="420,*" RowDefinitions="*" Margin="16">
+    <ScrollViewer Grid.Column="0">
+      <StackPanel Spacing="10">
+        <TextBlock Text="BuoyCalc Windows" FontSize="24" FontWeight="Bold" />
+        <TextBlock Text="Предварительный расчёт буйковой постановки" Foreground="Gray" />
+
+        <TextBlock Text="Проект" FontWeight="Bold" Margin="0,12,0,0" />
+        <TextBox Text="{Binding ProjectName}" Watermark="Название проекта" />
+
+        <TextBlock Text="Условия" FontWeight="Bold" Margin="0,12,0,0" />
+        <TextBox Text="{Binding WaterDensity}" Watermark="Плотность воды, кг/м³" />
+        <TextBox Text="{Binding Depth}" Watermark="Глубина, м" />
+        <TextBox Text="{Binding CurrentSpeed}" Watermark="Течение, м/с" />
+        <TextBox Text="{Binding WaveHeight}" Watermark="Высота волны, м" />
+        <TextBox Text="{Binding WavePeriod}" Watermark="Период волны, с" />
+
+        <TextBlock Text="Буй" FontWeight="Bold" Margin="0,12,0,0" />
+        <TextBox Text="{Binding BuoyVolume}" Watermark="Объём, м³" />
+        <TextBox Text="{Binding BuoyWeight}" Watermark="Масса, кг" />
+        <TextBox Text="{Binding BuoyArea}" Watermark="Площадь сопротивления, м²" />
+        <TextBox Text="{Binding BuoyCd}" Watermark="Cd" />
+
+        <TextBlock Text="Якорь" FontWeight="Bold" Margin="0,12,0,0" />
+        <TextBox Text="{Binding AnchorWeight}" Watermark="Масса якоря, кг" />
+        <TextBox Text="{Binding AnchorVolume}" Watermark="Объём якоря, м³" />
+        <TextBox Text="{Binding AnchorCoefficient}" Watermark="Коэффициент удержания" />
+        <TextBox Text="{Binding SafetyFactor}" Watermark="Коэффициент запаса" />
+
+        <Button Content="Рассчитать" Command="{Binding CalculateCommand}" Margin="0,12,0,0" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <Grid Grid.Column="1" RowDefinitions="Auto,*,220" Margin="16,0,0,0">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="+ линия" Command="{Binding AddLineCommand}" />
+        <Button Content="+ соединитель" Command="{Binding AddConnectorCommand}" />
+        <Button Content="+ прибор" Command="{Binding AddPayloadCommand}" />
+      </StackPanel>
+
+      <ScrollViewer Grid.Row="1" Margin="0,12,0,12">
+        <ItemsControl ItemsSource="{Binding AssemblyItems}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
+                <Grid ColumnDefinitions="90,*,90,90" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+                  <CheckBox Grid.RowSpan="2" IsChecked="{Binding IsEnabled}" Content="Вкл." />
+                  <TextBox Grid.Column="1" Text="{Binding Title}" Watermark="Название" />
+                  <TextBox Grid.Column="2" Text="{Binding Kind}" Watermark="Kind" />
+                  <TextBox Grid.Column="3" Text="{Binding LengthM}" Watermark="Длина" />
+                  <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding RopePresetId}" Watermark="Rope preset" />
+                  <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding ConnectorPresetId}" Watermark="Connector preset" />
+                  <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding PayloadWeightAirKg}" Watermark="Масса" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">
+        <TextBox Text="{Binding ResultText}" AcceptsReturn="True" IsReadOnly="True" />
+        <TextBox Grid.Column="1" Text="{Binding ReportText}" AcceptsReturn="True" IsReadOnly="True" />
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>
