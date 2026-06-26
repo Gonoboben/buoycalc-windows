@@ -12,4 +12,6 @@ public sealed class BuoyLibraryItem
     public string Note { get; set; } = string.Empty;
 
     public string DisplayName => $"{Name} · V={VolumeM3:0.###} м³ · {WeightKg:0.##} кг";
+
+    public override string ToString() => DisplayName;
 }
