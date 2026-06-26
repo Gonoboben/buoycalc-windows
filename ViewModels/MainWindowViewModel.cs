@@ -42,6 +42,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _sequenceSummary = "";
     private string _projectStatusText = "Проект ещё не сохранён.";
     private string _buoyLibraryStatusText = "Библиотека готова.";
+    private string _visualizationDepthText = "Глубина: 50 м";
+    private string _visualizationLineLengthText = "Длина линии: 55 м";
+    private string _visualizationOffsetText = "Оценочный снос: после расчёта";
+    private string _visualizationSlackRatioText = "L/Depth: 1.1";
+    private string _visualizationStatusText = "OK: длина линии не меньше глубины";
 
     public MainWindowViewModel(IProjectFileDialogService? fileDialogService = null)
     {
@@ -90,8 +95,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public string ProjectName { get => _projectName; set => SetProperty(ref _projectName, value); }
     public string ProjectFilePath { get => _projectFilePath; set => SetProperty(ref _projectFilePath, value); }
-    public string WaterDensity { get => _waterDensity; set => SetProperty(ref _waterDensity, value); }
-    public string Depth { get => _depth; set => SetProperty(ref _depth, value); }
+    public string WaterDensity { get => _waterDensity; set { if (SetProperty(ref _waterDensity, value)) UpdateVisualizationSummary(); } }
+    public string Depth { get => _depth; set { if (SetProperty(ref _depth, value)) UpdateVisualizationSummary(); } }
     public string CurrentSpeed { get => _currentSpeed; set => SetProperty(ref _currentSpeed, value); }
     public string WaveHeight { get => _waveHeight; set => SetProperty(ref _waveHeight, value); }
     public string WavePeriod { get => _wavePeriod; set => SetProperty(ref _wavePeriod, value); }
@@ -146,6 +151,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string SequenceSummary { get => _sequenceSummary; set => SetProperty(ref _sequenceSummary, value); }
     public string ProjectStatusText { get => _projectStatusText; set => SetProperty(ref _projectStatusText, value); }
     public string BuoyLibraryStatusText { get => _buoyLibraryStatusText; set => SetProperty(ref _buoyLibraryStatusText, value); }
+    public string VisualizationDepthText { get => _visualizationDepthText; set => SetProperty(ref _visualizationDepthText, value); }
+    public string VisualizationLineLengthText { get => _visualizationLineLengthText; set => SetProperty(ref _visualizationLineLengthText, value); }
+    public string VisualizationOffsetText { get => _visualizationOffsetText; set => SetProperty(ref _visualizationOffsetText, value); }
+    public string VisualizationSlackRatioText { get => _visualizationSlackRatioText; set => SetProperty(ref _visualizationSlackRatioText, value); }
+    public string VisualizationStatusText { get => _visualizationStatusText; set => SetProperty(ref _visualizationStatusText, value); }
 
     private void RefreshLibraries()
     {
@@ -447,7 +457,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         UpdateSequenceSummary();
     }
 
-    private void UpdateSequenceSummary()
+    private void UpdateSequenceSummary(CalculationResult? result = null)
     {
         var enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
         var lineLengthM = enabledItems.Where(x => x.Kind == AssemblyItemKind.Line).Sum(x => x.LengthM);
@@ -455,6 +465,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var payloadWeightKg = enabledItems.Where(x => x.Kind == AssemblyItemKind.Payload).Sum(x => x.PayloadWeightAirKg);
         SequenceSummary = $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы: {payloadWeightKg:0.##} кг";
         UpdateSequenceDiagram();
+        UpdateVisualizationSummary(result);
     }
 
     private void UpdateSequenceDiagram()
@@ -470,6 +481,30 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         SequenceDiagramLines.Add("↓");
         SequenceDiagramLines.Add($"■ Якорь: {SafeText(AnchorName, "Якорь")} · {SafeText(AnchorType, "тип не задан")}");
+    }
+
+    private void UpdateVisualizationSummary(CalculationResult? result = null)
+    {
+        var depthM = Parse(Depth);
+        var lineLengthM = AssemblyItems
+            .Where(x => x.IsEnabled)
+            .Select(x => x.ToInput())
+            .Where(x => x.Kind == AssemblyItemKind.Line)
+            .Sum(x => x.LengthM);
+
+        var slackRatio = depthM > 0 ? lineLengthM / depthM : 0;
+        var offsetText = result is null ? "после расчёта" : $"{result.EstimatedOffsetM:0.##} м";
+
+        VisualizationDepthText = $"Глубина: {depthM:0.##} м";
+        VisualizationLineLengthText = $"Длина линии: {lineLengthM:0.##} м";
+        VisualizationOffsetText = $"Оценочный снос: {offsetText}";
+        VisualizationSlackRatioText = depthM > 0 ? $"L/Depth: {slackRatio:0.###}" : "L/Depth: не определено";
+
+        VisualizationStatusText = depthM <= 0
+            ? "WARNING: глубина не задана"
+            : lineLengthM >= depthM
+                ? "OK: длина линии не меньше глубины"
+                : "WARNING: линия короче глубины";
     }
 
     private void Calculate()
@@ -488,7 +523,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nГрунт: {environment.Seabed.DisplayName}\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nСлабое звено: {result.WeakLinkName}\nЗапас слабого звена: {result.TensionReserve:0.##}\nЗапас якоря: {result.AnchorReserve:0.##}";
         ReportText = ReportBuilder.Build(ProjectName, environment, buoy, anchor, result);
-        UpdateSequenceSummary();
+        UpdateSequenceSummary(result);
     }
 
     private static double Parse(string value)
