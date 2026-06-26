@@ -6,7 +6,7 @@
         MinWidth="1160"
         MinHeight="760"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.11.2">
+        Title="BuoyCalc Windows v0.11.3">
 
   <Grid RowDefinitions="Auto,*">
     <Border Grid.Row="0" Background="#172033" Padding="20,16">
@@ -22,7 +22,7 @@
             </Border>
           </Button>
           <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
-            <TextBlock Text="v0.11.2 stable table" Foreground="#C7D2E5" FontSize="13" />
+            <TextBlock Text="v0.11.3 stable table" Foreground="#C7D2E5" FontSize="13" />
           </Border>
         </StackPanel>
       </Grid>
@@ -70,48 +70,8 @@
             <StackPanel Spacing="4"><TextBlock Text="Таблица элементов" FontSize="20" FontWeight="Bold" /><TextBlock Text="Стабильная таблица без внешних пакетов. Для длинной таблицы используйте горизонтальную прокрутку." FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></StackPanel>
             <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
               <StackPanel MinWidth="1510">
-                <Border Background="#E9EFFA" BorderBrush="#D7DEE9" BorderThickness="1" Padding="6">
-                  <Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150">
-                    <TextBlock Grid.Column="0" Text="№" FontWeight="Bold" />
-                    <TextBlock Grid.Column="1" Text="Тип" FontWeight="Bold" />
-                    <TextBlock Grid.Column="2" Text="Элемент" FontWeight="Bold" />
-                    <TextBlock Grid.Column="3" Text="Пресет" FontWeight="Bold" />
-                    <TextBlock Grid.Column="4" Text="L, м" FontWeight="Bold" />
-                    <TextBlock Grid.Column="5" Text="Кол." FontWeight="Bold" />
-                    <TextBlock Grid.Column="6" Text="Вес в воде" FontWeight="Bold" />
-                    <TextBlock Grid.Column="7" Text="A, м²" FontWeight="Bold" />
-                    <TextBlock Grid.Column="8" Text="Cd" FontWeight="Bold" />
-                    <TextBlock Grid.Column="9" Text="Сила, Н" FontWeight="Bold" />
-                    <TextBlock Grid.Column="10" Text="MBL" FontWeight="Bold" />
-                    <TextBlock Grid.Column="11" Text="WLL" FontWeight="Bold" />
-                    <TextBlock Grid.Column="12" Text="Запас" FontWeight="Bold" />
-                    <TextBlock Grid.Column="13" Text="Статус" FontWeight="Bold" />
-                  </Grid>
-                </Border>
-                <ItemsControl ItemsSource="{Binding ElementRows}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Border BorderBrush="#D7DEE9" BorderThickness="0,0,1,1" Padding="6">
-                        <Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150">
-                          <TextBlock Grid.Column="0" Text="{Binding Number}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="1" Text="{Binding Kind}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="2" Text="{Binding Title}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="3" Text="{Binding PresetName}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="4" Text="{Binding LengthM}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="5" Text="{Binding Count}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="6" Text="{Binding WeightWaterKg}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="7" Text="{Binding ProjectedAreaM2}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="8" Text="{Binding DragCoefficient}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="9" Text="{Binding CurrentForceN}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="10" Text="{Binding BreakingLoadKn}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="11" Text="{Binding WorkingLoadKn}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="12" Text="{Binding Reserve}" TextWrapping="NoWrap" />
-                          <TextBlock Grid.Column="13" Text="{Binding Status}" TextWrapping="NoWrap" />
-                        </Grid>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <Border Background="#E9EFFA" BorderBrush="#D7DEE9" BorderThickness="1" Padding="6"><Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150"><TextBlock Grid.Column="0" Text="№" FontWeight="Bold" /><TextBlock Grid.Column="1" Text="Тип" FontWeight="Bold" /><TextBlock Grid.Column="2" Text="Элемент" FontWeight="Bold" /><TextBlock Grid.Column="3" Text="Пресет" FontWeight="Bold" /><TextBlock Grid.Column="4" Text="L, м" FontWeight="Bold" /><TextBlock Grid.Column="5" Text="Кол." FontWeight="Bold" /><TextBlock Grid.Column="6" Text="Вес в воде" FontWeight="Bold" /><TextBlock Grid.Column="7" Text="A, м²" FontWeight="Bold" /><TextBlock Grid.Column="8" Text="Cd" FontWeight="Bold" /><TextBlock Grid.Column="9" Text="Сила, Н" FontWeight="Bold" /><TextBlock Grid.Column="10" Text="MBL" FontWeight="Bold" /><TextBlock Grid.Column="11" Text="WLL" FontWeight="Bold" /><TextBlock Grid.Column="12" Text="Запас" FontWeight="Bold" /><TextBlock Grid.Column="13" Text="Статус" FontWeight="Bold" /></Grid></Border>
+                <ItemsControl ItemsSource="{Binding ElementRows}"><ItemsControl.ItemTemplate><DataTemplate><Border BorderBrush="#D7DEE9" BorderThickness="0,0,1,1" Padding="6"><Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150"><TextBlock Grid.Column="0" Text="{Binding Number}" TextWrapping="NoWrap" /><TextBlock Grid.Column="1" Text="{Binding Kind}" TextWrapping="NoWrap" /><TextBlock Grid.Column="2" Text="{Binding Title}" TextWrapping="NoWrap" /><TextBlock Grid.Column="3" Text="{Binding PresetName}" TextWrapping="NoWrap" /><TextBlock Grid.Column="4" Text="{Binding LengthM}" TextWrapping="NoWrap" /><TextBlock Grid.Column="5" Text="{Binding Count}" TextWrapping="NoWrap" /><TextBlock Grid.Column="6" Text="{Binding WeightWaterKg}" TextWrapping="NoWrap" /><TextBlock Grid.Column="7" Text="{Binding ProjectedAreaM2}" TextWrapping="NoWrap" /><TextBlock Grid.Column="8" Text="{Binding DragCoefficient}" TextWrapping="NoWrap" /><TextBlock Grid.Column="9" Text="{Binding CurrentForceN}" TextWrapping="NoWrap" /><TextBlock Grid.Column="10" Text="{Binding BreakingLoadKn}" TextWrapping="NoWrap" /><TextBlock Grid.Column="11" Text="{Binding WorkingLoadKn}" TextWrapping="NoWrap" /><TextBlock Grid.Column="12" Text="{Binding Reserve}" TextWrapping="NoWrap" /><TextBlock Grid.Column="13" Text="{Binding Status}" TextWrapping="NoWrap" /></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
               </StackPanel>
             </ScrollViewer>
           </Grid>
@@ -120,7 +80,7 @@
         <Border Grid.Row="2" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
           <Grid RowDefinitions="Auto,*">
             <StackPanel Spacing="4"><TextBlock Text="Отчёт" FontSize="20" FontWeight="Bold" /><TextBlock Text="Markdown-текст для копирования или будущего экспорта" FontSize="12" Foreground="#697386" /></StackPanel>
-            <TextBox Grid.Row="1" Text="{Binding ReportText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0" />
+            <TextBox Grid.Row="1" Text="{Binding ReportText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap" Margin="0,12,0,0" />
           </Grid>
         </Border>
       </Grid>
