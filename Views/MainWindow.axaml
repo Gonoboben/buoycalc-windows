@@ -6,7 +6,7 @@
         MinWidth="1080"
         MinHeight="720"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.6.1">
+        Title="BuoyCalc Windows v0.6.2">
 
   <Grid RowDefinitions="Auto,*">
 
@@ -18,15 +18,24 @@
         </StackPanel>
 
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-          <Button Content="Библиотека элементов..."
-                  Click="OpenLibraryButton_Click"
-                  Padding="14,8"
-                  Background="#3B82F6"
-                  Foreground="White"
-                  BorderBrush="#60A5FA"
-                  FontWeight="SemiBold" />
+          <Button Click="OpenLibraryButton_Click"
+                  Padding="0"
+                  Background="Transparent"
+                  BorderBrush="Transparent"
+                  BorderThickness="0">
+            <Border Background="#263653"
+                    BorderBrush="#3A4C6A"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="14,8">
+              <TextBlock Text="Библиотека элементов..."
+                         Foreground="White"
+                         FontSize="13"
+                         FontWeight="SemiBold" />
+            </Border>
+          </Button>
           <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
-            <TextBlock Text="v0.6.1 help in library" Foreground="#C7D2E5" FontSize="13" />
+            <TextBlock Text="v0.6.2 button style fix" Foreground="#C7D2E5" FontSize="13" />
           </Border>
         </StackPanel>
       </Grid>
