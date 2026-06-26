@@ -28,6 +28,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _buoyWeight = "80";
     private string _buoyArea = "0.5";
     private string _buoyCd = "0.8";
+    private AnchorLibraryItem? _selectedAnchorPreset;
+    private string _anchorName = "Concrete 500 kg";
+    private string _anchorType = "Deadweight";
+    private string _anchorMaterial = "Concrete / Бетон";
     private string _anchorWeight = "500";
     private string _anchorVolume = "0.20";
     private string _anchorCoefficient = "1.0";
@@ -36,13 +40,14 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _reportText = "";
     private string _sequenceSummary = "";
     private string _projectStatusText = "Проект ещё не сохранён.";
-    private string _buoyLibraryStatusText = "Библиотека буёв готова.";
+    private string _buoyLibraryStatusText = "Библиотека готова.";
 
     public MainWindowViewModel(IProjectFileDialogService? fileDialogService = null)
     {
         _fileDialogService = fileDialogService;
         AssemblyItems = new ObservableCollection<AssemblyItemViewModel>();
         BuoyPresets = new ObservableCollection<BuoyLibraryItem>();
+        AnchorPresets = new ObservableCollection<AnchorLibraryItem>();
 
         CalculateCommand = new RelayCommand(Calculate);
         AddLineCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии", RopePresetStorageId = "built-in:polyester_20" }));
@@ -54,14 +59,15 @@ public sealed class MainWindowViewModel : ViewModelBase
         LoadProjectCommand = new RelayCommand(async () => await LoadProjectAsync());
         SaveBuoyPresetCommand = new RelayCommand(SaveCurrentBuoyToLibrary);
         DeleteBuoyPresetCommand = new RelayCommand(DeleteSelectedBuoyPreset);
-        RefreshBuoyLibraryCommand = new RelayCommand(() => RefreshBuoyLibrary(null));
+        RefreshBuoyLibraryCommand = new RelayCommand(RefreshLibraries);
 
-        RefreshBuoyLibrary(null);
+        RefreshLibraries();
         ResetToDefaultProject();
     }
 
     public ObservableCollection<AssemblyItemViewModel> AssemblyItems { get; }
     public ObservableCollection<BuoyLibraryItem> BuoyPresets { get; }
+    public ObservableCollection<AnchorLibraryItem> AnchorPresets { get; }
 
     public ICommand CalculateCommand { get; }
     public ICommand AddLineCommand { get; }
@@ -96,10 +102,25 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public AnchorLibraryItem? SelectedAnchorPreset
+    {
+        get => _selectedAnchorPreset;
+        set
+        {
+            if (SetProperty(ref _selectedAnchorPreset, value))
+            {
+                ApplySelectedAnchorPreset();
+            }
+        }
+    }
+
     public string BuoyVolume { get => _buoyVolume; set => SetProperty(ref _buoyVolume, value); }
     public string BuoyWeight { get => _buoyWeight; set => SetProperty(ref _buoyWeight, value); }
     public string BuoyArea { get => _buoyArea; set => SetProperty(ref _buoyArea, value); }
     public string BuoyCd { get => _buoyCd; set => SetProperty(ref _buoyCd, value); }
+    public string AnchorName { get => _anchorName; set => SetProperty(ref _anchorName, value); }
+    public string AnchorType { get => _anchorType; set => SetProperty(ref _anchorType, value); }
+    public string AnchorMaterial { get => _anchorMaterial; set => SetProperty(ref _anchorMaterial, value); }
     public string AnchorWeight { get => _anchorWeight; set => SetProperty(ref _anchorWeight, value); }
     public string AnchorVolume { get => _anchorVolume; set => SetProperty(ref _anchorVolume, value); }
     public string AnchorCoefficient { get => _anchorCoefficient; set => SetProperty(ref _anchorCoefficient, value); }
@@ -110,10 +131,15 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ProjectStatusText { get => _projectStatusText; set => SetProperty(ref _projectStatusText, value); }
     public string BuoyLibraryStatusText { get => _buoyLibraryStatusText; set => SetProperty(ref _buoyLibraryStatusText, value); }
 
+    private void RefreshLibraries()
+    {
+        RefreshBuoyLibrary(SelectedBuoyPreset?.Id);
+        RefreshAnchorLibrary(SelectedAnchorPreset?.Id);
+        RefreshSequenceLibraryOptions();
+    }
+
     private void RefreshBuoyLibrary(string? selectedId)
     {
-        selectedId ??= SelectedBuoyPreset?.Id;
-
         BuoyPresets.Clear();
         foreach (var buoy in BuoyLibraryStorage.LoadAllBuoys())
         {
@@ -121,8 +147,19 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == selectedId) ?? BuoyPresets.FirstOrDefault();
-        BuoyLibraryStatusText = $"Буёв в библиотеке: {BuoyPresets.Count}. Пользовательский файл: {BuoyLibraryStorage.LibraryPath}";
-        RefreshSequenceLibraryOptions();
+        BuoyLibraryStatusText = $"Библиотека: буёв {BuoyPresets.Count}, якорей {AnchorPresets.Count}.";
+    }
+
+    private void RefreshAnchorLibrary(string? selectedId)
+    {
+        AnchorPresets.Clear();
+        foreach (var anchor in AnchorLibraryStorage.LoadAllAnchors())
+        {
+            AnchorPresets.Add(anchor);
+        }
+
+        SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == selectedId) ?? AnchorPresets.FirstOrDefault();
+        BuoyLibraryStatusText = $"Библиотека: буёв {BuoyPresets.Count}, якорей {AnchorPresets.Count}.";
     }
 
     private void RefreshSequenceLibraryOptions()
@@ -147,7 +184,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         BuoyWeight = FormatDouble(SelectedBuoyPreset.WeightKg);
         BuoyArea = FormatDouble(SelectedBuoyPreset.ProjectedAreaM2);
         BuoyCd = FormatDouble(SelectedBuoyPreset.DragCoefficient);
-        BuoyLibraryStatusText = $"Выбран буй: {SelectedBuoyPreset.DisplayName}";
+    }
+
+    private void ApplySelectedAnchorPreset()
+    {
+        if (SelectedAnchorPreset is null)
+        {
+            return;
+        }
+
+        AnchorName = SelectedAnchorPreset.Name;
+        AnchorType = SelectedAnchorPreset.Type;
+        AnchorMaterial = SelectedAnchorPreset.Material;
+        AnchorWeight = FormatDouble(SelectedAnchorPreset.WeightAirKg);
+        AnchorVolume = FormatDouble(SelectedAnchorPreset.VolumeM3);
+        AnchorCoefficient = FormatDouble(SelectedAnchorPreset.BaseHoldingCoefficient);
     }
 
     private void SaveCurrentBuoyToLibrary()
@@ -168,7 +219,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         };
 
         BuoyLibraryStorage.UpsertUserBuoy(buoy);
-        RefreshBuoyLibrary(buoy.Id);
+        RefreshLibraries();
         BuoyLibraryStatusText = $"Буй сохранён в библиотеку: {name}";
     }
 
@@ -189,7 +240,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var deletedName = SelectedBuoyPreset.Name;
         var deleted = BuoyLibraryStorage.DeleteUserBuoy(SelectedBuoyPreset.Id);
 
-        RefreshBuoyLibrary(null);
+        RefreshLibraries();
         BuoyLibraryStatusText = deleted
             ? $"Удалён пользовательский буй: {deletedName}"
             : "Пользовательский буй не найден в файле библиотеки.";
@@ -308,15 +359,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         CurrentSpeed = "0.5";
         WaveHeight = "1.0";
         WavePeriod = "6.0";
-        BuoyName = "Буй";
         SelectedBuoyPreset = BuoyPresets.FirstOrDefault();
-        BuoyVolume = "0.50";
-        BuoyWeight = "80";
-        BuoyArea = "0.5";
-        BuoyCd = "0.8";
-        AnchorWeight = "500";
-        AnchorVolume = "0.20";
-        AnchorCoefficient = "1.0";
+        SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == "built-in:concrete_500") ?? AnchorPresets.FirstOrDefault();
         SafetyFactor = "5";
         ResultText = "Нажмите «Рассчитать».";
         ReportText = "";
@@ -409,6 +453,10 @@ public sealed class MainWindowViewModel : ViewModelBase
             BuoyWeight = BuoyWeight,
             BuoyArea = BuoyArea,
             BuoyCd = BuoyCd,
+            SelectedAnchorPresetId = SelectedAnchorPreset?.Id ?? string.Empty,
+            AnchorName = AnchorName,
+            AnchorType = AnchorType,
+            AnchorMaterial = AnchorMaterial,
             AnchorWeight = AnchorWeight,
             AnchorVolume = AnchorVolume,
             AnchorCoefficient = AnchorCoefficient,
@@ -439,14 +487,15 @@ public sealed class MainWindowViewModel : ViewModelBase
         WaveHeight = dto.WaveHeight;
         WavePeriod = dto.WavePeriod;
         BuoyName = string.IsNullOrWhiteSpace(dto.BuoyName) ? "Буй" : dto.BuoyName;
-        RefreshBuoyLibrary(dto.SelectedBuoyPresetId);
-        BuoyVolume = dto.BuoyVolume;
-        BuoyWeight = dto.BuoyWeight;
-        BuoyArea = dto.BuoyArea;
-        BuoyCd = dto.BuoyCd;
-        AnchorWeight = dto.AnchorWeight;
-        AnchorVolume = dto.AnchorVolume;
-        AnchorCoefficient = dto.AnchorCoefficient;
+        RefreshLibraries();
+        SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == dto.SelectedBuoyPresetId) ?? SelectedBuoyPreset;
+        SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == dto.SelectedAnchorPresetId) ?? SelectedAnchorPreset;
+        if (!string.IsNullOrWhiteSpace(dto.AnchorName)) AnchorName = dto.AnchorName;
+        if (!string.IsNullOrWhiteSpace(dto.AnchorType)) AnchorType = dto.AnchorType;
+        if (!string.IsNullOrWhiteSpace(dto.AnchorMaterial)) AnchorMaterial = dto.AnchorMaterial;
+        if (!string.IsNullOrWhiteSpace(dto.AnchorWeight)) AnchorWeight = dto.AnchorWeight;
+        if (!string.IsNullOrWhiteSpace(dto.AnchorVolume)) AnchorVolume = dto.AnchorVolume;
+        if (!string.IsNullOrWhiteSpace(dto.AnchorCoefficient)) AnchorCoefficient = dto.AnchorCoefficient;
         SafetyFactor = dto.SafetyFactor;
         ResultText = "Проект загружен. Нажмите «Рассчитать».";
         ReportText = "";
@@ -503,7 +552,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             SeabedCatalog.ById("unknown"));
 
         var buoy = new BuoyInput(BuoyName, Parse(BuoyVolume), Parse(BuoyWeight), Parse(BuoyArea), Parse(BuoyCd));
-        var anchor = new AnchorInput("Якорь", "Deadweight", "Concrete", Parse(AnchorWeight), Parse(AnchorVolume), Parse(AnchorCoefficient));
+        var anchor = new AnchorInput(AnchorName, AnchorType, AnchorMaterial, Parse(AnchorWeight), Parse(AnchorVolume), Parse(AnchorCoefficient));
         var items = AssemblyItems.Select(x => x.ToInput()).ToList();
 
         var result = BuoyCalculator.Calculate(environment, buoy, items, anchor, Parse(SafetyFactor));
