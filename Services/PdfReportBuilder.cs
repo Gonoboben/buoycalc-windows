@@ -26,9 +26,10 @@ public static class PdfReportBuilder
 
         using var stream = File.Open(filePath, FileMode.Create, FileAccess.Write);
         using var document = SKDocument.CreatePdf(stream);
-        using var typeface = SKTypeface.FromFamilyName("Arial") ?? SKTypeface.Default;
+        using var regularTypeface = SKTypeface.FromFamilyName("Arial") ?? SKTypeface.Default;
+        using var boldTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? regularTypeface;
 
-        var writer = new PdfCanvasWriter(document, typeface);
+        var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
         writer.BeginPage();
 
         writer.Title("BuoyCalc Windows - предварительный отчёт");
@@ -60,15 +61,17 @@ public static class PdfReportBuilder
     private sealed class PdfCanvasWriter
     {
         private readonly SKDocument _document;
-        private readonly SKTypeface _typeface;
+        private readonly SKTypeface _regularTypeface;
+        private readonly SKTypeface _boldTypeface;
         private SKCanvas? _canvas;
         private int _pageNumber;
         private float _y;
 
-        public PdfCanvasWriter(SKDocument document, SKTypeface typeface)
+        public PdfCanvasWriter(SKDocument document, SKTypeface regularTypeface, SKTypeface boldTypeface)
         {
             _document = document;
-            _typeface = typeface;
+            _regularTypeface = regularTypeface;
+            _boldTypeface = boldTypeface;
         }
 
         public void BeginPage()
@@ -192,7 +195,7 @@ public static class PdfReportBuilder
                 Color = SKColors.Black,
                 IsAntialias = true,
                 TextSize = size,
-                Typeface = bold ? SKTypeface.FromTypeface(_typeface, SKFontStyle.Bold) : _typeface
+                Typeface = bold ? _boldTypeface : _regularTypeface
             };
         }
 
