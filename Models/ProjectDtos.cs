@@ -12,6 +12,8 @@ public sealed class BuoyProjectDto
     public string WaveHeight { get; set; } = string.Empty;
     public string WavePeriod { get; set; } = string.Empty;
 
+    public string BuoyName { get; set; } = string.Empty;
+    public string SelectedBuoyPresetId { get; set; } = string.Empty;
     public string BuoyVolume { get; set; } = string.Empty;
     public string BuoyWeight { get; set; } = string.Empty;
     public string BuoyArea { get; set; } = string.Empty;
