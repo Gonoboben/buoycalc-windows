@@ -48,6 +48,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         _fileDialogService = fileDialogService;
         AssemblyItems = new ObservableCollection<AssemblyItemViewModel>();
         ElementRows = new ObservableCollection<ElementCalculationDisplayRow>();
+        SequenceDiagramLines = new ObservableCollection<string>();
         BuoyPresets = new ObservableCollection<BuoyLibraryItem>();
         AnchorPresets = new ObservableCollection<AnchorLibraryItem>();
         SeabedPresets = new ObservableCollection<SeabedPreset>(SeabedCatalog.Presets);
@@ -70,6 +71,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<AssemblyItemViewModel> AssemblyItems { get; }
     public ObservableCollection<ElementCalculationDisplayRow> ElementRows { get; }
+    public ObservableCollection<string> SequenceDiagramLines { get; }
     public ObservableCollection<BuoyLibraryItem> BuoyPresets { get; }
     public ObservableCollection<AnchorLibraryItem> AnchorPresets { get; }
     public ObservableCollection<SeabedPreset> SeabedPresets { get; }
@@ -100,26 +102,40 @@ public sealed class MainWindowViewModel : ViewModelBase
         set => SetProperty(ref _selectedSeabedPreset, value);
     }
 
-    public string BuoyName { get => _buoyName; set => SetProperty(ref _buoyName, value); }
+    public string BuoyName { get => _buoyName; set { if (SetProperty(ref _buoyName, value)) UpdateSequenceDiagram(); } }
 
     public BuoyLibraryItem? SelectedBuoyPreset
     {
         get => _selectedBuoyPreset;
-        set { if (SetProperty(ref _selectedBuoyPreset, value)) ApplySelectedBuoyPreset(); }
+        set
+        {
+            if (SetProperty(ref _selectedBuoyPreset, value))
+            {
+                ApplySelectedBuoyPreset();
+                UpdateSequenceDiagram();
+            }
+        }
     }
 
     public AnchorLibraryItem? SelectedAnchorPreset
     {
         get => _selectedAnchorPreset;
-        set { if (SetProperty(ref _selectedAnchorPreset, value)) ApplySelectedAnchorPreset(); }
+        set
+        {
+            if (SetProperty(ref _selectedAnchorPreset, value))
+            {
+                ApplySelectedAnchorPreset();
+                UpdateSequenceDiagram();
+            }
+        }
     }
 
     public string BuoyVolume { get => _buoyVolume; set => SetProperty(ref _buoyVolume, value); }
     public string BuoyWeight { get => _buoyWeight; set => SetProperty(ref _buoyWeight, value); }
     public string BuoyArea { get => _buoyArea; set => SetProperty(ref _buoyArea, value); }
     public string BuoyCd { get => _buoyCd; set => SetProperty(ref _buoyCd, value); }
-    public string AnchorName { get => _anchorName; set => SetProperty(ref _anchorName, value); }
-    public string AnchorType { get => _anchorType; set => SetProperty(ref _anchorType, value); }
+    public string AnchorName { get => _anchorName; set { if (SetProperty(ref _anchorName, value)) UpdateSequenceDiagram(); } }
+    public string AnchorType { get => _anchorType; set { if (SetProperty(ref _anchorType, value)) UpdateSequenceDiagram(); } }
     public string AnchorMaterial { get => _anchorMaterial; set => SetProperty(ref _anchorMaterial, value); }
     public string AnchorWeight { get => _anchorWeight; set => SetProperty(ref _anchorWeight, value); }
     public string AnchorVolume { get => _anchorVolume; set => SetProperty(ref _anchorVolume, value); }
@@ -295,6 +311,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ResultText = "Нажмите «Рассчитать».";
         ReportText = "";
         ElementRows.Clear();
+        SequenceDiagramLines.Clear();
 
         ClearAssemblyItems();
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Скоба под буем", ConnectorPresetStorageId = "built-in:shackle_55", Count = "1" });
@@ -406,6 +423,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ResultText = "Проект загружен. Нажмите «Рассчитать».";
         ReportText = "";
         ElementRows.Clear();
+        SequenceDiagramLines.Clear();
 
         ClearAssemblyItems();
         foreach (var item in dto.AssemblyItems)
@@ -436,6 +454,22 @@ public sealed class MainWindowViewModel : ViewModelBase
         var connectorCount = enabledItems.Count(x => x.Kind == AssemblyItemKind.Connector);
         var payloadWeightKg = enabledItems.Where(x => x.Kind == AssemblyItemKind.Payload).Sum(x => x.PayloadWeightAirKg);
         SequenceSummary = $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы: {payloadWeightKg:0.##} кг";
+        UpdateSequenceDiagram();
+    }
+
+    private void UpdateSequenceDiagram()
+    {
+        SequenceDiagramLines.Clear();
+        SequenceDiagramLines.Add($"● Буй: {SafeText(BuoyName, "Буй")}");
+
+        foreach (var item in AssemblyItems.Where(x => x.IsEnabled))
+        {
+            SequenceDiagramLines.Add("↓");
+            SequenceDiagramLines.Add($"○ {item.KindDisplayName}: {SafeText(item.Title, "Элемент")} · {item.Summary}");
+        }
+
+        SequenceDiagramLines.Add("↓");
+        SequenceDiagramLines.Add($"■ Якорь: {SafeText(AnchorName, "Якорь")} · {SafeText(AnchorType, "тип не задан")}");
     }
 
     private void Calculate()
@@ -464,6 +498,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     private static string FormatDouble(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+
+    private static string SafeText(string value, string fallback)
+    {
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+    }
 
     private static string NormalizeRopeId(string value)
     {
