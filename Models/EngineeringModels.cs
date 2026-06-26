@@ -9,7 +9,8 @@ public record ConnectorPreset(string Id, string Name, string Type, double Weight
 public record AnchorPreset(string Id, string Name, string Type, string Material, double WeightAirKg, double VolumeM3, double BaseHoldingCoefficient, string Note);
 public record SeabedPreset(string Id, string Name, double HoldingMultiplier, string Note)
 {
-    public string DisplayName => Name;
+    public string DisplayName => $"{Name} · K={HoldingMultiplier:0.##}";
+    public override string ToString() => DisplayName;
 }
 
 public enum AssemblyItemKind
@@ -85,6 +86,10 @@ public record CalculationResult(
     string WeakLinkName,
     double WorkingLoadKn,
     double TensionReserve,
+    double AnchorWeightWaterKg,
+    double AnchorBaseHoldingCoefficient,
+    double AnchorTypeMultiplier,
+    double SeabedHoldingMultiplier,
     double AnchorHoldingKg,
     double RequiredAnchorHoldingKg,
     double AnchorReserve,
@@ -143,7 +148,9 @@ public static class BuoyCalculator
         var tensionReserve = tensionKn > 0 && workingLoad > 0 ? workingLoad / tensionKn : 0;
 
         var anchorWeightWater = WeightInWaterKg(anchor.WeightAirKg, anchor.VolumeM3, environment.WaterDensityKgM3);
-        var anchorHoldingKg = anchorWeightWater * anchor.BaseHoldingCoefficient * environment.Seabed.HoldingMultiplier;
+        var anchorTypeMultiplier = AnchorTypeMultiplier(anchor.Type);
+        var seabedMultiplier = environment.Seabed.HoldingMultiplier;
+        var anchorHoldingKg = anchorWeightWater * anchor.BaseHoldingCoefficient * anchorTypeMultiplier * seabedMultiplier;
         var requiredHoldingKg = horizontalForce / 9.80665;
         var anchorReserve = requiredHoldingKg > 0 ? anchorHoldingKg / requiredHoldingKg : 0;
 
@@ -155,6 +162,8 @@ public static class BuoyCalculator
             buoyancyKg,
             buoyCurrentForce,
             anchorWeightWater,
+            anchorTypeMultiplier,
+            seabedMultiplier,
             anchorReserve);
 
         var estimatedOffset = verticalForceN > 0 ? horizontalForce / verticalForceN * environment.DepthM : 0;
@@ -165,12 +174,19 @@ public static class BuoyCalculator
             lineLength >= environment.DepthM ? "OK: длина линии не меньше глубины" : "FAILED: линия короче глубины",
             structuralRows.Count > 0 ? "OK: найдено слабое звено цепочки" : "WARNING: нет элементов с MBL для проверки слабого звена",
             tensionReserve >= 1 ? "OK: запас по слабому звену" : "WARNING: малый запас по слабому звену",
-            anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря"
+            anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря",
+            environment.Seabed.Id == "unknown" ? "WARNING: грунт не задан точно" : $"OK: грунт учтён: {environment.Seabed.Name}",
+            $"INFO: удержание якоря = вес в воде × K якоря × K типа × K грунта = {anchorWeightWater:0.####} × {anchor.BaseHoldingCoefficient:0.####} × {anchorTypeMultiplier:0.####} × {seabedMultiplier:0.####}"
         };
 
         if (assemblyRows.Any(x => x.Status.StartsWith("WARNING")))
         {
             checks.Add("WARNING: один или несколько элементов имеют малый индивидуальный запас");
+        }
+
+        if (environment.Seabed.Id == "rock" && IsDeadweightAnchor(anchor.Type))
+        {
+            checks.Add("WARNING: каменистый грунт может ухудшать работу грузового якоря");
         }
 
         var verdict = checks.Any(x => x.StartsWith("FAILED")) ? "Не подходит" : checks.Any(x => x.StartsWith("WARNING")) ? "Требуется проверка" : "Подходит";
@@ -190,6 +206,10 @@ public static class BuoyCalculator
             weakLinkName,
             workingLoad,
             tensionReserve,
+            anchorWeightWater,
+            anchor.BaseHoldingCoefficient,
+            anchorTypeMultiplier,
+            seabedMultiplier,
             anchorHoldingKg,
             requiredHoldingKg,
             anchorReserve,
@@ -261,6 +281,8 @@ public static class BuoyCalculator
         double buoyancyKg,
         double buoyCurrentForceN,
         double anchorWeightWaterKg,
+        double anchorTypeMultiplier,
+        double seabedMultiplier,
         double anchorReserve)
     {
         var rows = new List<ElementCalculationRow>();
@@ -291,7 +313,7 @@ public static class BuoyCalculator
             number,
             "Якорь",
             anchor.Name,
-            anchor.Type,
+            $"{anchor.Type}; грунт: {environment.Seabed.Name}; Kтип={anchorTypeMultiplier:0.####}; Kгр={seabedMultiplier:0.####}",
             0,
             1,
             anchorWeightWaterKg,
@@ -314,6 +336,23 @@ public static class BuoyCalculator
             AssemblyItemKind.Payload => "Прибор",
             _ => "Линия"
         };
+    }
+
+    private static double AnchorTypeMultiplier(string type)
+    {
+        var value = (type ?? string.Empty).ToLowerInvariant();
+
+        if (value.Contains("plate") || value.Contains("плит")) return 1.25;
+        if (value.Contains("mushroom") || value.Contains("гриб")) return 1.15;
+        if (value.Contains("deadweight") || value.Contains("груз") || value.Contains("concrete") || value.Contains("бетон")) return 1.0;
+
+        return 1.0;
+    }
+
+    private static bool IsDeadweightAnchor(string type)
+    {
+        var value = (type ?? string.Empty).ToLowerInvariant();
+        return value.Contains("deadweight") || value.Contains("груз") || value.Contains("concrete") || value.Contains("бетон");
     }
 
     private static double WeightInWaterKg(double weightAirKg, double volumeM3, double waterDensityKgM3)
