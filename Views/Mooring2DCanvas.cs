@@ -66,14 +66,14 @@ public sealed class Mooring2DCanvas : Control
         buoyX = Math.Clamp(buoyX, padding + 80, width - padding - 80);
         anchorX = Math.Clamp(anchorX, padding + 80, width - padding - 80);
 
-        var buoyPoint = new Point(buoyX, surfaceY + 30);
+        var buoyPoint = new Point(buoyX, surfaceY);
+        var lineStartPoint = new Point(buoyX, surfaceY + 14);
         var anchorPoint = new Point(anchorX, bottomY - 8);
 
-        context.DrawLine(LinePen, buoyPoint, anchorPoint);
-        context.DrawLine(ThinLinePen, new Point(buoyPoint.X, surfaceY), buoyPoint);
+        context.DrawLine(LinePen, lineStartPoint, anchorPoint);
         context.DrawLine(ThinLinePen, new Point(anchorPoint.X, bottomY), anchorPoint);
 
-        DrawElementNodes(context, vm, buoyPoint, anchorPoint);
+        DrawElementNodes(context, vm, lineStartPoint, anchorPoint);
         DrawBuoy(context, buoyPoint, vm?.BuoyName ?? "Буй");
         DrawAnchor(context, anchorPoint, vm?.AnchorName ?? "Якорь");
 
