@@ -110,4 +110,22 @@ public static class BuoyLibraryStorage
 
         SaveUserBuoys(userBuoys);
     }
+
+    public static bool DeleteUserBuoy(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id) || id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var userBuoys = LoadUserBuoys();
+        var removed = userBuoys.RemoveAll(x => x.Id == id) > 0;
+
+        if (removed)
+        {
+            SaveUserBuoys(userBuoys);
+        }
+
+        return removed;
+    }
 }
