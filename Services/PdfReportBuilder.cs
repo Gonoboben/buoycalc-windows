@@ -184,11 +184,11 @@ public static class PdfReportBuilder
             var centerX = x + width / 2;
             var buoyX = Math.Clamp(centerX - offsetPixels / 2, x + 80, x + width - 80);
             var anchorX = Math.Clamp(centerX + offsetPixels / 2, x + 80, x + width - 80);
-            var buoyPoint = new SKPoint(buoyX, surfaceY + 38);
+            var buoyPoint = new SKPoint(buoyX, surfaceY);
+            var lineStartPoint = new SKPoint(buoyX, surfaceY + 13);
             var anchorPoint = new SKPoint(anchorX, bottomY - 8);
 
-            _canvas.DrawLine(buoyPoint, anchorPoint, linePaint);
-            _canvas.DrawLine(new SKPoint(buoyPoint.X, surfaceY), buoyPoint, thinPaint);
+            _canvas.DrawLine(lineStartPoint, anchorPoint, linePaint);
             _canvas.DrawLine(new SKPoint(anchorPoint.X, bottomY), anchorPoint, thinPaint);
 
             var labels = sequenceLines.Where(v => !string.IsNullOrWhiteSpace(v) && v != "↓").ToList();
@@ -203,8 +203,8 @@ public static class PdfReportBuilder
             for (var i = 0; i < nodes.Count; i++)
             {
                 var t = (i + 1f) / (nodes.Count + 1f);
-                var px = buoyPoint.X + (anchorPoint.X - buoyPoint.X) * t;
-                var py = buoyPoint.Y + (anchorPoint.Y - buoyPoint.Y) * t;
+                var px = lineStartPoint.X + (anchorPoint.X - lineStartPoint.X) * t;
+                var py = lineStartPoint.Y + (anchorPoint.Y - lineStartPoint.Y) * t;
                 _canvas.DrawCircle(px, py, 5.8f, nodePaint);
                 _canvas.DrawCircle(px, py, 5.8f, nodeBorderPaint);
 
