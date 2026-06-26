@@ -18,7 +18,13 @@
         </StackPanel>
 
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-          <Button Content="Библиотека элементов..." Click="OpenLibraryButton_Click" Padding="14,8" />
+          <Button Content="Библиотека элементов..."
+                  Click="OpenLibraryButton_Click"
+                  Padding="14,8"
+                  Background="#3B82F6"
+                  Foreground="White"
+                  BorderBrush="#60A5FA"
+                  FontWeight="SemiBold" />
           <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
             <TextBlock Text="v0.6.1 help in library" Foreground="#C7D2E5" FontSize="13" />
           </Border>
