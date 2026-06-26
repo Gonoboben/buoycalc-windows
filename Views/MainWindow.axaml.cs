@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -47,6 +48,73 @@ public partial class MainWindow : Window
             viewModel.CalculateCommand.Execute(null);
         }
     }
+
+    private async void ExportPdfButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(viewModel.ReportText))
+        {
+            viewModel.ProjectStatusText = "Сначала выполните расчёт, затем экспортируйте PDF.";
+            return;
+        }
+
+        var suggestedFileName = MakeSafeFileName(viewModel.ProjectName) + "_report.pdf";
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Сохранить PDF-отчёт BuoyCalc",
+            SuggestedFileName = suggestedFileName,
+            DefaultExtension = "pdf",
+            FileTypeChoices = PdfFileTypes
+        });
+
+        var path = file?.Path.LocalPath;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            viewModel.ProjectStatusText = "Экспорт PDF отменён.";
+            return;
+        }
+
+        try
+        {
+            PdfReportBuilder.Build(
+                path,
+                viewModel.ProjectName,
+                viewModel.ResultText,
+                viewModel.SequenceDiagramLines,
+                viewModel.ElementRows,
+                viewModel.ReportText);
+
+            viewModel.ProjectStatusText = $"PDF сохранён: {path}";
+        }
+        catch (System.Exception ex)
+        {
+            viewModel.ProjectStatusText = $"Ошибка экспорта PDF: {ex.Message}";
+        }
+    }
+
+    private static string MakeSafeFileName(string value)
+    {
+        value = string.IsNullOrWhiteSpace(value) ? "BuoyCalc_Project" : value.Trim();
+        foreach (var invalidChar in Path.GetInvalidFileNameChars())
+        {
+            value = value.Replace(invalidChar, '_');
+        }
+
+        return value.Replace(' ', '_');
+    }
+
+    private static IReadOnlyList<FilePickerFileType> PdfFileTypes { get; } = new[]
+    {
+        new FilePickerFileType("PDF report")
+        {
+            Patterns = new[] { "*.pdf" }
+        },
+        FilePickerFileTypes.All
+    };
 
     private sealed class AvaloniaProjectFileDialogService : IProjectFileDialogService
     {
