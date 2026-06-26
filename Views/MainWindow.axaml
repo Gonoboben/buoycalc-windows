@@ -6,7 +6,7 @@
         MinWidth="1080"
         MinHeight="720"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.6">
+        Title="BuoyCalc Windows v0.6.1">
 
   <Grid RowDefinitions="Auto,*">
 
@@ -16,9 +16,13 @@
           <TextBlock Text="BuoyCalc Windows" FontSize="26" FontWeight="Bold" Foreground="White" />
           <TextBlock Text="Предварительный инженерный расчёт буйковой постановки" FontSize="13" Foreground="#C7D2E5" />
         </StackPanel>
-        <Border Grid.Column="1" Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
-          <TextBlock Text="v0.6 element library window" Foreground="#C7D2E5" FontSize="13" />
-        </Border>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Button Content="Библиотека элементов..." Click="OpenLibraryButton_Click" Padding="14,8" />
+          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
+            <TextBlock Text="v0.6.1 help in library" Foreground="#C7D2E5" FontSize="13" />
+          </Border>
+        </StackPanel>
       </Grid>
     </Border>
 
@@ -108,15 +112,12 @@
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <TextBlock Text="Выбранный буй" FontSize="12" Foreground="#697386" />
-                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="В главном окне выбирается только готовый буй. Создание, редактирование и удаление вынесены в отдельное окно «Библиотека элементов»." />
+                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="В главном окне выбирается только готовый буй. Создание, редактирование и удаление вынесены в верхнюю кнопку «Библиотека элементов...»." />
                 </StackPanel>
                 <ComboBox ItemsSource="{Binding BuoyPresets}" SelectedItem="{Binding SelectedBuoyPreset}" HorizontalAlignment="Stretch" />
               </StackPanel>
 
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                <Button Content="Библиотека..." Click="OpenLibraryButton_Click" />
-                <Button Grid.Column="1" Content="Обновить список" Command="{Binding RefreshBuoyLibraryCommand}" />
-              </Grid>
+              <Button Content="Обновить список буёв" Command="{Binding RefreshBuoyLibraryCommand}" HorizontalAlignment="Stretch" />
 
               <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
                 <TextBlock Text="{Binding BuoyLibraryStatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
