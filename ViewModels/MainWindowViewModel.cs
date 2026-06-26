@@ -22,6 +22,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _currentSpeed = "0.5";
     private string _waveHeight = "1.0";
     private string _wavePeriod = "6.0";
+    private SeabedPreset? _selectedSeabedPreset;
     private string _buoyName = "Буй";
     private BuoyLibraryItem? _selectedBuoyPreset;
     private string _buoyVolume = "0.50";
@@ -49,6 +50,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ElementRows = new ObservableCollection<ElementCalculationDisplayRow>();
         BuoyPresets = new ObservableCollection<BuoyLibraryItem>();
         AnchorPresets = new ObservableCollection<AnchorLibraryItem>();
+        SeabedPresets = new ObservableCollection<SeabedPreset>(SeabedCatalog.Presets);
 
         CalculateCommand = new RelayCommand(Calculate);
         AddLineCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии", RopePresetStorageId = "built-in:polyester_20" }));
@@ -70,6 +72,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ObservableCollection<ElementCalculationDisplayRow> ElementRows { get; }
     public ObservableCollection<BuoyLibraryItem> BuoyPresets { get; }
     public ObservableCollection<AnchorLibraryItem> AnchorPresets { get; }
+    public ObservableCollection<SeabedPreset> SeabedPresets { get; }
 
     public ICommand CalculateCommand { get; }
     public ICommand AddLineCommand { get; }
@@ -90,6 +93,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string CurrentSpeed { get => _currentSpeed; set => SetProperty(ref _currentSpeed, value); }
     public string WaveHeight { get => _waveHeight; set => SetProperty(ref _waveHeight, value); }
     public string WavePeriod { get => _wavePeriod; set => SetProperty(ref _wavePeriod, value); }
+
+    public SeabedPreset? SelectedSeabedPreset
+    {
+        get => _selectedSeabedPreset;
+        set => SetProperty(ref _selectedSeabedPreset, value);
+    }
+
     public string BuoyName { get => _buoyName; set => SetProperty(ref _buoyName, value); }
 
     public BuoyLibraryItem? SelectedBuoyPreset
@@ -278,6 +288,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         CurrentSpeed = "0.5";
         WaveHeight = "1.0";
         WavePeriod = "6.0";
+        SelectedSeabedPreset = SeabedCatalog.ById("unknown");
         SelectedBuoyPreset = BuoyPresets.FirstOrDefault();
         SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == "built-in:concrete_500") ?? AnchorPresets.FirstOrDefault();
         SafetyFactor = "5";
@@ -339,6 +350,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             CurrentSpeed = CurrentSpeed,
             WaveHeight = WaveHeight,
             WavePeriod = WavePeriod,
+            SelectedSeabedPresetId = SelectedSeabedPreset?.Id ?? "unknown",
             BuoyName = BuoyName,
             SelectedBuoyPresetId = SelectedBuoyPreset?.Id ?? string.Empty,
             BuoyVolume = BuoyVolume,
@@ -379,6 +391,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         CurrentSpeed = dto.CurrentSpeed;
         WaveHeight = dto.WaveHeight;
         WavePeriod = dto.WavePeriod;
+        SelectedSeabedPreset = SeabedPresets.FirstOrDefault(x => x.Id == dto.SelectedSeabedPresetId) ?? SeabedCatalog.ById("unknown");
         BuoyName = string.IsNullOrWhiteSpace(dto.BuoyName) ? "Буй" : dto.BuoyName;
         RefreshLibraries();
         SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == dto.SelectedBuoyPresetId) ?? SelectedBuoyPreset;
@@ -427,7 +440,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void Calculate()
     {
-        var environment = new EnvironmentInput(Parse(WaterDensity), Parse(Depth), Parse(CurrentSpeed), Parse(WaveHeight), Parse(WavePeriod), SeabedCatalog.ById("unknown"));
+        var environment = new EnvironmentInput(Parse(WaterDensity), Parse(Depth), Parse(CurrentSpeed), Parse(WaveHeight), Parse(WavePeriod), SelectedSeabedPreset ?? SeabedCatalog.ById("unknown"));
         var buoy = new BuoyInput(BuoyName, Parse(BuoyVolume), Parse(BuoyWeight), Parse(BuoyArea), Parse(BuoyCd));
         var anchor = new AnchorInput(AnchorName, AnchorType, AnchorMaterial, Parse(AnchorWeight), Parse(AnchorVolume), Parse(AnchorCoefficient));
         var items = AssemblyItems.Select(x => x.ToInput()).ToList();
@@ -439,7 +452,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             ElementRows.Add(ElementCalculationDisplayRow.From(row));
         }
 
-        ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nСлабое звено: {result.WeakLinkName}\nЗапас слабого звена: {result.TensionReserve:0.##}\nЗапас якоря: {result.AnchorReserve:0.##}";
+        ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nГрунт: {environment.Seabed.DisplayName}\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nСлабое звено: {result.WeakLinkName}\nЗапас слабого звена: {result.TensionReserve:0.##}\nЗапас якоря: {result.AnchorReserve:0.##}";
         ReportText = ReportBuilder.Build(ProjectName, environment, buoy, anchor, result);
         UpdateSequenceSummary();
     }
