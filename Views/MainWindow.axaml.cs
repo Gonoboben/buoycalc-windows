@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using BuoyCalc.Windows.Services;
@@ -15,6 +16,17 @@ public partial class MainWindow : Window
     {
         AvaloniaXamlLoader.Load(this);
         DataContext = new MainWindowViewModel(new AvaloniaProjectFileDialogService(this));
+    }
+
+    private async void OpenLibraryButton_Click(object? sender, RoutedEventArgs e)
+    {
+        var libraryWindow = new ElementLibraryWindow();
+        await libraryWindow.ShowDialog(this);
+
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.RefreshBuoyLibraryCommand.Execute(null);
+        }
     }
 
     private sealed class AvaloniaProjectFileDialogService : IProjectFileDialogService
