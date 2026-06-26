@@ -46,7 +46,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         _fileDialogService = fileDialogService;
         AssemblyItems = new ObservableCollection<AssemblyItemViewModel>();
-        ElementRows = new ObservableCollection<ElementCalculationRow>();
+        ElementRows = new ObservableCollection<ElementCalculationDisplayRow>();
         BuoyPresets = new ObservableCollection<BuoyLibraryItem>();
         AnchorPresets = new ObservableCollection<AnchorLibraryItem>();
 
@@ -67,7 +67,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     public ObservableCollection<AssemblyItemViewModel> AssemblyItems { get; }
-    public ObservableCollection<ElementCalculationRow> ElementRows { get; }
+    public ObservableCollection<ElementCalculationDisplayRow> ElementRows { get; }
     public ObservableCollection<BuoyLibraryItem> BuoyPresets { get; }
     public ObservableCollection<AnchorLibraryItem> AnchorPresets { get; }
 
@@ -436,7 +436,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ElementRows.Clear();
         foreach (var row in result.ElementRows)
         {
-            ElementRows.Add(row);
+            ElementRows.Add(ElementCalculationDisplayRow.From(row));
         }
 
         ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nСлабое звено: {result.WeakLinkName}\nЗапас слабого звена: {result.TensionReserve:0.##}\nЗапас якоря: {result.AnchorReserve:0.##}";
