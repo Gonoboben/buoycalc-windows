@@ -45,7 +45,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         BuoyPresets = new ObservableCollection<BuoyLibraryItem>();
 
         CalculateCommand = new RelayCommand(Calculate);
-        AddLineCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии" }));
+        AddLineCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии", RopePresetId = "built-in:polyester_20" }));
         AddConnectorCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Новый соединитель" }));
         AddPayloadCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "Новый прибор", PayloadWeightAirKg = "10", PayloadProjectedAreaM2 = "0.02" }));
         NewProjectCommand = new RelayCommand(NewProject);
@@ -122,6 +122,17 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == selectedId) ?? BuoyPresets.FirstOrDefault();
         BuoyLibraryStatusText = $"Буёв в библиотеке: {BuoyPresets.Count}. Пользовательский файл: {BuoyLibraryStorage.LibraryPath}";
+        RefreshSequenceLibraryOptions();
+    }
+
+    private void RefreshSequenceLibraryOptions()
+    {
+        foreach (var item in AssemblyItems)
+        {
+            item.RefreshLibraryOptions();
+        }
+
+        UpdateSequenceSummary();
     }
 
     private void ApplySelectedBuoyPreset()
@@ -312,10 +323,10 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         ClearAssemblyItems();
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Скоба под буем", ConnectorPresetId = "shackle_55", Count = "1" });
-        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Верхний буйреп", RopePresetId = "polyester_20", LengthM = "45" });
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Верхний буйреп", RopePresetId = "built-in:polyester_20", LengthM = "45" });
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Вертлюг", ConnectorPresetId = "swivel_60", Count = "1" });
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "ADCP", PayloadWeightAirKg = "40", PayloadProjectedAreaM2 = "0.05", PayloadDragCoefficient = "1.0" });
-        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Нижняя цепь", RopePresetId = "chain_10", LengthM = "10" });
+        AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Нижняя цепь", RopePresetId = "built-in:chain_10", LengthM = "10" });
 
         UpdateSequenceSummary();
     }
@@ -449,7 +460,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 IsEnabled = item.IsEnabled,
                 Kind = item.Kind,
                 Title = item.Title,
-                RopePresetId = item.RopePresetId,
+                RopePresetId = NormalizeRopeId(item.RopePresetId),
                 ConnectorPresetId = item.ConnectorPresetId,
                 LengthM = item.LengthM,
                 Count = item.Kind == "Connector" ? "1" : item.Count,
@@ -511,6 +522,21 @@ public sealed class MainWindowViewModel : ViewModelBase
     private static string FormatDouble(double value)
     {
         return value.ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    private static string NormalizeRopeId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "built-in:polyester_20";
+        }
+
+        if (value.StartsWith("user:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        return "built-in:" + value;
     }
 
     private static string MakeSafeFileName(string value)
