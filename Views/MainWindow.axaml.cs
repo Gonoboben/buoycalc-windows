@@ -49,6 +49,21 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void Open2DButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var window = new Mooring2DWindow
+        {
+            DataContext = viewModel
+        };
+
+        await window.ShowDialog(this);
+    }
+
     private async void ExportPdfButton_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel)
