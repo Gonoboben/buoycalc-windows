@@ -6,42 +6,24 @@
         MinWidth="1080"
         MinHeight="720"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.4.1">
+        Title="BuoyCalc Windows v0.5">
 
   <Grid RowDefinitions="Auto,*">
 
-    <!-- Header -->
     <Border Grid.Row="0" Background="#172033" Padding="20,16">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="4">
-          <TextBlock Text="BuoyCalc Windows"
-                     FontSize="26"
-                     FontWeight="Bold"
-                     Foreground="White" />
-          <TextBlock Text="Предварительный инженерный расчёт буйковой постановки"
-                     FontSize="13"
-                     Foreground="#C7D2E5" />
+          <TextBlock Text="BuoyCalc Windows" FontSize="26" FontWeight="Bold" Foreground="White" />
+          <TextBlock Text="Предварительный инженерный расчёт буйковой постановки" FontSize="13" Foreground="#C7D2E5" />
         </StackPanel>
-
-        <Border Grid.Column="1"
-                Background="#263653"
-                CornerRadius="12"
-                Padding="14,8"
-                VerticalAlignment="Center">
-          <TextBlock Text="v0.4.1 help + file dialogs"
-                     Foreground="#C7D2E5"
-                     FontSize="13" />
+        <Border Grid.Column="1" Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
+          <TextBlock Text="v0.5 buoy library" Foreground="#C7D2E5" FontSize="13" />
         </Border>
       </Grid>
     </Border>
 
-    <!-- Main content -->
-    <Grid Grid.Row="1"
-          ColumnDefinitions="360,*,360"
-          ColumnSpacing="16"
-          Margin="18">
+    <Grid Grid.Row="1" ColumnDefinitions="360,*,360" ColumnSpacing="16" Margin="18">
 
-      <!-- Left panel -->
       <ScrollViewer Grid.Column="0">
         <StackPanel Spacing="14">
 
@@ -67,10 +49,7 @@
               </Grid>
 
               <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
-                <TextBlock Text="{Binding ProjectStatusText}"
-                           FontSize="12"
-                           Foreground="#697386"
-                           TextWrapping="Wrap" />
+                <TextBlock Text="{Binding ProjectStatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
               </Border>
             </StackPanel>
           </Border>
@@ -125,6 +104,33 @@
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
             <StackPanel Spacing="10">
               <TextBlock Text="Буй" FontSize="18" FontWeight="Bold" />
+
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Библиотека буёв" FontSize="12" Foreground="#697386" />
+                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Можно выбрать встроенный пресет буя или сохранить текущие значения как пользовательский буй. Пользовательская библиотека хранится в Документы\BuoyCalc\Libraries\user-buoys.json." />
+                </StackPanel>
+                <ComboBox ItemsSource="{Binding BuoyPresets}" SelectedItem="{Binding SelectedBuoyPreset}" HorizontalAlignment="Stretch" />
+              </StackPanel>
+
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button Content="Применить" Command="{Binding ApplyBuoyPresetCommand}" />
+                <Button Grid.Column="1" Content="Сохранить буй" Command="{Binding SaveBuoyPresetCommand}" />
+                <Button Grid.Column="2" Content="Обновить" Command="{Binding RefreshBuoyLibraryCommand}" />
+              </Grid>
+
+              <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
+                <TextBlock Text="{Binding BuoyLibraryStatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+              </Border>
+
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Название буя" FontSize="12" Foreground="#697386" />
+                  <TextBlock Text="?" FontSize="12" Foreground="#315B9A" ToolTip.Tip="Имя буя используется в отчёте и при сохранении пользовательского пресета." />
+                </StackPanel>
+                <TextBox Text="{Binding BuoyName}" Watermark="Название буя" />
+              </StackPanel>
+
               <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
                 <StackPanel Spacing="4">
                   <StackPanel Orientation="Horizontal" Spacing="6">
@@ -198,28 +204,19 @@
                 </StackPanel>
               </Grid>
 
-              <Button Content="Рассчитать систему"
-                      Command="{Binding CalculateCommand}"
-                      HorizontalAlignment="Stretch"
-                      Margin="0,8,0,0"
-                      Padding="14,10"
-                      FontWeight="Bold" />
+              <Button Content="Рассчитать систему" Command="{Binding CalculateCommand}" HorizontalAlignment="Stretch" Margin="0,8,0,0" Padding="14,10" FontWeight="Bold" />
             </StackPanel>
           </Border>
         </StackPanel>
       </ScrollViewer>
 
-      <!-- Center panel -->
       <Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
         <Grid RowDefinitions="Auto,Auto,*">
 
           <StackPanel Grid.Row="0" Spacing="10">
             <StackPanel Spacing="4">
               <TextBlock Text="Последовательность постановки" FontSize="20" FontWeight="Bold" />
-              <TextBlock Text="Собирается сверху вниз: буй → соединители → линия → приборы → якорь"
-                         FontSize="12"
-                         Foreground="#697386"
-                         TextWrapping="Wrap" />
+              <TextBlock Text="Собирается сверху вниз: буй → соединители → линия → приборы → якорь" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -231,15 +228,8 @@
 
           <Border Grid.Row="1" Background="#F7F9FC" CornerRadius="12" Padding="12" Margin="0,14,0,12">
             <StackPanel Spacing="4">
-              <TextBlock Text="{Binding SequenceSummary}"
-                         FontSize="13"
-                         FontWeight="Bold"
-                         Foreground="#263653"
-                         TextWrapping="Wrap" />
-              <TextBlock Text="Соединитель считается как один элемент последовательности. Если нужно несколько соединителей, добавьте несколько элементов или продублируйте карточку."
-                         FontSize="12"
-                         Foreground="#697386"
-                         TextWrapping="Wrap" />
+              <TextBlock Text="{Binding SequenceSummary}" FontSize="13" FontWeight="Bold" Foreground="#263653" TextWrapping="Wrap" />
+              <TextBlock Text="Соединитель считается как один элемент последовательности. Если нужно несколько соединителей, добавьте несколько элементов или продублируйте карточку." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
 
@@ -247,12 +237,7 @@
             <ItemsControl ItemsSource="{Binding AssemblyItems}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border BorderBrush="#D7DEE9"
-                          BorderThickness="1"
-                          Background="#FBFCFE"
-                          CornerRadius="14"
-                          Padding="14"
-                          Margin="0,0,0,10">
+                  <Border BorderBrush="#D7DEE9" BorderThickness="1" Background="#FBFCFE" CornerRadius="14" Padding="14" Margin="0,0,0,10">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                       <Border Width="34" Height="34" CornerRadius="17" Background="#E9EFFA" VerticalAlignment="Top">
                         <TextBlock Text="●" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#315B9A" />
@@ -277,29 +262,20 @@
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
                           <StackPanel Spacing="4">
                             <TextBlock Text="Тип элемента" FontSize="12" Foreground="#697386" />
-                            <ComboBox ItemsSource="{Binding KindOptions}"
-                                      SelectedItem="{Binding Kind}"
-                                      HorizontalAlignment="Stretch" />
+                            <ComboBox ItemsSource="{Binding KindOptions}" SelectedItem="{Binding Kind}" HorizontalAlignment="Stretch" />
                           </StackPanel>
 
                           <Border Grid.Column="1" Background="#F3F6FA" CornerRadius="10" Padding="10">
-                            <TextBlock Text="Выберите тип, затем заполните только его параметры ниже. Неактуальные поля скрываются."
-                                       FontSize="12"
-                                       Foreground="#697386"
-                                       TextWrapping="Wrap" />
+                            <TextBlock Text="Выберите тип, затем заполните только его параметры ниже. Неактуальные поля скрываются." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
                           </Border>
                         </Grid>
 
-                        <!-- Line fields -->
                         <Border IsVisible="{Binding IsLine}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
                           <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
                             <StackPanel Spacing="4">
                               <TextBlock Text="Пресет линии" FontSize="12" Foreground="#697386" />
-                              <ComboBox ItemsSource="{Binding RopePresetOptions}"
-                                        SelectedItem="{Binding RopePresetId}"
-                                        HorizontalAlignment="Stretch" />
+                              <ComboBox ItemsSource="{Binding RopePresetOptions}" SelectedItem="{Binding RopePresetId}" HorizontalAlignment="Stretch" />
                             </StackPanel>
-
                             <StackPanel Grid.Column="1" Spacing="4">
                               <TextBlock Text="Длина, м" FontSize="12" Foreground="#697386" />
                               <TextBox Text="{Binding LengthM}" Watermark="м" />
@@ -307,34 +283,27 @@
                           </Grid>
                         </Border>
 
-                        <!-- Connector fields -->
                         <Border IsVisible="{Binding IsConnector}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
                           <StackPanel Spacing="4">
                             <TextBlock Text="Пресет соединителя" FontSize="12" Foreground="#697386" />
-                            <ComboBox ItemsSource="{Binding ConnectorPresetOptions}"
-                                      SelectedItem="{Binding ConnectorPresetId}"
-                                      HorizontalAlignment="Stretch" />
+                            <ComboBox ItemsSource="{Binding ConnectorPresetOptions}" SelectedItem="{Binding ConnectorPresetId}" HorizontalAlignment="Stretch" />
                           </StackPanel>
                         </Border>
 
-                        <!-- Payload fields -->
                         <Border IsVisible="{Binding IsPayload}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
                           <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
                             <StackPanel Spacing="4">
                               <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
                               <TextBox Text="{Binding PayloadWeightAirKg}" Watermark="кг" />
                             </StackPanel>
-
                             <StackPanel Grid.Column="1" Spacing="4">
                               <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
                               <TextBox Text="{Binding PayloadVolumeM3}" Watermark="м³" />
                             </StackPanel>
-
                             <StackPanel Grid.Column="2" Spacing="4">
                               <TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" />
                               <TextBox Text="{Binding PayloadProjectedAreaM2}" Watermark="м²" />
                             </StackPanel>
-
                             <StackPanel Grid.Column="3" Spacing="4">
                               <TextBlock Text="Cd" FontSize="12" Foreground="#697386" />
                               <TextBox Text="{Binding PayloadDragCoefficient}" Watermark="Cd" />
@@ -351,7 +320,6 @@
         </Grid>
       </Border>
 
-      <!-- Right panel -->
       <Grid Grid.Column="2" RowDefinitions="260,*" RowSpacing="16">
         <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
           <Grid RowDefinitions="Auto,*">
@@ -359,16 +327,7 @@
               <TextBlock Text="Результат" FontSize="20" FontWeight="Bold" />
               <TextBlock Text="Ключевые показатели после расчёта" FontSize="12" Foreground="#697386" />
             </StackPanel>
-
-            <TextBox Grid.Row="1"
-                     Text="{Binding ResultText}"
-                     AcceptsReturn="True"
-                     IsReadOnly="True"
-                     Background="#F7F9FC"
-                     BorderThickness="0"
-                     FontSize="14"
-                     TextWrapping="Wrap"
-                     Margin="0,12,0,0" />
+            <TextBox Grid.Row="1" Text="{Binding ResultText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontSize="14" TextWrapping="Wrap" Margin="0,12,0,0" />
           </Grid>
         </Border>
 
@@ -378,17 +337,7 @@
               <TextBlock Text="Отчёт" FontSize="20" FontWeight="Bold" />
               <TextBlock Text="Markdown-текст для копирования или будущего экспорта" FontSize="12" Foreground="#697386" />
             </StackPanel>
-
-            <TextBox Grid.Row="1"
-                     Text="{Binding ReportText}"
-                     AcceptsReturn="True"
-                     IsReadOnly="True"
-                     Background="#F7F9FC"
-                     BorderThickness="0"
-                     FontFamily="Consolas"
-                     FontSize="12"
-                     TextWrapping="Wrap"
-                     Margin="0,12,0,0" />
+            <TextBox Grid.Row="1" Text="{Binding ReportText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0" />
           </Grid>
         </Border>
       </Grid>
