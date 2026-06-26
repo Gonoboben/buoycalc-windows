@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,6 +22,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _currentSpeed = "0.5";
     private string _waveHeight = "1.0";
     private string _wavePeriod = "6.0";
+    private string _buoyName = "Буй";
+    private BuoyLibraryItem? _selectedBuoyPreset;
     private string _buoyVolume = "0.50";
     private string _buoyWeight = "80";
     private string _buoyArea = "0.5";
@@ -33,11 +36,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _reportText = "";
     private string _sequenceSummary = "";
     private string _projectStatusText = "Проект ещё не сохранён.";
+    private string _buoyLibraryStatusText = "Библиотека буёв готова.";
 
     public MainWindowViewModel(IProjectFileDialogService? fileDialogService = null)
     {
         _fileDialogService = fileDialogService;
         AssemblyItems = new ObservableCollection<AssemblyItemViewModel>();
+        BuoyPresets = new ObservableCollection<BuoyLibraryItem>();
 
         CalculateCommand = new RelayCommand(Calculate);
         AddLineCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии" }));
@@ -47,11 +52,17 @@ public sealed class MainWindowViewModel : ViewModelBase
         SaveProjectCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: false));
         SaveProjectAsCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: true));
         LoadProjectCommand = new RelayCommand(async () => await LoadProjectAsync());
+        ApplyBuoyPresetCommand = new RelayCommand(ApplySelectedBuoyPreset);
+        SaveBuoyPresetCommand = new RelayCommand(SaveCurrentBuoyToLibrary);
+        RefreshBuoyLibraryCommand = new RelayCommand(() => RefreshBuoyLibrary(null));
 
+        RefreshBuoyLibrary(null);
         ResetToDefaultProject();
     }
 
     public ObservableCollection<AssemblyItemViewModel> AssemblyItems { get; }
+    public ObservableCollection<BuoyLibraryItem> BuoyPresets { get; }
+
     public ICommand CalculateCommand { get; }
     public ICommand AddLineCommand { get; }
     public ICommand AddConnectorCommand { get; }
@@ -60,6 +71,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand SaveProjectCommand { get; }
     public ICommand SaveProjectAsCommand { get; }
     public ICommand LoadProjectCommand { get; }
+    public ICommand ApplyBuoyPresetCommand { get; }
+    public ICommand SaveBuoyPresetCommand { get; }
+    public ICommand RefreshBuoyLibraryCommand { get; }
 
     public string ProjectName { get => _projectName; set => SetProperty(ref _projectName, value); }
     public string ProjectFilePath { get => _projectFilePath; set => SetProperty(ref _projectFilePath, value); }
@@ -68,6 +82,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string CurrentSpeed { get => _currentSpeed; set => SetProperty(ref _currentSpeed, value); }
     public string WaveHeight { get => _waveHeight; set => SetProperty(ref _waveHeight, value); }
     public string WavePeriod { get => _wavePeriod; set => SetProperty(ref _wavePeriod, value); }
+    public string BuoyName { get => _buoyName; set => SetProperty(ref _buoyName, value); }
+    public BuoyLibraryItem? SelectedBuoyPreset { get => _selectedBuoyPreset; set => SetProperty(ref _selectedBuoyPreset, value); }
     public string BuoyVolume { get => _buoyVolume; set => SetProperty(ref _buoyVolume, value); }
     public string BuoyWeight { get => _buoyWeight; set => SetProperty(ref _buoyWeight, value); }
     public string BuoyArea { get => _buoyArea; set => SetProperty(ref _buoyArea, value); }
@@ -80,6 +96,59 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ReportText { get => _reportText; set => SetProperty(ref _reportText, value); }
     public string SequenceSummary { get => _sequenceSummary; set => SetProperty(ref _sequenceSummary, value); }
     public string ProjectStatusText { get => _projectStatusText; set => SetProperty(ref _projectStatusText, value); }
+    public string BuoyLibraryStatusText { get => _buoyLibraryStatusText; set => SetProperty(ref _buoyLibraryStatusText, value); }
+
+    private void RefreshBuoyLibrary(string? selectedId)
+    {
+        selectedId ??= SelectedBuoyPreset?.Id;
+
+        BuoyPresets.Clear();
+        foreach (var buoy in BuoyLibraryStorage.LoadAllBuoys())
+        {
+            BuoyPresets.Add(buoy);
+        }
+
+        SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == selectedId) ?? BuoyPresets.FirstOrDefault();
+        BuoyLibraryStatusText = $"Буёв в библиотеке: {BuoyPresets.Count}. Пользовательский файл: {BuoyLibraryStorage.LibraryPath}";
+    }
+
+    private void ApplySelectedBuoyPreset()
+    {
+        if (SelectedBuoyPreset is null)
+        {
+            BuoyLibraryStatusText = "Выберите буй из библиотеки.";
+            return;
+        }
+
+        BuoyName = SelectedBuoyPreset.Name;
+        BuoyVolume = FormatDouble(SelectedBuoyPreset.VolumeM3);
+        BuoyWeight = FormatDouble(SelectedBuoyPreset.WeightKg);
+        BuoyArea = FormatDouble(SelectedBuoyPreset.ProjectedAreaM2);
+        BuoyCd = FormatDouble(SelectedBuoyPreset.DragCoefficient);
+        BuoyLibraryStatusText = $"Применён буй: {SelectedBuoyPreset.DisplayName}";
+    }
+
+    private void SaveCurrentBuoyToLibrary()
+    {
+        var name = string.IsNullOrWhiteSpace(BuoyName) ? "Пользовательский буй" : BuoyName.Trim();
+        var selectedUserId = SelectedBuoyPreset is { Source: "User" } ? SelectedBuoyPreset.Id : string.Empty;
+
+        var buoy = new BuoyLibraryItem
+        {
+            Id = selectedUserId,
+            Source = "User",
+            Name = name,
+            VolumeM3 = Parse(BuoyVolume),
+            WeightKg = Parse(BuoyWeight),
+            ProjectedAreaM2 = Parse(BuoyArea),
+            DragCoefficient = Parse(BuoyCd),
+            Note = "Сохранено пользователем из формы буя."
+        };
+
+        BuoyLibraryStorage.UpsertUserBuoy(buoy);
+        RefreshBuoyLibrary(buoy.Id);
+        BuoyLibraryStatusText = $"Буй сохранён в библиотеку: {name}";
+    }
 
     private void AddAssemblyItem(AssemblyItemViewModel item)
     {
@@ -194,6 +263,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         CurrentSpeed = "0.5";
         WaveHeight = "1.0";
         WavePeriod = "6.0";
+        BuoyName = "Буй";
+        SelectedBuoyPreset = BuoyPresets.FirstOrDefault();
         BuoyVolume = "0.50";
         BuoyWeight = "80";
         BuoyArea = "0.5";
@@ -287,6 +358,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             CurrentSpeed = CurrentSpeed,
             WaveHeight = WaveHeight,
             WavePeriod = WavePeriod,
+            BuoyName = BuoyName,
+            SelectedBuoyPresetId = SelectedBuoyPreset?.Id ?? string.Empty,
             BuoyVolume = BuoyVolume,
             BuoyWeight = BuoyWeight,
             BuoyArea = BuoyArea,
@@ -320,6 +393,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         CurrentSpeed = dto.CurrentSpeed;
         WaveHeight = dto.WaveHeight;
         WavePeriod = dto.WavePeriod;
+        BuoyName = string.IsNullOrWhiteSpace(dto.BuoyName) ? "Буй" : dto.BuoyName;
+        RefreshBuoyLibrary(dto.SelectedBuoyPresetId);
         BuoyVolume = dto.BuoyVolume;
         BuoyWeight = dto.BuoyWeight;
         BuoyArea = dto.BuoyArea;
@@ -382,7 +457,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             Parse(WavePeriod),
             SeabedCatalog.ById("unknown"));
 
-        var buoy = new BuoyInput("Буй", Parse(BuoyVolume), Parse(BuoyWeight), Parse(BuoyArea), Parse(BuoyCd));
+        var buoy = new BuoyInput(BuoyName, Parse(BuoyVolume), Parse(BuoyWeight), Parse(BuoyArea), Parse(BuoyCd));
         var anchor = new AnchorInput("Якорь", "Deadweight", "Concrete", Parse(AnchorWeight), Parse(AnchorVolume), Parse(AnchorCoefficient));
         var items = AssemblyItems.Select(x => x.ToInput()).ToList();
 
@@ -396,7 +471,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     private static double Parse(string value)
     {
         value = (value ?? string.Empty).Replace(',', '.');
-        return double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : 0;
+        return double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : 0;
+    }
+
+    private static string FormatDouble(double value)
+    {
+        return value.ToString("0.###", CultureInfo.InvariantCulture);
     }
 
     private static string MakeSafeFileName(string value)
