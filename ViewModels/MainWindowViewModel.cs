@@ -20,6 +20,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _waterDensity = "1025";
     private string _depth = "50";
     private string _currentSpeed = "0.5";
+    private bool _useCurrentProfile;
+    private string _currentProfileSummary = "Профиль течения отключён. Используется одно значение скорости.";
     private string _waveHeight = "1.0";
     private string _wavePeriod = "6.0";
     private SeabedPreset? _selectedSeabedPreset;
@@ -57,6 +59,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         AssemblyItems = new ObservableCollection<AssemblyItemViewModel>();
         ElementRows = new ObservableCollection<ElementCalculationDisplayRow>();
         SequenceDiagramLines = new ObservableCollection<string>();
+        CurrentProfilePoints = new ObservableCollection<CurrentProfilePointViewModel>();
         BuoyPresets = new ObservableCollection<BuoyLibraryItem>();
         AnchorPresets = new ObservableCollection<AnchorLibraryItem>();
         SeabedPresets = new ObservableCollection<SeabedPreset>(SeabedCatalog.Presets);
@@ -65,6 +68,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         AddLineCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Line", Title = "Новый участок линии", RopePresetStorageId = "built-in:polyester_20" }));
         AddConnectorCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Новый соединитель", ConnectorPresetStorageId = "built-in:shackle_55" }));
         AddPayloadCommand = new RelayCommand(() => AddAssemblyItem(new AssemblyItemViewModel { Kind = "Payload", Title = "Новый прибор", PayloadPresetStorageId = "built-in:adcp_40" }));
+        AddCurrentProfilePointCommand = new RelayCommand(AddCurrentProfilePoint);
+        ResetCurrentProfileCommand = new RelayCommand(ResetCurrentProfile);
         NewProjectCommand = new RelayCommand(NewProject);
         SaveProjectCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: false));
         SaveProjectAsCommand = new RelayCommand(async () => await SaveProjectAsync(promptForPath: true));
@@ -80,6 +85,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ObservableCollection<AssemblyItemViewModel> AssemblyItems { get; }
     public ObservableCollection<ElementCalculationDisplayRow> ElementRows { get; }
     public ObservableCollection<string> SequenceDiagramLines { get; }
+    public ObservableCollection<CurrentProfilePointViewModel> CurrentProfilePoints { get; }
     public ObservableCollection<BuoyLibraryItem> BuoyPresets { get; }
     public ObservableCollection<AnchorLibraryItem> AnchorPresets { get; }
     public ObservableCollection<SeabedPreset> SeabedPresets { get; }
@@ -88,6 +94,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand AddLineCommand { get; }
     public ICommand AddConnectorCommand { get; }
     public ICommand AddPayloadCommand { get; }
+    public ICommand AddCurrentProfilePointCommand { get; }
+    public ICommand ResetCurrentProfileCommand { get; }
     public ICommand NewProjectCommand { get; }
     public ICommand SaveProjectCommand { get; }
     public ICommand SaveProjectAsCommand { get; }
@@ -100,7 +108,21 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ProjectFilePath { get => _projectFilePath; set => SetProperty(ref _projectFilePath, value); }
     public string WaterDensity { get => _waterDensity; set { if (SetProperty(ref _waterDensity, value)) UpdateVisualizationSummary(); } }
     public string Depth { get => _depth; set { if (SetProperty(ref _depth, value)) UpdateVisualizationSummary(); } }
-    public string CurrentSpeed { get => _currentSpeed; set => SetProperty(ref _currentSpeed, value); }
+    public string CurrentSpeed { get => _currentSpeed; set { if (SetProperty(ref _currentSpeed, value)) UpdateCurrentProfileSummary(); } }
+
+    public bool UseCurrentProfile
+    {
+        get => _useCurrentProfile;
+        set
+        {
+            if (SetProperty(ref _useCurrentProfile, value))
+            {
+                UpdateCurrentProfileSummary();
+            }
+        }
+    }
+
+    public string CurrentProfileSummary { get => _currentProfileSummary; set => SetProperty(ref _currentProfileSummary, value); }
     public string WaveHeight { get => _waveHeight; set => SetProperty(ref _waveHeight, value); }
     public string WavePeriod { get => _wavePeriod; set => SetProperty(ref _wavePeriod, value); }
 
@@ -305,6 +327,86 @@ public sealed class MainWindowViewModel : ViewModelBase
         UpdateSequenceSummary();
     }
 
+    private void AddCurrentProfilePoint()
+    {
+        var depth = CurrentProfilePoints.Count == 0 ? 0 : CurrentProfilePoints.Select(x => x.ToInput().DepthM).Max() + 10;
+        var point = new CurrentProfilePointViewModel
+        {
+            DepthM = FormatDouble(depth),
+            EastCurrentMS = CurrentProfilePoints.Count == 0 ? CurrentSpeed : "0.3",
+            NorthCurrentMS = "0",
+            VerticalCurrentMS = "0",
+            WaterDensityKgM3 = WaterDensity
+        };
+        AddCurrentProfilePoint(point);
+    }
+
+    private void AddCurrentProfilePoint(CurrentProfilePointViewModel point)
+    {
+        point.RemoveRequested += RemoveCurrentProfilePoint;
+        point.PropertyChanged += OnCurrentProfilePointChanged;
+        CurrentProfilePoints.Add(point);
+        UpdateCurrentProfileSummary();
+    }
+
+    private void RemoveCurrentProfilePoint(CurrentProfilePointViewModel point)
+    {
+        point.RemoveRequested -= RemoveCurrentProfilePoint;
+        point.PropertyChanged -= OnCurrentProfilePointChanged;
+        CurrentProfilePoints.Remove(point);
+        UpdateCurrentProfileSummary();
+    }
+
+    private void ClearCurrentProfilePoints()
+    {
+        foreach (var point in CurrentProfilePoints)
+        {
+            point.RemoveRequested -= RemoveCurrentProfilePoint;
+            point.PropertyChanged -= OnCurrentProfilePointChanged;
+        }
+        CurrentProfilePoints.Clear();
+    }
+
+    private void ResetCurrentProfile()
+    {
+        ClearCurrentProfilePoints();
+        AddCurrentProfilePoint(new CurrentProfilePointViewModel { DepthM = "0", EastCurrentMS = CurrentSpeed, NorthCurrentMS = "0", VerticalCurrentMS = "0", WaterDensityKgM3 = WaterDensity });
+        AddCurrentProfilePoint(new CurrentProfilePointViewModel { DepthM = "10", EastCurrentMS = "0.45", NorthCurrentMS = "0", VerticalCurrentMS = "0", WaterDensityKgM3 = WaterDensity });
+        AddCurrentProfilePoint(new CurrentProfilePointViewModel { DepthM = "25", EastCurrentMS = "0.3", NorthCurrentMS = "0", VerticalCurrentMS = "0", WaterDensityKgM3 = WaterDensity });
+        AddCurrentProfilePoint(new CurrentProfilePointViewModel { DepthM = Depth, EastCurrentMS = "0.1", NorthCurrentMS = "0", VerticalCurrentMS = "0", WaterDensityKgM3 = WaterDensity });
+        UpdateCurrentProfileSummary();
+    }
+
+    private void OnCurrentProfilePointChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is CurrentProfilePointViewModel point)
+        {
+            point.RefreshSummary();
+        }
+        UpdateCurrentProfileSummary();
+    }
+
+    private void UpdateCurrentProfileSummary()
+    {
+        if (!UseCurrentProfile)
+        {
+            CurrentProfileSummary = $"Профиль течения отключён. Используется одно значение скорости: {CurrentSpeed} м/с.";
+            return;
+        }
+
+        if (CurrentProfilePoints.Count == 0)
+        {
+            CurrentProfileSummary = "Профиль включён, но точки не заданы. Будет использовано одно значение скорости.";
+            return;
+        }
+
+        var inputs = CurrentProfilePoints.Select(x => x.ToInput()).OrderBy(x => x.DepthM).ToList();
+        var maxSpeed = inputs.Max(x => x.HorizontalSpeedMS);
+        var minDepth = inputs.Min(x => x.DepthM);
+        var maxDepth = inputs.Max(x => x.DepthM);
+        CurrentProfileSummary = $"Профиль включён: {inputs.Count} точек, глубины {minDepth:0.##}–{maxDepth:0.##} м, max |Uгор|={maxSpeed:0.###} м/с. В v0.19 расчёт использует эту max-скорость как переходную оценку.";
+    }
+
     private void NewProject()
     {
         ResetToDefaultProject();
@@ -318,6 +420,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         WaterDensity = "1025";
         Depth = "50";
         CurrentSpeed = "0.5";
+        UseCurrentProfile = false;
         WaveHeight = "1.0";
         WavePeriod = "6.0";
         SelectedSeabedPreset = SeabedCatalog.ById("unknown");
@@ -328,6 +431,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         ReportText = "";
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
+
+        ClearCurrentProfilePoints();
+        ResetCurrentProfile();
+        UseCurrentProfile = false;
 
         ClearAssemblyItems();
         AddAssemblyItem(new AssemblyItemViewModel { Kind = "Connector", Title = "Скоба под буем", ConnectorPresetStorageId = "built-in:shackle_55", Count = "1" });
@@ -381,6 +488,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             WaterDensity = WaterDensity,
             Depth = Depth,
             CurrentSpeed = CurrentSpeed,
+            UseCurrentProfile = UseCurrentProfile ? "true" : "false",
             WaveHeight = WaveHeight,
             WavePeriod = WavePeriod,
             SelectedSeabedPresetId = SelectedSeabedPreset?.Id ?? "unknown",
@@ -398,6 +506,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             AnchorVolume = AnchorVolume,
             AnchorCoefficient = AnchorCoefficient,
             SafetyFactor = SafetyFactor,
+            CurrentProfilePoints = CurrentProfilePoints.Select(x => x.ToDto()).ToList(),
             AssemblyItems = AssemblyItems.Select(x => new AssemblyItemDto
             {
                 IsEnabled = x.IsEnabled,
@@ -422,6 +531,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         WaterDensity = dto.WaterDensity;
         Depth = dto.Depth;
         CurrentSpeed = dto.CurrentSpeed;
+        UseCurrentProfile = string.Equals(dto.UseCurrentProfile, "true", StringComparison.OrdinalIgnoreCase);
         WaveHeight = dto.WaveHeight;
         WavePeriod = dto.WavePeriod;
         SelectedSeabedPreset = SeabedPresets.FirstOrDefault(x => x.Id == dto.SelectedSeabedPresetId) ?? SeabedCatalog.ById("unknown");
@@ -440,6 +550,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         ReportText = "";
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
+
+        ClearCurrentProfilePoints();
+        foreach (var point in dto.CurrentProfilePoints)
+        {
+            AddCurrentProfilePoint(CurrentProfilePointViewModel.FromDto(point));
+        }
+        if (CurrentProfilePoints.Count == 0)
+        {
+            ResetCurrentProfile();
+        }
 
         ClearAssemblyItems();
         foreach (var item in dto.AssemblyItems)
@@ -461,6 +581,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             });
         }
         UpdateSequenceSummary();
+        UpdateCurrentProfileSummary();
     }
 
     private void UpdateSequenceSummary(CalculationResult? result = null)
@@ -520,7 +641,17 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void Calculate()
     {
-        var environment = new EnvironmentInput(Parse(WaterDensity), Parse(Depth), Parse(CurrentSpeed), Parse(WaveHeight), Parse(WavePeriod), SelectedSeabedPreset ?? SeabedCatalog.ById("unknown"));
+        var currentProfile = CurrentProfilePoints.Select(x => x.ToInput()).OrderBy(x => x.DepthM).ToList();
+        var environment = new EnvironmentInput(
+            Parse(WaterDensity),
+            Parse(Depth),
+            Parse(CurrentSpeed),
+            Parse(WaveHeight),
+            Parse(WavePeriod),
+            SelectedSeabedPreset ?? SeabedCatalog.ById("unknown"),
+            UseCurrentProfile,
+            currentProfile);
+
         var buoy = new BuoyInput(BuoyName, Parse(BuoyVolume), Parse(BuoyWeight), Parse(BuoyArea), Parse(BuoyCd));
         var anchor = new AnchorInput(AnchorName, AnchorType, AnchorMaterial, Parse(AnchorWeight), Parse(AnchorVolume), Parse(AnchorCoefficient));
         var items = AssemblyItems.Select(x => x.ToInput()).ToList();
@@ -532,9 +663,10 @@ public sealed class MainWindowViewModel : ViewModelBase
             ElementRows.Add(ElementCalculationDisplayRow.From(row));
         }
 
-        ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nГрунт: {environment.Seabed.DisplayName}\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nСлабое звено: {result.WeakLinkName}\nЗапас слабого звена: {result.TensionReserve:0.##}\nЗапас якоря: {result.AnchorReserve:0.##}";
+        ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nГрунт: {environment.Seabed.DisplayName}\nТечение расчётное: {environment.EffectiveCurrentSpeedMS:0.###} м/с\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nСлабое звено: {result.WeakLinkName}\nЗапас слабого звена: {result.TensionReserve:0.##}\nЗапас якоря: {result.AnchorReserve:0.##}";
         ReportText = ReportBuilder.Build(ProjectName, environment, buoy, anchor, result);
         UpdateSequenceSummary(result);
+        UpdateCurrentProfileSummary();
     }
 
     private static double Parse(string value)
