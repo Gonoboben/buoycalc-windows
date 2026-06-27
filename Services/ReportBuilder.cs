@@ -15,6 +15,7 @@ public static class ReportBuilder
     {
         var sb = new StringBuilder();
         var tensionRows = SegmentTensionAnalyzer.Build(result);
+        var nodeRows = MooringNodeAnalyzer.Build(result);
 
         sb.AppendLine("# BuoyCalc Windows — предварительный отчёт");
         sb.AppendLine();
@@ -91,6 +92,12 @@ public static class ReportBuilder
             var maxTension = tensionRows.OrderByDescending(x => x.TensionKn).First();
             sb.AppendLine($"- Макс. натяжение по сегментной оценке: {maxTension.TensionKn:0.####} кН, сегмент №{maxTension.Number}, z≈{maxTension.EstimatedDepthM:0.####} м");
         }
+        if (nodeRows.Count > 0)
+        {
+            var bottomNode = nodeRows[^1];
+            sb.AppendLine($"- Предварительный горизонтальный снос по узлам X/Z: {bottomNode.XOffsetM:0.####} м");
+            sb.AppendLine($"- Узлов линии X/Z: {nodeRows.Count}");
+        }
         sb.AppendLine();
 
         sb.AppendLine("## Таблица элементов");
@@ -142,6 +149,25 @@ public static class ReportBuilder
             sb.AppendLine();
         }
 
+        if (nodeRows.Count > 0)
+        {
+            sb.AppendLine("## Расчётные узлы линии X/Z");
+            sb.AppendLine("Координаты построены сверху вниз по оценочным углам сегментов. Это предварительная форма линии до итерационного равновесного расчёта.");
+            sb.AppendLine($"Показаны первые {System.Math.Min(90, nodeRows.Count)} узлов из {nodeRows.Count}.");
+            sb.AppendLine();
+            sb.AppendLine("| Узел | Сегмент | Элемент | s, м | X, м | Z, м | Lсег, м | Угол, ° | T, кН | Статус |");
+            sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---|");
+            foreach (var row in nodeRows.Take(90))
+            {
+                sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.SourceElement)} | {row.AlongLineM:0.####} | {row.XOffsetM:0.####} | {row.ZDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.SegmentAngleFromVerticalDeg:0.####} | {row.SegmentTensionKn:0.####} | {Escape(row.Status)} |");
+            }
+            if (nodeRows.Count > 90)
+            {
+                sb.AppendLine("| ... | ... | Остальные узлы скрыты в кратком отчёте |  |  |  |  |  |  |  |");
+            }
+            sb.AppendLine();
+        }
+
         sb.AppendLine("## Проверки");
         foreach (var check in result.Checks)
         {
@@ -150,7 +176,7 @@ public static class ReportBuilder
 
         sb.AppendLine();
         sb.AppendLine("## Ограничения");
-        sb.AppendLine("Расчёт является предварительным. В v0.21 добавлена оценка натяжений по сегментам снизу вверх, но итерационный расчёт формы равновесия и координат X/Y/Z будет добавлен следующим этапом.");
+        sb.AppendLine("Расчёт является предварительным. В v0.22 добавлены расчётные узлы X/Z по оценочным углам сегментов, но итерационный расчёт равновесной формы линии будет следующим этапом.");
 
         return sb.ToString();
     }
