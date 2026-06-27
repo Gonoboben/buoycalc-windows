@@ -6,7 +6,7 @@
         MinWidth="1160"
         MinHeight="760"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.15">
+        Title="BuoyCalc Windows v0.19">
 
   <Grid RowDefinitions="Auto,*">
     <Border Grid.Row="0" Background="#172033" Padding="20,16">
@@ -16,10 +16,13 @@
           <TextBlock Text="Предварительный инженерный расчёт буйковой постановки" FontSize="13" Foreground="#C7D2E5" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Button Click="OpenCurrentProfileButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
+            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Профиль течения..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
+          </Button>
           <Button Click="OpenLibraryButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
             <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Библиотека элементов..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
           </Button>
-          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center"><TextBlock Text="v0.15 2D visualization" Foreground="#C7D2E5" FontSize="13" /></Border>
+          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center"><TextBlock Text="v0.19 current profile" Foreground="#C7D2E5" FontSize="13" /></Border>
         </StackPanel>
       </Grid>
     </Border>
@@ -32,7 +35,7 @@
           </Border>
 
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-            <StackPanel Spacing="10"><TextBlock Text="Условия постановки" FontSize="18" FontWeight="Bold" /><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8"><StackPanel Spacing="4"><TextBlock Text="Плотность воды, кг/м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding WaterDensity}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Глубина, м" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding Depth}" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="Течение, м/с" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding CurrentSpeed}" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Высота волны, м" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding WaveHeight}" /></StackPanel><StackPanel Grid.Row="2" Spacing="4"><TextBlock Text="Период волны, с" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding WavePeriod}" /></StackPanel><StackPanel Grid.Row="2" Grid.Column="1" Spacing="4"><TextBlock Text="Грунт" FontSize="12" Foreground="#697386" /><ComboBox ItemsSource="{Binding SeabedPresets}" SelectedItem="{Binding SelectedSeabedPreset}" HorizontalAlignment="Stretch" /></StackPanel><Border Grid.Row="3" Grid.ColumnSpan="2" Background="#F7F9FC" CornerRadius="10" Padding="10"><TextBlock Text="Грунт влияет на удержание якоря через грунтовый множитель K." FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border></Grid></StackPanel>
+            <StackPanel Spacing="10"><TextBlock Text="Условия постановки" FontSize="18" FontWeight="Bold" /><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8"><StackPanel Spacing="4"><TextBlock Text="Плотность воды, кг/м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding WaterDensity}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Глубина, м" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding Depth}" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="Течение, м/с" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding CurrentSpeed}" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Высота волны, м" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding WaveHeight}" /></StackPanel><StackPanel Grid.Row="2" Spacing="4"><TextBlock Text="Период волны, с" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding WavePeriod}" /></StackPanel><StackPanel Grid.Row="2" Grid.Column="1" Spacing="4"><TextBlock Text="Грунт" FontSize="12" Foreground="#697386" /><ComboBox ItemsSource="{Binding SeabedPresets}" SelectedItem="{Binding SelectedSeabedPreset}" HorizontalAlignment="Stretch" /></StackPanel><Border Grid.Row="3" Grid.ColumnSpan="2" Background="#F7F9FC" CornerRadius="10" Padding="10"><TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border><Button Grid.Row="4" Grid.ColumnSpan="2" Content="Профиль течения по глубине..." Click="OpenCurrentProfileButton_Click" HorizontalAlignment="Stretch" /></Grid></StackPanel>
           </Border>
 
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
