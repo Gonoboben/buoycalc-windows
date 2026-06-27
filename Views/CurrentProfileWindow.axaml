@@ -1,0 +1,77 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="BuoyCalc.Windows.Views.CurrentProfileWindow"
+        Width="860"
+        Height="680"
+        MinWidth="760"
+        MinHeight="560"
+        Background="#F3F6FA"
+        Title="Профиль течения по глубине v0.19">
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="18" RowSpacing="14">
+    <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Профиль течения по глубине" FontSize="22" FontWeight="Bold" />
+          <TextBlock Text="Задайте компоненты течения U/V/W и плотность воды по слоям. В v0.19 профиль уже сохраняется и участвует как переходная оценка скорости; послойная интеграция сил будет следующим этапом." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+        </StackPanel>
+        <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Top">
+          <TextBlock Text="v0.19" FontSize="12" Foreground="#263653" FontWeight="Bold" />
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="14" BoxShadow="0 2 12 #18000000">
+      <StackPanel Spacing="10">
+        <CheckBox IsChecked="{Binding UseCurrentProfile}" Content="Использовать профиль течения вместо одного значения CurrentSpeed" />
+        <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
+          <TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+        </Border>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+          <Button Content="+ добавить точку профиля" Command="{Binding AddCurrentProfilePointCommand}" Padding="12,8" />
+          <Button Grid.Column="1" Content="Сбросить учебный профиль" Command="{Binding ResetCurrentProfileCommand}" Padding="12,8" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="2" Background="White" CornerRadius="16" Padding="14" BoxShadow="0 2 12 #18000000">
+      <Grid RowDefinitions="Auto,*" RowSpacing="8">
+        <Border Background="#E9EFFA" BorderBrush="#D7DEE9" BorderThickness="1" Padding="6">
+          <Grid ColumnDefinitions="90,110,110,110,120,*,70" ColumnSpacing="8">
+            <TextBlock Text="Глубина, м" FontSize="11" FontWeight="Bold" />
+            <TextBlock Grid.Column="1" Text="U East" FontSize="11" FontWeight="Bold" />
+            <TextBlock Grid.Column="2" Text="V North" FontSize="11" FontWeight="Bold" />
+            <TextBlock Grid.Column="3" Text="W Vert." FontSize="11" FontWeight="Bold" />
+            <TextBlock Grid.Column="4" Text="ρ, кг/м³" FontSize="11" FontWeight="Bold" />
+            <TextBlock Grid.Column="5" Text="Сводка" FontSize="11" FontWeight="Bold" />
+            <TextBlock Grid.Column="6" Text="" FontSize="11" FontWeight="Bold" />
+          </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding CurrentProfilePoints}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border BorderBrush="#D7DEE9" BorderThickness="1" CornerRadius="10" Padding="6" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="90,110,110,110,120,*,70" ColumnSpacing="8">
+                    <TextBox Text="{Binding DepthM}" FontSize="12" />
+                    <TextBox Grid.Column="1" Text="{Binding EastCurrentMS}" FontSize="12" />
+                    <TextBox Grid.Column="2" Text="{Binding NorthCurrentMS}" FontSize="12" />
+                    <TextBox Grid.Column="3" Text="{Binding VerticalCurrentMS}" FontSize="12" />
+                    <TextBox Grid.Column="4" Text="{Binding WaterDensityKgM3}" FontSize="12" />
+                    <TextBlock Grid.Column="5" Text="{Binding Summary}" FontSize="11" Foreground="#697386" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="6" Content="×" Command="{Binding RemoveCommand}" Width="42" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="3" Background="White" CornerRadius="16" Padding="14" BoxShadow="0 2 12 #18000000">
+      <TextBlock Text="Закройте окно крестиком. Изменения применяются сразу и сохраняются вместе с проектом." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+    </Border>
+  </Grid>
+</Window>
