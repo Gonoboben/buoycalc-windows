@@ -30,6 +30,21 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OpenCurrentProfileButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var window = new CurrentProfileWindow
+        {
+            DataContext = viewModel
+        };
+
+        await window.ShowDialog(this);
+    }
+
     private async void CalculateButton_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel)
