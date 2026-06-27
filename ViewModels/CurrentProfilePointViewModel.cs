@@ -12,6 +12,7 @@ public sealed class CurrentProfilePointViewModel : ViewModelBase
     private string _northCurrentMS = "0";
     private string _verticalCurrentMS = "0";
     private string _waterDensityKgM3 = "1025";
+    private bool _isRefreshingSummary;
 
     public CurrentProfilePointViewModel()
     {
@@ -73,7 +74,20 @@ public sealed class CurrentProfilePointViewModel : ViewModelBase
 
     public void RefreshSummary()
     {
-        OnPropertyChanged(nameof(Summary));
+        if (_isRefreshingSummary)
+        {
+            return;
+        }
+
+        try
+        {
+            _isRefreshingSummary = true;
+            OnPropertyChanged(nameof(Summary));
+        }
+        finally
+        {
+            _isRefreshingSummary = false;
+        }
     }
 
     private static double Parse(string value)
