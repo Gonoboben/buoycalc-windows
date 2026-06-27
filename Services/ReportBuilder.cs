@@ -10,7 +10,8 @@ public static class ReportBuilder
     {
         var sb = new StringBuilder();
         var tensionRows = SegmentTensionAnalyzer.Build(result);
-        var nodeRows = MooringNodeAnalyzer.Build(result, environment.DepthM);
+        var shape = MooringShapeSolver.Build(environment, result);
+        MooringShapeStore.Set(shape);
 
         sb.AppendLine("# BuoyCalc Windows — предварительный отчёт");
         sb.AppendLine();
@@ -50,6 +51,7 @@ public static class ReportBuilder
         sb.AppendLine($"- Масса: {buoy.WeightKg:0.####} кг");
         sb.AppendLine($"- Площадь: {buoy.ProjectedAreaM2:0.####} м²");
         sb.AppendLine($"- Cd: {buoy.DragCoefficient:0.####}");
+        sb.AppendLine($"- Состояние по форме: {DisplayBuoyState(shape.BuoyState)}");
         sb.AppendLine();
 
         sb.AppendLine("## Якорь");
@@ -87,19 +89,19 @@ public static class ReportBuilder
             var maxTension = tensionRows.OrderByDescending(x => x.TensionKn).First();
             sb.AppendLine($"- Макс. натяжение по сегментной оценке: {maxTension.TensionKn:0.####} кН, сегмент №{maxTension.Number}, z≈{maxTension.EstimatedDepthM:0.####} м");
         }
-        if (nodeRows.Count > 0)
+        if (shape.Nodes.Count > 0)
         {
-            var bottomNode = nodeRows[^1];
-            sb.AppendLine($"- Предварительный горизонтальный снос по узлам X/Z: {bottomNode.XOffsetM:0.####} м");
-            sb.AppendLine($"- Глубина якорного узла X/Z: {bottomNode.ZDepthM:0.####} м");
-            sb.AppendLine($"- Узлов линии X/Z: {nodeRows.Count}");
+            sb.AppendLine($"- Предварительный горизонтальный снос по узлам X/Z: {shape.HorizontalOffsetM:0.####} м");
+            sb.AppendLine($"- Глубина якорного узла X/Z: {shape.AnchorPoint?.ZDepthM ?? 0:0.####} м");
+            sb.AppendLine($"- Невязка якорной глубины: {shape.VerticalResidualM:0.####} м");
+            sb.AppendLine($"- Узлов формы: {shape.Nodes.Count}");
         }
         sb.AppendLine();
 
         AppendElementRows(sb, result);
         AppendSegmentRows(sb, result);
         AppendTensionRows(sb, tensionRows);
-        AppendNodeRows(sb, nodeRows);
+        AppendShapeRows(sb, shape);
 
         sb.AppendLine("## Проверки");
         foreach (var check in result.Checks)
@@ -109,7 +111,7 @@ public static class ReportBuilder
 
         sb.AppendLine();
         sb.AppendLine("## Ограничения");
-        sb.AppendLine("Расчёт является предварительным. В v0.24.2 якорный узел X/Z привязан к проектной глубине, поэтому якорь на 2D-схеме находится на дне. Итерационный расчёт равновесной формы линии будет следующим этапом.");
+        sb.AppendLine(shape.MethodNote);
 
         return sb.ToString();
     }
@@ -160,21 +162,32 @@ public static class ReportBuilder
         sb.AppendLine();
     }
 
-    private static void AppendNodeRows(StringBuilder sb, System.Collections.Generic.IReadOnlyList<MooringNodeRow> rows)
+    private static void AppendShapeRows(StringBuilder sb, MooringShapeResult shape)
     {
-        if (rows.Count == 0) return;
-        sb.AppendLine("## Расчётные узлы линии X/Z");
-        sb.AppendLine("Координаты построены сверху вниз по оценочным углам сегментов. Нижний граничный узел якоря привязан к проектной глубине.");
-        sb.AppendLine("Буй и якорь показаны как граничные узлы: буй — верхний конец линии, якорь — нижний конец линии на дне.");
-        sb.AppendLine($"Показаны первые {System.Math.Min(90, rows.Count)} узлов из {rows.Count}.");
+        if (shape.Nodes.Count == 0) return;
+        sb.AppendLine("## Расчётная форма постановки X/Z");
+        sb.AppendLine("Координаты являются выходом инженерного слоя MooringShapeSolver. Визуализация должна только отображать эти точки.");
+        sb.AppendLine($"Состояние буя: {DisplayBuoyState(shape.BuoyState)}. Сходимость: {(shape.Converged ? "да" : "нет, предварительная модель")}.");
+        sb.AppendLine($"Показаны первые {System.Math.Min(90, shape.Nodes.Count)} узлов из {shape.Nodes.Count}.");
         sb.AppendLine();
         sb.AppendLine("| Узел | Сегмент | Элемент | s, м | X, м | Z, м | Lсег, м | Угол, ° | T, кН | Статус |");
         sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---|");
-        foreach (var row in rows.Take(90))
+        foreach (var row in shape.Nodes.Take(90))
         {
-            sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.SourceElement)} | {row.AlongLineM:0.####} | {row.XOffsetM:0.####} | {row.ZDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.SegmentAngleFromVerticalDeg:0.####} | {row.SegmentTensionKn:0.####} | {Escape(row.Status)} |");
+            sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.AlongLineM:0.####} | {row.XOffsetM:0.####} | {row.ZDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.SegmentAngleFromVerticalDeg:0.####} | {row.SegmentTensionKn:0.####} | {Escape(row.Status)} |");
         }
         sb.AppendLine();
+    }
+
+    private static string DisplayBuoyState(BuoyShapeState state)
+    {
+        return state switch
+        {
+            BuoyShapeState.Surface => "на поверхности",
+            BuoyShapeState.Submerged => "под водой",
+            BuoyShapeState.Overloaded => "перегружен / отрицательная плавучесть",
+            _ => "не определено"
+        };
     }
 
     private static string Escape(string value)
