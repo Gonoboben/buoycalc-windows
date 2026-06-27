@@ -26,8 +26,13 @@ public static class MooringNodeAnalyzer
             return Array.Empty<MooringNodeRow>();
         }
 
+        var orderedSegments = result.SegmentRows.OrderBy(x => x.Number).ToList();
         var tensionRows = SegmentTensionAnalyzer.Build(result)
             .ToDictionary(x => x.Number);
+
+        var firstSegment = orderedSegments.First();
+        var lastSegment = orderedSegments.Last();
+        tensionRows.TryGetValue(firstSegment.Number, out var firstTension);
 
         var workRows = new List<NodeWorkRow>();
         var alongLineM = 0.0;
@@ -36,17 +41,17 @@ public static class MooringNodeAnalyzer
 
         workRows.Add(new NodeWorkRow(
             0,
-            0,
+            firstSegment.Number,
             "Буй / верхний конец линии",
             alongLineM,
             rawX,
             rawZ,
             0,
-            0,
-            0,
-            "INFO: верхний узел"));
+            firstTension?.AngleFromVerticalDeg ?? 0,
+            firstTension?.TensionKn ?? 0,
+            "INFO: буй, граничный узел"));
 
-        foreach (var segment in result.SegmentRows.OrderBy(x => x.Number))
+        foreach (var segment in orderedSegments)
         {
             tensionRows.TryGetValue(segment.Number, out var tension);
             var angleDeg = tension?.AngleFromVerticalDeg ?? 0;
@@ -59,17 +64,18 @@ public static class MooringNodeAnalyzer
             rawZ += dz;
             alongLineM += segment.SegmentLengthM;
 
+            var isBottomNode = segment.Number == lastSegment.Number;
             workRows.Add(new NodeWorkRow(
                 workRows.Count,
                 segment.Number,
-                segment.SourceElement,
+                isBottomNode ? "Якорь / нижний конец линии" : segment.SourceElement,
                 alongLineM,
                 rawX,
                 rawZ,
                 segment.SegmentLengthM,
                 angleDeg,
                 tension?.TensionKn ?? 0,
-                "OK"));
+                isBottomNode ? "INFO: якорь, граничный узел" : "OK"));
         }
 
         var estimatedDepthFromSegments = result.SegmentRows.Max(x => x.EstimatedDepthM);
