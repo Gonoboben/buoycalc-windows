@@ -5,6 +5,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using BuoyCalc.Windows.Services;
 using BuoyCalc.Windows.ViewModels;
 
 namespace BuoyCalc.Windows.Views;
@@ -59,10 +60,18 @@ public sealed class Mooring2DCanvas : Control
         DrawLabel(context, depth > 0 ? $"глубина {depth:0.##} м" : "глубина не задана", new Point(padding + 12, surfaceY + 12), 11, false, MutedTextBrush);
         DrawLabel(context, lineLength > 0 ? $"линия {lineLength:0.##} м" : "линия не задана", new Point(width - padding - 145, surfaceY + 12), 11, false, MutedTextBrush);
 
-        var calculatedNodes = ParseCalculatedNodes(vm?.ReportText);
-        if (calculatedNodes.Count >= 2)
+        var shape = MooringShapeStore.Current;
+        if (shape is { Nodes.Count: >= 2 })
         {
-            DrawCalculatedLine(context, calculatedNodes, vm, depth, offset, lineLength, width, surfaceY, bottomY, usableHeight, padding);
+            var nodes = shape.Nodes.Select(x => new CalculatedNode(x.Number, x.XOffsetM, x.ZDepthM, x.Label)).ToList();
+            DrawCalculatedLine(context, nodes, vm, shape.DepthM, shape.HorizontalOffsetM, shape.LineLengthM, shape.BuoyState, width, surfaceY, bottomY, usableHeight, padding, fromEngineeringCore: true);
+            return;
+        }
+
+        var parsedNodes = ParseCalculatedNodes(vm?.ReportText);
+        if (parsedNodes.Count >= 2)
+        {
+            DrawCalculatedLine(context, parsedNodes, vm, depth, offset, lineLength, BuoyShapeState.Unknown, width, surfaceY, bottomY, usableHeight, padding, fromEngineeringCore: false);
         }
         else
         {
@@ -77,27 +86,19 @@ public sealed class Mooring2DCanvas : Control
         double depth,
         double offset,
         double lineLength,
+        BuoyShapeState buoyState,
         double width,
         double surfaceY,
         double bottomY,
         double usableHeight,
-        double padding)
+        double padding,
+        bool fromEngineeringCore)
     {
         var minNodeX = nodes.Min(x => x.X);
         var maxNodeX = nodes.Max(x => x.X);
-        var topNode = nodes[0];
-        var anchorNode = nodes[^1];
-        var drawingDepth = Math.Max(1, depth > 0 ? depth : Math.Max(anchorNode.Z, nodes.Max(x => x.Z)));
-        var sourceTopZ = topNode.Z;
-        var sourceAnchorZ = anchorNode.Z;
-        var sourceVerticalSpan = Math.Max(0.0001, sourceAnchorZ - sourceTopZ);
+        var maxNodeZ = Math.Max(0.0001, nodes.Max(x => x.Z));
+        var drawingDepth = Math.Max(1, depth > 0 ? Math.Max(depth, maxNodeZ) : maxNodeZ);
         var horizontalSpanM = Math.Max(0.0001, maxNodeX - minNodeX);
-
-        var canReachSurface = lineLength >= drawingDepth * 0.98 || sourceTopZ <= drawingDepth * 0.02;
-        var topDisplayDepthM = canReachSurface
-            ? 0.0
-            : Math.Clamp(drawingDepth - sourceVerticalSpan, 0.0, drawingDepth);
-        var targetVerticalSpan = Math.Max(0.0001, drawingDepth - topDisplayDepthM);
 
         var maxHorizontalPixels = Math.Max(90, width - 2 * padding - 170);
         var xScale = maxHorizontalPixels / horizontalSpanM;
@@ -112,12 +113,9 @@ public sealed class Mooring2DCanvas : Control
         }
 
         var points = nodes
-            .Select(node =>
-            {
-                var t = Math.Clamp((node.Z - sourceTopZ) / sourceVerticalSpan, 0.0, 1.0);
-                var displayZ = topDisplayDepthM + t * targetVerticalSpan;
-                return new Point(startX + (node.X - minNodeX) * xScale, surfaceY + displayZ * zScale);
-            })
+            .Select(node => new Point(
+                startX + (node.X - minNodeX) * xScale,
+                surfaceY + Math.Clamp(node.Z, 0, drawingDepth) * zScale))
             .ToList();
 
         for (var i = 1; i < points.Count; i++)
@@ -126,7 +124,8 @@ public sealed class Mooring2DCanvas : Control
         }
 
         var buoyPoint = points[0];
-        var anchorPoint = new Point(points[^1].X, bottomY);
+        var anchorPoint = points[^1];
+        context.DrawLine(ThinLinePen, anchorPoint, new Point(anchorPoint.X, bottomY));
 
         var nodeStep = Math.Max(1, points.Count / 24);
         for (var i = 1; i < points.Count - 1; i += nodeStep)
@@ -137,8 +136,8 @@ public sealed class Mooring2DCanvas : Control
         DrawBuoy(context, buoyPoint, vm?.BuoyName ?? "Буй");
         DrawAnchor(context, anchorPoint, vm?.AnchorName ?? "Якорь");
 
-        DrawLabel(context, "форма по X/Z узлам", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
-        DrawLabel(context, canReachSurface ? "буй у поверхности, якорь на дне" : "буй под водой, якорь на дне", new Point(padding + 12, surfaceY + 50), 10, false, MutedTextBrush);
+        DrawLabel(context, fromEngineeringCore ? "форма из MooringShapeSolver" : "форма из X/Z таблицы", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
+        DrawLabel(context, DisplayBuoyState(buoyState), new Point(padding + 12, surfaceY + 50), 10, false, MutedTextBrush);
         DrawLabel(context, "X/Z масштабы разные", new Point(padding + 12, surfaceY + 66), 10, false, MutedTextBrush);
 
         var offsetText = offset > 0 ? $"снос расчётный {offset:0.##} м" : $"снос по узлам {horizontalSpanM:0.##} м";
@@ -201,7 +200,8 @@ public sealed class Mooring2DCanvas : Control
         foreach (var rawLine in reportText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
         {
             var line = rawLine.Trim();
-            if (line.StartsWith("## Расчётные узлы линии X/Z", StringComparison.OrdinalIgnoreCase))
+            if (line.StartsWith("## Расчётная форма постановки X/Z", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("## Расчётные узлы линии X/Z", StringComparison.OrdinalIgnoreCase))
             {
                 inNodeSection = true;
                 continue;
@@ -289,6 +289,17 @@ public sealed class Mooring2DCanvas : Control
         var typeface = new Typeface("Arial", FontStyle.Normal, bold ? FontWeight.Bold : FontWeight.Normal);
         var formattedText = new FormattedText(text ?? string.Empty, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, size, brush);
         context.DrawText(formattedText, origin);
+    }
+
+    private static string DisplayBuoyState(BuoyShapeState state)
+    {
+        return state switch
+        {
+            BuoyShapeState.Surface => "буй у поверхности",
+            BuoyShapeState.Submerged => "буй под водой",
+            BuoyShapeState.Overloaded => "буй перегружен",
+            _ => "состояние буя не определено"
+        };
     }
 
     private static string Shorten(string value, int maxLength)
