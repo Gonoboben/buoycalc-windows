@@ -72,7 +72,6 @@ public static class MooringNodeAnalyzer
                 "OK"));
         }
 
-        var targetDepth = Math.Max(0, result.LineLengthM > 0 ? result.ElementRows.LastOrDefault(x => x.Kind == "Якорь") is not null ? result.SegmentRows.Max(x => x.EstimatedDepthM) : 0 : 0);
         var estimatedDepthFromSegments = result.SegmentRows.Max(x => x.EstimatedDepthM);
         var scaleZ = rawZ > 0 && estimatedDepthFromSegments > 0 ? estimatedDepthFromSegments / rawZ : 1.0;
         var scaleX = scaleZ;
