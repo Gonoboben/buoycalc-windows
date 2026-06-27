@@ -21,6 +21,12 @@ public static class MooringNodeAnalyzer
 {
     public static IReadOnlyList<MooringNodeRow> Build(CalculationResult result)
     {
+        var fallbackDepthM = result.SegmentRows.Count > 0 ? result.SegmentRows.Max(x => x.EstimatedDepthM) : 0;
+        return Build(result, fallbackDepthM);
+    }
+
+    public static IReadOnlyList<MooringNodeRow> Build(CalculationResult result, double anchorDepthM)
+    {
         if (result.SegmentRows.Count == 0)
         {
             return Array.Empty<MooringNodeRow>();
@@ -72,17 +78,21 @@ public static class MooringNodeAnalyzer
                 segment.SegmentLengthM,
                 angleDeg,
                 tension?.TensionKn ?? 0,
-                isBottomNode ? "INFO: якорь, граничный узел" : "OK"));
+                isBottomNode ? "INFO: якорь на дне, граничный узел" : "OK"));
         }
 
-        var anchorNodeDepthM = result.SegmentRows.Max(x => x.EstimatedDepthM);
-        var verticalSpanM = rawZ;
+        var targetAnchorDepthM = Math.Max(0, anchorDepthM);
+        if (targetAnchorDepthM <= 0)
+        {
+            targetAnchorDepthM = result.SegmentRows.Max(x => x.EstimatedDepthM);
+        }
 
-        var scale = verticalSpanM > anchorNodeDepthM && verticalSpanM > 0
-            ? anchorNodeDepthM / verticalSpanM
+        var verticalSpanM = rawZ;
+        var scale = verticalSpanM > targetAnchorDepthM && verticalSpanM > 0
+            ? targetAnchorDepthM / verticalSpanM
             : 1.0;
 
-        var topNodeDepthM = Math.Max(0, anchorNodeDepthM - verticalSpanM * scale);
+        var topNodeDepthM = Math.Max(0, targetAnchorDepthM - verticalSpanM * scale);
 
         return workRows
             .Select(row => new MooringNodeRow(
