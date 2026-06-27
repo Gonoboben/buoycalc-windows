@@ -6,7 +6,7 @@
         MinWidth="1160"
         MinHeight="760"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.21.1">
+        Title="BuoyCalc Windows v0.21.3">
 
   <Grid RowDefinitions="Auto,*">
     <Border Grid.Row="0" Background="#172033" Padding="20,16">
@@ -15,17 +15,26 @@
           <TextBlock Text="BuoyCalc Windows" FontSize="26" FontWeight="Bold" Foreground="White" />
           <TextBlock Text="Предварительный инженерный расчёт буйковой постановки" FontSize="13" Foreground="#C7D2E5" />
         </StackPanel>
+
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
           <Button Click="OpenCurrentProfileButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
-            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Профиль течения..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
+            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8">
+              <TextBlock Text="Профиль течения..." Foreground="White" FontSize="13" FontWeight="SemiBold" />
+            </Border>
           </Button>
           <Button Click="OpenReportTextButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
-            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Отчёт текстом..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
+            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8">
+              <TextBlock Text="Отчёт текстом..." Foreground="White" FontSize="13" FontWeight="SemiBold" />
+            </Border>
           </Button>
           <Button Click="OpenLibraryButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
-            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Библиотека элементов..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
+            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8">
+              <TextBlock Text="Библиотека элементов..." Foreground="White" FontSize="13" FontWeight="SemiBold" />
+            </Border>
           </Button>
-          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center"><TextBlock Text="v0.21.1 report" Foreground="#C7D2E5" FontSize="13" /></Border>
+          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
+            <TextBlock Text="v0.21.3 cleanup" Foreground="#C7D2E5" FontSize="13" />
+          </Border>
         </StackPanel>
       </Grid>
     </Border>
@@ -34,39 +43,323 @@
       <ScrollViewer Grid.Column="0">
         <StackPanel Spacing="14">
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-            <StackPanel Spacing="10"><TextBlock Text="Проект" FontSize="18" FontWeight="Bold" /><TextBox Text="{Binding ProjectName}" Watermark="Название проекта" /><TextBox Text="{Binding ProjectFilePath}" Watermark="Путь к .json файлу проекта" /><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8"><Button Content="Новый" Command="{Binding NewProjectCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveProjectCommand}" /><Button Grid.Row="1" Content="Сохранить как..." Command="{Binding SaveProjectAsCommand}" /><Button Grid.Row="1" Grid.Column="1" Content="Загрузить..." Command="{Binding LoadProjectCommand}" /></Grid><Border Background="#F7F9FC" CornerRadius="10" Padding="10"><TextBlock Text="{Binding ProjectStatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border></StackPanel>
+            <StackPanel Spacing="10">
+              <TextBlock Text="Проект" FontSize="18" FontWeight="Bold" />
+              <TextBox Text="{Binding ProjectName}" PlaceholderText="Название проекта" />
+              <TextBox Text="{Binding ProjectFilePath}" PlaceholderText="Путь к .json файлу проекта" />
+              <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                <Button Content="Новый" Command="{Binding NewProjectCommand}" />
+                <Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveProjectCommand}" />
+                <Button Grid.Row="1" Content="Сохранить как..." Command="{Binding SaveProjectAsCommand}" />
+                <Button Grid.Row="1" Grid.Column="1" Content="Загрузить..." Command="{Binding LoadProjectCommand}" />
+              </Grid>
+              <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
+                <TextBlock Text="{Binding ProjectStatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+              </Border>
+            </StackPanel>
           </Border>
 
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-            <StackPanel Spacing="10"><TextBlock Text="Условия постановки" FontSize="18" FontWeight="Bold" /><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8"><StackPanel Spacing="4"><TextBlock Text="Плотность воды, кг/м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding WaterDensity}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Глубина, м" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding Depth}" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="Течение, м/с" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding CurrentSpeed}" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Высота волны, м" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding WaveHeight}" /></StackPanel><StackPanel Grid.Row="2" Spacing="4"><TextBlock Text="Период волны, с" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding WavePeriod}" /></StackPanel><StackPanel Grid.Row="2" Grid.Column="1" Spacing="4"><TextBlock Text="Грунт" FontSize="12" Foreground="#697386" /><ComboBox ItemsSource="{Binding SeabedPresets}" SelectedItem="{Binding SelectedSeabedPreset}" HorizontalAlignment="Stretch" /></StackPanel><Border Grid.Row="3" Grid.ColumnSpan="2" Background="#F7F9FC" CornerRadius="10" Padding="10"><TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border><Button Grid.Row="4" Grid.ColumnSpan="2" Content="Профиль течения по глубине..." Click="OpenCurrentProfileButton_Click" HorizontalAlignment="Stretch" /></Grid></StackPanel>
+            <StackPanel Spacing="10">
+              <TextBlock Text="Условия постановки" FontSize="18" FontWeight="Bold" />
+              <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Плотность воды, кг/м³" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding WaterDensity}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Глубина, м" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding Depth}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Spacing="4">
+                  <TextBlock Text="Течение, м/с" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding CurrentSpeed}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Высота волны, м" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding WaveHeight}" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Spacing="4">
+                  <TextBlock Text="Период волны, с" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding WavePeriod}" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Грунт" FontSize="12" Foreground="#697386" />
+                  <ComboBox ItemsSource="{Binding SeabedPresets}" SelectedItem="{Binding SelectedSeabedPreset}" HorizontalAlignment="Stretch" />
+                </StackPanel>
+                <Border Grid.Row="3" Grid.ColumnSpan="2" Background="#F7F9FC" CornerRadius="10" Padding="10">
+                  <TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+                </Border>
+                <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Профиль течения по глубине..." Click="OpenCurrentProfileButton_Click" HorizontalAlignment="Stretch" />
+              </Grid>
+            </StackPanel>
           </Border>
 
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-            <StackPanel Spacing="10"><TextBlock Text="Буй" FontSize="18" FontWeight="Bold" /><StackPanel Spacing="4"><TextBlock Text="Выбранный буй" FontSize="12" Foreground="#697386" /><ComboBox ItemsSource="{Binding BuoyPresets}" SelectedItem="{Binding SelectedBuoyPreset}" HorizontalAlignment="Stretch" /></StackPanel><Button Content="Обновить списки библиотеки" Command="{Binding RefreshBuoyLibraryCommand}" HorizontalAlignment="Stretch" /><Border Background="#F7F9FC" CornerRadius="10" Padding="10"><TextBlock Text="{Binding BuoyLibraryStatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border><TextBox Text="{Binding BuoyName}" IsReadOnly="True" /><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8"><StackPanel Spacing="4"><TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyVolume}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyWeight}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyArea}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyCd}" IsReadOnly="True" /></StackPanel></Grid></StackPanel>
+            <StackPanel Spacing="10">
+              <TextBlock Text="Буй" FontSize="18" FontWeight="Bold" />
+              <StackPanel Spacing="4">
+                <TextBlock Text="Выбранный буй" FontSize="12" Foreground="#697386" />
+                <ComboBox ItemsSource="{Binding BuoyPresets}" SelectedItem="{Binding SelectedBuoyPreset}" HorizontalAlignment="Stretch" />
+              </StackPanel>
+              <Button Content="Обновить списки библиотеки" Command="{Binding RefreshBuoyLibraryCommand}" HorizontalAlignment="Stretch" />
+              <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
+                <TextBlock Text="{Binding BuoyLibraryStatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+              </Border>
+              <TextBox Text="{Binding BuoyName}" IsReadOnly="True" />
+              <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding BuoyVolume}" IsReadOnly="True" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding BuoyWeight}" IsReadOnly="True" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Spacing="4">
+                  <TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding BuoyArea}" IsReadOnly="True" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Cd" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding BuoyCd}" IsReadOnly="True" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
           </Border>
 
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-            <StackPanel Spacing="10"><TextBlock Text="Якорь и запас" FontSize="18" FontWeight="Bold" /><StackPanel Spacing="4"><TextBlock Text="Выбранный якорь" FontSize="12" Foreground="#697386" /><ComboBox ItemsSource="{Binding AnchorPresets}" SelectedItem="{Binding SelectedAnchorPreset}" HorizontalAlignment="Stretch" /></StackPanel><TextBox Text="{Binding AnchorName}" IsReadOnly="True" /><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8"><StackPanel Spacing="4"><TextBlock Text="Тип" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorType}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Материал" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorMaterial}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorWeight}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorVolume}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Row="2" Spacing="4"><TextBlock Text="Коэф. удержания" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorCoefficient}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Row="2" Grid.Column="1" Spacing="4"><TextBlock Text="Коэф. запаса" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding SafetyFactor}" /></StackPanel></Grid><Button Content="Проверить схему и рассчитать" Click="CalculateButton_Click" HorizontalAlignment="Stretch" Margin="0,8,0,0" Padding="14,10" FontWeight="Bold" /></StackPanel>
+            <StackPanel Spacing="10">
+              <TextBlock Text="Якорь и запас" FontSize="18" FontWeight="Bold" />
+              <StackPanel Spacing="4">
+                <TextBlock Text="Выбранный якорь" FontSize="12" Foreground="#697386" />
+                <ComboBox ItemsSource="{Binding AnchorPresets}" SelectedItem="{Binding SelectedAnchorPreset}" HorizontalAlignment="Stretch" />
+              </StackPanel>
+              <TextBox Text="{Binding AnchorName}" IsReadOnly="True" />
+              <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="Тип" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding AnchorType}" IsReadOnly="True" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Материал" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding AnchorMaterial}" IsReadOnly="True" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Spacing="4">
+                  <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding AnchorWeight}" IsReadOnly="True" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding AnchorVolume}" IsReadOnly="True" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Spacing="4">
+                  <TextBlock Text="Коэф. удержания" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding AnchorCoefficient}" IsReadOnly="True" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                  <TextBlock Text="Коэф. запаса" FontSize="12" Foreground="#697386" />
+                  <TextBox Text="{Binding SafetyFactor}" />
+                </StackPanel>
+              </Grid>
+              <Button Content="Проверить схему и рассчитать" Click="CalculateButton_Click" HorizontalAlignment="Stretch" Margin="0,8,0,0" Padding="14,10" FontWeight="Bold" />
+            </StackPanel>
           </Border>
         </StackPanel>
       </ScrollViewer>
 
       <Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
         <Grid RowDefinitions="Auto,Auto,*">
-          <StackPanel Grid.Row="0" Spacing="10"><StackPanel Spacing="4"><TextBlock Text="Последовательность постановки" FontSize="20" FontWeight="Bold" /><TextBlock Text="Собирается сверху вниз: буй → соединители → линия → приборы → якорь" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></StackPanel><StackPanel Orientation="Horizontal" Spacing="8"><Button Content="+ линия" Command="{Binding AddLineCommand}" /><Button Content="+ соединитель" Command="{Binding AddConnectorCommand}" /><Button Content="+ прибор" Command="{Binding AddPayloadCommand}" /></StackPanel></StackPanel>
-          <Border Grid.Row="1" Background="#F7F9FC" CornerRadius="12" Padding="12" Margin="0,14,0,12"><StackPanel Spacing="4"><TextBlock Text="{Binding SequenceSummary}" FontSize="13" FontWeight="Bold" Foreground="#263653" TextWrapping="Wrap" /><TextBlock Text="Перед расчётом программа откроет отдельное окно проверки схемы. Отдельная 2D-схема доступна в блоке результата." FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></StackPanel></Border>
-          <ScrollViewer Grid.Row="2"><ItemsControl ItemsSource="{Binding AssemblyItems}"><ItemsControl.ItemTemplate><DataTemplate><Border BorderBrush="#D7DEE9" BorderThickness="1" Background="#FBFCFE" CornerRadius="14" Padding="14" Margin="0,0,0,10"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="12"><Border Width="34" Height="34" CornerRadius="17" Background="#E9EFFA" VerticalAlignment="Top"><TextBlock Text="●" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#315B9A" /></Border><StackPanel Grid.Column="1" Spacing="10"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><StackPanel Spacing="4"><TextBox Text="{Binding Title}" Watermark="Название элемента" FontWeight="Bold" /><TextBlock Text="{Binding Summary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /><CheckBox IsChecked="{Binding IsEnabled}" Content="Учитывать в расчёте" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top"><Button Content="↑" Command="{Binding MoveUpCommand}" Width="34" /><Button Content="↓" Command="{Binding MoveDownCommand}" Width="34" /><Button Content="⧉" Command="{Binding DuplicateCommand}" Width="34" /><Button Content="×" Command="{Binding RemoveCommand}" Width="34" /></StackPanel></Grid><Grid ColumnDefinitions="180,*" ColumnSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Тип элемента" FontSize="12" Foreground="#697386" /><ComboBox ItemsSource="{Binding KindOptions}" SelectedItem="{Binding Kind}" HorizontalAlignment="Stretch" /></StackPanel><Border Grid.Column="1" Background="#F3F6FA" CornerRadius="10" Padding="10"><TextBlock Text="Выберите тип, затем заполните только его параметры ниже." FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border></Grid><Border IsVisible="{Binding IsLine}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10"><Grid ColumnDefinitions="*,150" ColumnSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Пресет линии" FontSize="12" Foreground="#697386" /><ComboBox ItemsSource="{Binding RopePresetOptions}" SelectedItem="{Binding RopePresetId}" HorizontalAlignment="Stretch" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Длина, м" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding LengthM}" Watermark="м" /></StackPanel></Grid></Border><Border IsVisible="{Binding IsConnector}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10"><StackPanel Spacing="4"><TextBlock Text="Пресет соединителя" FontSize="12" Foreground="#697386" /><ComboBox ItemsSource="{Binding ConnectorPresetOptions}" SelectedItem="{Binding ConnectorPresetId}" HorizontalAlignment="Stretch" /></StackPanel></Border><Border IsVisible="{Binding IsPayload}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10"><StackPanel Spacing="10"><StackPanel Spacing="4"><TextBlock Text="Пресет прибора" FontSize="12" Foreground="#697386" /><ComboBox ItemsSource="{Binding PayloadPresetOptions}" SelectedItem="{Binding PayloadPresetId}" HorizontalAlignment="Stretch" /></StackPanel><Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadWeightAirKg}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadVolumeM3}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Column="2" Spacing="4"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadProjectedAreaM2}" IsReadOnly="True" /></StackPanel><StackPanel Grid.Column="3" Spacing="4"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadDragCoefficient}" IsReadOnly="True" /></StackPanel></Grid></StackPanel></Border></StackPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+          <StackPanel Grid.Row="0" Spacing="10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Последовательность постановки" FontSize="20" FontWeight="Bold" />
+              <TextBlock Text="Собирается сверху вниз: буй → соединители → линия → приборы → якорь" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="+ линия" Command="{Binding AddLineCommand}" />
+              <Button Content="+ соединитель" Command="{Binding AddConnectorCommand}" />
+              <Button Content="+ прибор" Command="{Binding AddPayloadCommand}" />
+            </StackPanel>
+          </StackPanel>
+
+          <Border Grid.Row="1" Background="#F7F9FC" CornerRadius="12" Padding="12" Margin="0,14,0,12">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{Binding SequenceSummary}" FontSize="13" FontWeight="Bold" Foreground="#263653" TextWrapping="Wrap" />
+              <TextBlock Text="Перед расчётом программа откроет отдельное окно проверки схемы. Отдельная 2D-схема доступна в блоке результата." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <ScrollViewer Grid.Row="2">
+            <ItemsControl ItemsSource="{Binding AssemblyItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="#D7DEE9" BorderThickness="1" Background="#FBFCFE" CornerRadius="14" Padding="14" Margin="0,0,0,10">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                      <Border Width="34" Height="34" CornerRadius="17" Background="#E9EFFA" VerticalAlignment="Top">
+                        <TextBlock Text="●" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#315B9A" />
+                      </Border>
+
+                      <StackPanel Grid.Column="1" Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <StackPanel Spacing="4">
+                            <TextBox Text="{Binding Title}" PlaceholderText="Название элемента" FontWeight="Bold" />
+                            <TextBlock Text="{Binding Summary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+                            <CheckBox IsChecked="{Binding IsEnabled}" Content="Учитывать в расчёте" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+                            <Button Content="↑" Command="{Binding MoveUpCommand}" Width="34" />
+                            <Button Content="↓" Command="{Binding MoveDownCommand}" Width="34" />
+                            <Button Content="⧉" Command="{Binding DuplicateCommand}" Width="34" />
+                            <Button Content="×" Command="{Binding RemoveCommand}" Width="34" />
+                          </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="Тип элемента" FontSize="12" Foreground="#697386" />
+                            <ComboBox ItemsSource="{Binding KindOptions}" SelectedItem="{Binding Kind}" HorizontalAlignment="Stretch" />
+                          </StackPanel>
+                          <Border Grid.Column="1" Background="#F3F6FA" CornerRadius="10" Padding="10">
+                            <TextBlock Text="Выберите тип, затем заполните только его параметры ниже." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+                          </Border>
+                        </Grid>
+
+                        <Border IsVisible="{Binding IsLine}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
+                          <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+                            <StackPanel Spacing="4">
+                              <TextBlock Text="Пресет линии" FontSize="12" Foreground="#697386" />
+                              <ComboBox ItemsSource="{Binding RopePresetOptions}" SelectedItem="{Binding RopePresetId}" HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                              <TextBlock Text="Длина, м" FontSize="12" Foreground="#697386" />
+                              <TextBox Text="{Binding LengthM}" PlaceholderText="м" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+
+                        <Border IsVisible="{Binding IsConnector}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="Пресет соединителя" FontSize="12" Foreground="#697386" />
+                            <ComboBox ItemsSource="{Binding ConnectorPresetOptions}" SelectedItem="{Binding ConnectorPresetId}" HorizontalAlignment="Stretch" />
+                          </StackPanel>
+                        </Border>
+
+                        <Border IsVisible="{Binding IsPayload}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
+                          <StackPanel Spacing="10">
+                            <StackPanel Spacing="4">
+                              <TextBlock Text="Пресет прибора" FontSize="12" Foreground="#697386" />
+                              <ComboBox ItemsSource="{Binding PayloadPresetOptions}" SelectedItem="{Binding PayloadPresetId}" HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                              <StackPanel Spacing="4">
+                                <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
+                                <TextBox Text="{Binding PayloadWeightAirKg}" IsReadOnly="True" />
+                              </StackPanel>
+                              <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
+                                <TextBox Text="{Binding PayloadVolumeM3}" IsReadOnly="True" />
+                              </StackPanel>
+                              <StackPanel Grid.Column="2" Spacing="4">
+                                <TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" />
+                                <TextBox Text="{Binding PayloadProjectedAreaM2}" IsReadOnly="True" />
+                              </StackPanel>
+                              <StackPanel Grid.Column="3" Spacing="4">
+                                <TextBlock Text="Cd" FontSize="12" Foreground="#697386" />
+                                <TextBox Text="{Binding PayloadDragCoefficient}" IsReadOnly="True" />
+                              </StackPanel>
+                            </Grid>
+                          </StackPanel>
+                        </Border>
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
         </Grid>
       </Border>
 
       <Grid Grid.Column="2" RowDefinitions="230,310,*" RowSpacing="16">
-        <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Результат" FontSize="20" FontWeight="Bold" /><TextBlock Text="Ключевые показатели после расчёта" FontSize="12" Foreground="#697386" /></StackPanel><TextBox Grid.Row="1" Text="{Binding ResultText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontSize="13" TextWrapping="Wrap" Margin="0,12,0,0" /><Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="8"><Button Content="2D-схема" Click="Open2DButton_Click" HorizontalAlignment="Stretch" Padding="14,9" FontWeight="Bold" /><Button Grid.Column="1" Content="Экспорт PDF" Click="ExportPdfButton_Click" HorizontalAlignment="Stretch" Padding="14,9" FontWeight="Bold" /></Grid></Grid></Border>
-
-        <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="14" BoxShadow="0 2 12 #18000000">
-          <Grid RowDefinitions="Auto,*" RowSpacing="8"><StackPanel Spacing="3"><TextBlock Text="Таблица элементов" FontSize="18" FontWeight="Bold" /><TextBlock Text="В таблицу включены буй, все элементы последовательности и якорь. Для длинной таблицы используйте горизонтальную прокрутку." FontSize="11" Foreground="#697386" TextWrapping="Wrap" /></StackPanel><ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"><StackPanel MinWidth="1510"><Border Background="#E9EFFA" BorderBrush="#D7DEE9" BorderThickness="1" Padding="4"><Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150"><TextBlock Grid.Column="0" Text="№" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="1" Text="Тип" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="2" Text="Элемент" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="3" Text="Пресет" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="4" Text="L, м" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="5" Text="Кол." FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="6" Text="Вес в воде" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="7" Text="A, м²" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="8" Text="Cd" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="9" Text="Сила, Н" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="10" Text="MBL" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="11" Text="WLL" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="12" Text="Запас" FontWeight="Bold" FontSize="10.5" /><TextBlock Grid.Column="13" Text="Статус" FontWeight="Bold" FontSize="10.5" /></Grid></Border><ItemsControl ItemsSource="{Binding ElementRows}"><ItemsControl.ItemTemplate><DataTemplate><Border BorderBrush="#D7DEE9" BorderThickness="0,0,1,1" Padding="4"><Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150"><TextBlock Grid.Column="0" Text="{Binding Number}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="1" Text="{Binding Kind}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="2" Text="{Binding Title}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="3" Text="{Binding PresetName}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="4" Text="{Binding LengthM}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="5" Text="{Binding Count}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="6" Text="{Binding WeightWaterKg}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="7" Text="{Binding ProjectedAreaM2}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="8" Text="{Binding DragCoefficient}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="9" Text="{Binding CurrentForceN}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="10" Text="{Binding BreakingLoadKn}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="11" Text="{Binding WorkingLoadKn}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="12" Text="{Binding Reserve}" TextWrapping="NoWrap" FontSize="10.5" /><TextBlock Grid.Column="13" Text="{Binding Status}" TextWrapping="NoWrap" FontSize="10.5" /></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></ScrollViewer></Grid>
+        <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Результат" FontSize="20" FontWeight="Bold" />
+              <TextBlock Text="Ключевые показатели после расчёта" FontSize="12" Foreground="#697386" />
+            </StackPanel>
+            <TextBox Grid.Row="1" Text="{Binding ResultText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontSize="13" TextWrapping="Wrap" Margin="0,12,0,0" />
+            <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="8">
+              <Button Content="2D-схема" Click="Open2DButton_Click" HorizontalAlignment="Stretch" Padding="14,9" FontWeight="Bold" />
+              <Button Grid.Column="1" Content="Экспорт PDF" Click="ExportPdfButton_Click" HorizontalAlignment="Stretch" Padding="14,9" FontWeight="Bold" />
+            </Grid>
+          </Grid>
         </Border>
 
-        <Border Grid.Row="2" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Отчёт" FontSize="20" FontWeight="Bold" /><TextBlock Text="Markdown-текст для копирования или будущего экспорта" FontSize="12" Foreground="#697386" /></StackPanel><TextBox Grid.Row="1" Text="{Binding ReportText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap" Margin="0,12,0,0" /></Grid></Border>
+        <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="14" BoxShadow="0 2 12 #18000000">
+          <Grid RowDefinitions="Auto,*" RowSpacing="8">
+            <StackPanel Spacing="3">
+              <TextBlock Text="Таблица элементов" FontSize="18" FontWeight="Bold" />
+              <TextBlock Text="В таблицу включены буй, все элементы последовательности и якорь. Для длинной таблицы используйте горизонтальную прокрутку." FontSize="11" Foreground="#697386" TextWrapping="Wrap" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+              <StackPanel MinWidth="1510">
+                <Border Background="#E9EFFA" BorderBrush="#D7DEE9" BorderThickness="1" Padding="4">
+                  <Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150">
+                    <TextBlock Grid.Column="0" Text="№" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="1" Text="Тип" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="2" Text="Элемент" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="3" Text="Пресет" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="4" Text="L, м" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="5" Text="Кол." FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="6" Text="Вес в воде" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="7" Text="A, м²" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="8" Text="Cd" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="9" Text="Сила, Н" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="10" Text="MBL" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="11" Text="WLL" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="12" Text="Запас" FontWeight="Bold" FontSize="10.5" />
+                    <TextBlock Grid.Column="13" Text="Статус" FontWeight="Bold" FontSize="10.5" />
+                  </Grid>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding ElementRows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border BorderBrush="#D7DEE9" BorderThickness="0,0,1,1" Padding="4">
+                        <Grid ColumnDefinitions="45,95,155,175,70,60,110,85,55,90,85,85,75,150">
+                          <TextBlock Grid.Column="0" Text="{Binding Number}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="1" Text="{Binding Kind}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="2" Text="{Binding Title}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="3" Text="{Binding PresetName}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="4" Text="{Binding LengthM}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="5" Text="{Binding Count}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="6" Text="{Binding WeightWaterKg}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="7" Text="{Binding ProjectedAreaM2}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="8" Text="{Binding DragCoefficient}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="9" Text="{Binding CurrentForceN}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="10" Text="{Binding BreakingLoadKn}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="11" Text="{Binding WorkingLoadKn}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="12" Text="{Binding Reserve}" TextWrapping="NoWrap" FontSize="10.5" />
+                          <TextBlock Grid.Column="13" Text="{Binding Status}" TextWrapping="NoWrap" FontSize="10.5" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+          <Grid RowDefinitions="Auto,*">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Отчёт" FontSize="20" FontWeight="Bold" />
+              <TextBlock Text="Markdown-текст для копирования или будущего экспорта" FontSize="12" Foreground="#697386" />
+            </StackPanel>
+            <TextBox Grid.Row="1" Text="{Binding ReportText}" AcceptsReturn="True" IsReadOnly="True" Background="#F7F9FC" BorderThickness="0" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap" Margin="0,12,0,0" />
+          </Grid>
+        </Border>
       </Grid>
     </Grid>
   </Grid>
