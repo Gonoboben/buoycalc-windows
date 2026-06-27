@@ -64,7 +64,7 @@ public static class PdfReportBuilder
         writer.ElementTable(elementRows.ToList());
         writer.Space(10);
         writer.Section("Полный текстовый отчёт");
-        writer.Multiline(reportText, 8, maxLines: 180);
+        writer.Multiline(reportText, 7.2f);
 
         writer.EndPage();
         document.Close();
@@ -121,21 +121,13 @@ public static class PdfReportBuilder
             }
         }
 
-        public void Multiline(string text, float size, int maxLines = 500)
+        public void Multiline(string text, float size)
         {
-            var count = 0;
             foreach (var rawLine in SplitLines(text))
             {
                 foreach (var line in Wrap(rawLine, size, PageWidth - 2 * Margin))
                 {
-                    if (count >= maxLines)
-                    {
-                        DrawText("... отчёт обрезан для компактного PDF", size, false);
-                        return;
-                    }
-
                     DrawText(line, size, false);
-                    count++;
                 }
             }
         }
