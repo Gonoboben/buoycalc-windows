@@ -84,8 +84,9 @@ public sealed class Mooring2DCanvas : Control
     {
         var minNodeX = nodes.Min(x => x.X);
         var maxNodeX = nodes.Max(x => x.X);
-        var maxNodeZ = Math.Max(0.0001, nodes.Max(x => x.Z));
-        var drawingDepth = Math.Max(1, Math.Max(depth, maxNodeZ));
+        var anchorNode = nodes[^1];
+        var anchorNodeZ = Math.Max(0.0001, anchorNode.Z);
+        var drawingDepth = Math.Max(1, depth > 0 ? depth : anchorNodeZ);
         var horizontalSpanM = Math.Max(0.0001, maxNodeX - minNodeX);
 
         var maxHorizontalPixels = Math.Max(90, width - 2 * padding - 170);
@@ -101,7 +102,12 @@ public sealed class Mooring2DCanvas : Control
         }
 
         var points = nodes
-            .Select(node => new Point(startX + (node.X - minNodeX) * xScale, surfaceY + node.Z * zScale))
+            .Select(node =>
+            {
+                var displayZ = drawingDepth - (anchorNodeZ - node.Z);
+                displayZ = Math.Clamp(displayZ, 0, drawingDepth);
+                return new Point(startX + (node.X - minNodeX) * xScale, surfaceY + displayZ * zScale);
+            })
             .ToList();
 
         for (var i = 1; i < points.Count; i++)
@@ -110,8 +116,8 @@ public sealed class Mooring2DCanvas : Control
         }
 
         var buoyPoint = points[0];
-        var anchorPoint = points[^1];
-        context.DrawLine(ThinLinePen, new Point(anchorPoint.X, anchorPoint.Y), new Point(anchorPoint.X, bottomY));
+        var anchorPoint = new Point(points[^1].X, bottomY);
+        context.DrawLine(ThinLinePen, anchorPoint, new Point(anchorPoint.X, bottomY));
 
         var nodeStep = Math.Max(1, points.Count / 24);
         for (var i = 1; i < points.Count - 1; i += nodeStep)
@@ -123,7 +129,8 @@ public sealed class Mooring2DCanvas : Control
         DrawAnchor(context, anchorPoint, vm?.AnchorName ?? "Якорь");
 
         DrawLabel(context, "форма по X/Z узлам", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
-        DrawLabel(context, "X/Z масштабы разные", new Point(padding + 12, surfaceY + 50), 10, false, MutedTextBrush);
+        DrawLabel(context, "якорь закреплён на дне", new Point(padding + 12, surfaceY + 50), 10, false, MutedTextBrush);
+        DrawLabel(context, "X/Z масштабы разные", new Point(padding + 12, surfaceY + 66), 10, false, MutedTextBrush);
 
         var offsetText = offset > 0 ? $"снос расчётный {offset:0.##} м" : $"снос по узлам {horizontalSpanM:0.##} м";
         var y = bottomY + 48;
