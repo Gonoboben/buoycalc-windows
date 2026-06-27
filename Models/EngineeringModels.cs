@@ -13,6 +13,17 @@ public record SeabedPreset(string Id, string Name, double HoldingMultiplier, str
     public override string ToString() => DisplayName;
 }
 
+public record CurrentProfilePointInput(
+    double DepthM,
+    double EastCurrentMS,
+    double NorthCurrentMS,
+    double VerticalCurrentMS,
+    double WaterDensityKgM3)
+{
+    public double HorizontalSpeedMS => Math.Sqrt(EastCurrentMS * EastCurrentMS + NorthCurrentMS * NorthCurrentMS);
+    public double SpeedMS => Math.Sqrt(EastCurrentMS * EastCurrentMS + NorthCurrentMS * NorthCurrentMS + VerticalCurrentMS * VerticalCurrentMS);
+}
+
 public enum AssemblyItemKind
 {
     Connector,
@@ -39,7 +50,20 @@ public record EnvironmentInput(
     double CurrentSpeedMS,
     double WaveHeightM,
     double WavePeriodS,
-    SeabedPreset Seabed);
+    SeabedPreset Seabed,
+    bool UseCurrentProfile = false,
+    IReadOnlyList<CurrentProfilePointInput>? CurrentProfile = null)
+{
+    public IReadOnlyList<CurrentProfilePointInput> EffectiveCurrentProfile => CurrentProfile ?? Array.Empty<CurrentProfilePointInput>();
+
+    public double EffectiveCurrentSpeedMS => UseCurrentProfile && EffectiveCurrentProfile.Count > 0
+        ? EffectiveCurrentProfile.Max(x => x.HorizontalSpeedMS)
+        : CurrentSpeedMS;
+
+    public double EffectiveWaterDensityKgM3 => UseCurrentProfile && EffectiveCurrentProfile.Count > 0
+        ? EffectiveCurrentProfile.Average(x => x.WaterDensityKgM3 > 0 ? x.WaterDensityKgM3 : WaterDensityKgM3)
+        : WaterDensityKgM3;
+}
 
 public record BuoyInput(
     string Name,
@@ -111,27 +135,29 @@ public static class BuoyCalculator
         var lineItems = enabledItems.Where(x => x.Kind == AssemblyItemKind.Line && x.RopePreset is not null).ToList();
         var connectorItems = enabledItems.Where(x => x.Kind == AssemblyItemKind.Connector && x.ConnectorPreset is not null).ToList();
         var payloadItems = enabledItems.Where(x => x.Kind == AssemblyItemKind.Payload).ToList();
+        var currentSpeedMS = environment.EffectiveCurrentSpeedMS;
+        var waterDensityKgM3 = environment.EffectiveWaterDensityKgM3;
 
         var lineLength = lineItems.Sum(x => Math.Max(0, x.LengthM));
         var lineWeightWater = lineItems.Sum(x => Math.Max(0, x.LengthM) * x.RopePreset!.WeightWaterKgM);
-        var lineCurrentForce = lineItems.Sum(x => DragForce(environment.WaterDensityKgM3, environment.CurrentSpeedMS, Math.Max(0, x.LengthM) * x.RopePreset!.DiameterMm / 1000.0, x.RopePreset!.DragCoefficient));
+        var lineCurrentForce = lineItems.Sum(x => DragForce(waterDensityKgM3, currentSpeedMS, Math.Max(0, x.LengthM) * x.RopePreset!.DiameterMm / 1000.0, x.RopePreset!.DragCoefficient));
 
-        var connectorWeightWater = connectorItems.Sum(x => Math.Max(1, x.Count) * WeightInWaterKg(x.ConnectorPreset!.WeightAirKg, x.ConnectorPreset.VolumeM3, environment.WaterDensityKgM3));
-        var connectorCurrentForce = connectorItems.Sum(x => Math.Max(1, x.Count) * DragForce(environment.WaterDensityKgM3, environment.CurrentSpeedMS, x.ConnectorPreset!.ProjectedAreaM2, x.ConnectorPreset.DragCoefficient));
+        var connectorWeightWater = connectorItems.Sum(x => Math.Max(1, x.Count) * WeightInWaterKg(x.ConnectorPreset!.WeightAirKg, x.ConnectorPreset.VolumeM3, waterDensityKgM3));
+        var connectorCurrentForce = connectorItems.Sum(x => Math.Max(1, x.Count) * DragForce(waterDensityKgM3, currentSpeedMS, x.ConnectorPreset!.ProjectedAreaM2, x.ConnectorPreset.DragCoefficient));
 
-        var payloadWeightWater = payloadItems.Sum(x => WeightInWaterKg(x.PayloadWeightAirKg, x.PayloadVolumeM3, environment.WaterDensityKgM3));
-        var payloadCurrentForce = payloadItems.Sum(x => DragForce(environment.WaterDensityKgM3, environment.CurrentSpeedMS, x.PayloadProjectedAreaM2, x.PayloadDragCoefficient));
+        var payloadWeightWater = payloadItems.Sum(x => WeightInWaterKg(x.PayloadWeightAirKg, x.PayloadVolumeM3, waterDensityKgM3));
+        var payloadCurrentForce = payloadItems.Sum(x => DragForce(waterDensityKgM3, currentSpeedMS, x.PayloadProjectedAreaM2, x.PayloadDragCoefficient));
 
-        var buoyancyKg = buoy.VolumeM3 * environment.WaterDensityKgM3;
-        var buoyWeightWater = WeightInWaterKg(buoy.WeightKg, 0, environment.WaterDensityKgM3);
+        var buoyancyKg = buoy.VolumeM3 * waterDensityKgM3;
+        var buoyWeightWater = WeightInWaterKg(buoy.WeightKg, 0, waterDensityKgM3);
         var totalWeightWater = buoyWeightWater + lineWeightWater + connectorWeightWater + payloadWeightWater;
         var netBuoyancyKg = buoyancyKg - totalWeightWater;
 
-        var buoyCurrentForce = DragForce(environment.WaterDensityKgM3, environment.CurrentSpeedMS, buoy.ProjectedAreaM2, buoy.DragCoefficient);
+        var buoyCurrentForce = DragForce(waterDensityKgM3, currentSpeedMS, buoy.ProjectedAreaM2, buoy.DragCoefficient);
         var currentForce = buoyCurrentForce + lineCurrentForce + connectorCurrentForce + payloadCurrentForce;
 
         var waveVelocity = environment.WavePeriodS > 0 ? Math.PI * environment.WaveHeightM / environment.WavePeriodS : 0;
-        var waveForce = DragForce(environment.WaterDensityKgM3, waveVelocity, buoy.ProjectedAreaM2, buoy.DragCoefficient);
+        var waveForce = DragForce(waterDensityKgM3, waveVelocity, buoy.ProjectedAreaM2, buoy.DragCoefficient);
         var horizontalForce = currentForce + waveForce;
 
         var verticalForceN = Math.Max(0, netBuoyancyKg) * 9.80665;
@@ -147,7 +173,7 @@ public static class BuoyCalculator
         var workingLoad = safetyFactor > 0 && weakLinkKn > 0 ? weakLinkKn / safetyFactor : 0;
         var tensionReserve = tensionKn > 0 && workingLoad > 0 ? workingLoad / tensionKn : 0;
 
-        var anchorWeightWater = WeightInWaterKg(anchor.WeightAirKg, anchor.VolumeM3, environment.WaterDensityKgM3);
+        var anchorWeightWater = WeightInWaterKg(anchor.WeightAirKg, anchor.VolumeM3, waterDensityKgM3);
         var anchorTypeMultiplier = AnchorTypeMultiplier(anchor.Type);
         var seabedMultiplier = environment.Seabed.HoldingMultiplier;
         var anchorHoldingKg = anchorWeightWater * anchor.BaseHoldingCoefficient * anchorTypeMultiplier * seabedMultiplier;
@@ -176,6 +202,7 @@ public static class BuoyCalculator
             tensionReserve >= 1 ? "OK: запас по слабому звену" : "WARNING: малый запас по слабому звену",
             anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря",
             environment.Seabed.Id == "unknown" ? "WARNING: грунт не задан точно" : $"OK: грунт учтён: {environment.Seabed.Name}",
+            environment.UseCurrentProfile ? $"INFO: используется профиль течения, расчётная скорость пока принята как максимум |Uгор| = {currentSpeedMS:0.####} м/с" : $"INFO: используется одно значение скорости течения = {currentSpeedMS:0.####} м/с",
             $"INFO: удержание якоря = вес в воде × K якоря × K типа × K грунта = {anchorWeightWater:0.####} × {anchor.BaseHoldingCoefficient:0.####} × {anchorTypeMultiplier:0.####} × {seabedMultiplier:0.####}"
         };
 
@@ -223,6 +250,8 @@ public static class BuoyCalculator
     {
         var rows = new List<ElementCalculationRow>();
         var number = 1;
+        var currentSpeedMS = environment.EffectiveCurrentSpeedMS;
+        var waterDensityKgM3 = environment.EffectiveWaterDensityKgM3;
 
         foreach (var item in enabledItems)
         {
@@ -248,7 +277,7 @@ public static class BuoyCalculator
             else if (item.Kind == AssemblyItemKind.Connector && item.ConnectorPreset is not null)
             {
                 presetName = item.ConnectorPreset.Name;
-                weightWaterKg = count * WeightInWaterKg(item.ConnectorPreset.WeightAirKg, item.ConnectorPreset.VolumeM3, environment.WaterDensityKgM3);
+                weightWaterKg = count * WeightInWaterKg(item.ConnectorPreset.WeightAirKg, item.ConnectorPreset.VolumeM3, waterDensityKgM3);
                 areaM2 = count * item.ConnectorPreset.ProjectedAreaM2;
                 cd = item.ConnectorPreset.DragCoefficient;
                 breakingLoadKn = item.ConnectorPreset.BreakingLoadKn;
@@ -256,13 +285,13 @@ public static class BuoyCalculator
             else if (item.Kind == AssemblyItemKind.Payload)
             {
                 presetName = item.Title;
-                weightWaterKg = WeightInWaterKg(item.PayloadWeightAirKg, item.PayloadVolumeM3, environment.WaterDensityKgM3);
+                weightWaterKg = WeightInWaterKg(item.PayloadWeightAirKg, item.PayloadVolumeM3, waterDensityKgM3);
                 areaM2 = item.PayloadProjectedAreaM2;
                 cd = item.PayloadDragCoefficient;
                 count = 1;
             }
 
-            var currentForceN = DragForce(environment.WaterDensityKgM3, environment.CurrentSpeedMS, areaM2, cd);
+            var currentForceN = DragForce(waterDensityKgM3, currentSpeedMS, areaM2, cd);
             var workingLoadKn = safetyFactor > 0 && breakingLoadKn > 0 ? breakingLoadKn / safetyFactor : 0;
             var reserve = tensionKn > 0 && workingLoadKn > 0 ? workingLoadKn / tensionKn : 0;
             var status = breakingLoadKn <= 0 ? "INFO: MBL не задан" : reserve >= 1 ? "OK" : "WARNING: малый запас";
