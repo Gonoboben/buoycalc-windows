@@ -57,11 +57,8 @@ public static class MooringNodeAnalyzer
             var angleDeg = tension?.AngleFromVerticalDeg ?? 0;
             var angleRad = angleDeg * Math.PI / 180.0;
 
-            var dx = segment.SegmentLengthM * Math.Sin(angleRad);
-            var dz = segment.SegmentLengthM * Math.Cos(angleRad);
-
-            rawX += dx;
-            rawZ += dz;
+            rawX += segment.SegmentLengthM * Math.Sin(angleRad);
+            rawZ += segment.SegmentLengthM * Math.Cos(angleRad);
             alongLineM += segment.SegmentLengthM;
 
             var isBottomNode = segment.Number == lastSegment.Number;
@@ -78,9 +75,14 @@ public static class MooringNodeAnalyzer
                 isBottomNode ? "INFO: якорь, граничный узел" : "OK"));
         }
 
-        var estimatedDepthFromSegments = result.SegmentRows.Max(x => x.EstimatedDepthM);
-        var scaleZ = rawZ > 0 && estimatedDepthFromSegments > 0 ? estimatedDepthFromSegments / rawZ : 1.0;
-        var scaleX = scaleZ;
+        var anchorNodeDepthM = result.SegmentRows.Max(x => x.EstimatedDepthM);
+        var verticalSpanM = rawZ;
+
+        var scale = verticalSpanM > anchorNodeDepthM && verticalSpanM > 0
+            ? anchorNodeDepthM / verticalSpanM
+            : 1.0;
+
+        var topNodeDepthM = Math.Max(0, anchorNodeDepthM - verticalSpanM * scale);
 
         return workRows
             .Select(row => new MooringNodeRow(
@@ -88,8 +90,8 @@ public static class MooringNodeAnalyzer
                 row.SegmentNumber,
                 row.SourceElement,
                 row.AlongLineM,
-                row.RawX * scaleX,
-                row.RawZ * scaleZ,
+                row.RawX * scale,
+                topNodeDepthM + row.RawZ * scale,
                 row.SegmentLengthM,
                 row.SegmentAngleFromVerticalDeg,
                 row.SegmentTensionKn,
