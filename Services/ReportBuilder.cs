@@ -15,7 +15,7 @@ public static class ReportBuilder
     {
         var sb = new StringBuilder();
         var tensionRows = SegmentTensionAnalyzer.Build(result);
-        var nodeRows = MooringNodeAnalyzer.Build(result);
+        var nodeRows = MooringNodeAnalyzer.Build(result, environment.DepthM);
 
         sb.AppendLine("# BuoyCalc Windows — предварительный отчёт");
         sb.AppendLine();
@@ -153,7 +153,8 @@ public static class ReportBuilder
         {
             sb.AppendLine("## Расчётные узлы линии X/Z");
             sb.AppendLine("Координаты построены сверху вниз по оценочным углам сегментов. Это предварительная форма линии до итерационного равновесного расчёта.");
-            sb.AppendLine("Буй и якорь показаны как граничные узлы: буй — верхний конец линии, якорь — нижний конец линии. Они не являются сегментами троса, поэтому длина сегмента у буя равна 0.");
+            sb.AppendLine("Буй и якорь показаны как граничные узлы: буй — верхний конец линии, якорь — нижний конец линии. Они не являются сегментами троса, поэтому длина сегмента у буя и якоря равна 0.");
+            sb.AppendLine("Глубина якорного узла принята равной проектной глубине из условий постановки.");
             sb.AppendLine($"Показаны первые {System.Math.Min(90, nodeRows.Count)} узлов из {nodeRows.Count}.");
             sb.AppendLine();
             sb.AppendLine("| Узел | Сегмент | Элемент | s, м | X, м | Z, м | Lсег, м | Угол, ° | T, кН | Статус |");
@@ -177,7 +178,7 @@ public static class ReportBuilder
 
         sb.AppendLine();
         sb.AppendLine("## Ограничения");
-        sb.AppendLine("Расчёт является предварительным. В v0.22.1 буй и якорь явно показаны как граничные узлы X/Z, но итерационный расчёт равновесной формы линии будет следующим этапом.");
+        sb.AppendLine("Расчёт является предварительным. В v0.22.2 якорный узел X/Z привязан к проектной глубине, но итерационный расчёт равновесной формы линии будет следующим этапом.");
 
         return sb.ToString();
     }
