@@ -9,6 +9,7 @@ public sealed class BuoyProjectDto
     public string WaterDensity { get; set; } = string.Empty;
     public string Depth { get; set; } = string.Empty;
     public string CurrentSpeed { get; set; } = string.Empty;
+    public string UseCurrentProfile { get; set; } = string.Empty;
     public string WaveHeight { get; set; } = string.Empty;
     public string WavePeriod { get; set; } = string.Empty;
     public string SelectedSeabedPresetId { get; set; } = string.Empty;
@@ -30,6 +31,7 @@ public sealed class BuoyProjectDto
     public string SafetyFactor { get; set; } = string.Empty;
 
     public List<AssemblyItemDto> AssemblyItems { get; set; } = new();
+    public List<CurrentProfilePointDto> CurrentProfilePoints { get; set; } = new();
 }
 
 public sealed class AssemblyItemDto
@@ -46,4 +48,13 @@ public sealed class AssemblyItemDto
     public string PayloadVolumeM3 { get; set; } = string.Empty;
     public string PayloadProjectedAreaM2 { get; set; } = string.Empty;
     public string PayloadDragCoefficient { get; set; } = string.Empty;
+}
+
+public sealed class CurrentProfilePointDto
+{
+    public string DepthM { get; set; } = string.Empty;
+    public string EastCurrentMS { get; set; } = string.Empty;
+    public string NorthCurrentMS { get; set; } = string.Empty;
+    public string VerticalCurrentMS { get; set; } = string.Empty;
+    public string WaterDensityKgM3 { get; set; } = string.Empty;
 }
