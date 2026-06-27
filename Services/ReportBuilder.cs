@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using BuoyCalc.Windows.Models;
@@ -11,6 +12,7 @@ public static class ReportBuilder
         var sb = new StringBuilder();
         var tensionRows = SegmentTensionAnalyzer.Build(result);
         var shape = MooringShapeSolver.Build(environment, result);
+        var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
         MooringShapeStore.Set(shape);
 
         sb.AppendLine("# BuoyCalc Windows — предварительный отчёт");
@@ -18,8 +20,29 @@ public static class ReportBuilder
         sb.AppendLine($"Проект: {projectName}");
         sb.AppendLine($"Вердикт: {result.Verdict}");
         sb.AppendLine($"Главный риск: {result.MainRisk}");
+        sb.AppendLine($"Инженерная диагностика: {diagnostics.Summary}");
         sb.AppendLine();
 
+        AppendEnvironment(sb, environment);
+        AppendBuoy(sb, buoy, shape);
+        AppendAnchor(sb, anchor, result);
+        AppendTotals(sb, result, tensionRows, shape, diagnostics);
+        AppendDiagnostics(sb, diagnostics);
+        AppendElementRows(sb, result);
+        AppendSegmentRows(sb, result);
+        AppendTensionRows(sb, tensionRows);
+        AppendShapeRows(sb, shape);
+        AppendChecks(sb, result);
+
+        sb.AppendLine("## Ограничения");
+        sb.AppendLine(shape.MethodNote);
+        sb.AppendLine("v0.26 добавляет инженерную диагностику и невязки, но полная итерационная сходимость формы ещё не включена.");
+
+        return sb.ToString();
+    }
+
+    private static void AppendEnvironment(StringBuilder sb, EnvironmentInput environment)
+    {
         sb.AppendLine("## Условия");
         sb.AppendLine($"- Плотность воды базовая: {environment.WaterDensityKgM3:0.####} кг/м³");
         sb.AppendLine($"- Плотность воды расчётная: {environment.EffectiveWaterDensityKgM3:0.####} кг/м³");
@@ -33,18 +56,23 @@ public static class ReportBuilder
         sb.AppendLine($"- Примечание по грунту: {environment.Seabed.Note}");
         sb.AppendLine();
 
-        if (environment.EffectiveCurrentProfile.Count > 0)
+        if (environment.EffectiveCurrentProfile.Count == 0)
         {
-            sb.AppendLine("## Профиль течения по глубине");
-            sb.AppendLine("| Глубина, м | U East, м/с | V North, м/с | W Vertical, м/с | |U|, м/с | ρ, кг/м³ |");
-            sb.AppendLine("|---:|---:|---:|---:|---:|---:|");
-            foreach (var p in environment.EffectiveCurrentProfile)
-            {
-                sb.AppendLine($"| {p.DepthM:0.####} | {p.EastCurrentMS:0.####} | {p.NorthCurrentMS:0.####} | {p.VerticalCurrentMS:0.####} | {p.SpeedMS:0.####} | {p.WaterDensityKgM3:0.####} |");
-            }
-            sb.AppendLine();
+            return;
         }
 
+        sb.AppendLine("## Профиль течения по глубине");
+        sb.AppendLine("| Глубина, м | U East, м/с | V North, м/с | W Vertical, м/с | |U|, м/с | ρ, кг/м³ |");
+        sb.AppendLine("|---:|---:|---:|---:|---:|---:|");
+        foreach (var p in environment.EffectiveCurrentProfile)
+        {
+            sb.AppendLine($"| {p.DepthM:0.####} | {p.EastCurrentMS:0.####} | {p.NorthCurrentMS:0.####} | {p.VerticalCurrentMS:0.####} | {p.SpeedMS:0.####} | {p.WaterDensityKgM3:0.####} |");
+        }
+        sb.AppendLine();
+    }
+
+    private static void AppendBuoy(StringBuilder sb, BuoyInput buoy, MooringShapeResult shape)
+    {
         sb.AppendLine("## Буй");
         sb.AppendLine($"- Название: {buoy.Name}");
         sb.AppendLine($"- Объём: {buoy.VolumeM3:0.####} м³");
@@ -52,8 +80,12 @@ public static class ReportBuilder
         sb.AppendLine($"- Площадь: {buoy.ProjectedAreaM2:0.####} м²");
         sb.AppendLine($"- Cd: {buoy.DragCoefficient:0.####}");
         sb.AppendLine($"- Состояние по форме: {DisplayBuoyState(shape.BuoyState)}");
+        sb.AppendLine($"- Глубина узла буя: {shape.BuoyPoint?.ZDepthM ?? 0:0.####} м");
         sb.AppendLine();
+    }
 
+    private static void AppendAnchor(StringBuilder sb, AnchorInput anchor, CalculationResult result)
+    {
         sb.AppendLine("## Якорь");
         sb.AppendLine($"- Название: {anchor.Name}");
         sb.AppendLine($"- Тип: {anchor.Type}");
@@ -64,9 +96,12 @@ public static class ReportBuilder
         sb.AppendLine($"- Базовый коэф. удержания якоря: {result.AnchorBaseHoldingCoefficient:0.####}");
         sb.AppendLine($"- Множитель типа якоря: {result.AnchorTypeMultiplier:0.####}");
         sb.AppendLine($"- Множитель грунта: {result.SeabedHoldingMultiplier:0.####}");
-        sb.AppendLine($"- Формула удержания: вес в воде × K якоря × K типа × K грунта");
+        sb.AppendLine("- Формула удержания: вес в воде × K якоря × K типа × K грунта");
         sb.AppendLine();
+    }
 
+    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, EngineeringDiagnosticsResult diagnostics)
+    {
         sb.AppendLine("## Итоги");
         sb.AppendLine($"- Плавучесть: {result.BuoyancyKg:0.####} кг");
         sb.AppendLine($"- Вес в воде: {result.TotalWeightWaterKg:0.####} кг");
@@ -84,11 +119,14 @@ public static class ReportBuilder
         sb.AppendLine($"- Запас якоря: {result.AnchorReserve:0.####}");
         sb.AppendLine($"- Длина линии: {result.LineLengthM:0.####} м");
         sb.AppendLine($"- Оценочный снос: {result.EstimatedOffsetM:0.####} м");
+        sb.AppendLine($"- Диагностика: {diagnostics.Summary}");
+
         if (tensionRows.Count > 0)
         {
             var maxTension = tensionRows.OrderByDescending(x => x.TensionKn).First();
             sb.AppendLine($"- Макс. натяжение по сегментной оценке: {maxTension.TensionKn:0.####} кН, сегмент №{maxTension.Number}, z≈{maxTension.EstimatedDepthM:0.####} м");
         }
+
         if (shape.Nodes.Count > 0)
         {
             sb.AppendLine($"- Предварительный горизонтальный снос по узлам X/Z: {shape.HorizontalOffsetM:0.####} м");
@@ -97,23 +135,20 @@ public static class ReportBuilder
             sb.AppendLine($"- Узлов формы: {shape.Nodes.Count}");
         }
         sb.AppendLine();
+    }
 
-        AppendElementRows(sb, result);
-        AppendSegmentRows(sb, result);
-        AppendTensionRows(sb, tensionRows);
-        AppendShapeRows(sb, shape);
-
-        sb.AppendLine("## Проверки");
-        foreach (var check in result.Checks)
-        {
-            sb.AppendLine($"- {check}");
-        }
-
+    private static void AppendDiagnostics(StringBuilder sb, EngineeringDiagnosticsResult diagnostics)
+    {
+        sb.AppendLine("## Контроль инженерной модели");
+        sb.AppendLine($"Общий статус: {EngineeringDiagnostics.DisplaySeverity(diagnostics.OverallSeverity)} — {diagnostics.Summary}.");
         sb.AppendLine();
-        sb.AppendLine("## Ограничения");
-        sb.AppendLine(shape.MethodNote);
-
-        return sb.ToString();
+        sb.AppendLine("| Проверка | Значение | Допуск / критерий | Статус | Примечание |");
+        sb.AppendLine("|---|---:|---|---|---|");
+        foreach (var row in diagnostics.Rows)
+        {
+            sb.AppendLine($"| {Escape(row.CheckName)} | {Escape(row.Value)} | {Escape(row.Tolerance)} | {EngineeringDiagnostics.DisplaySeverity(row.Severity)} | {Escape(row.Note)} |");
+        }
+        sb.AppendLine();
     }
 
     private static void AppendElementRows(StringBuilder sb, CalculationResult result)
@@ -145,7 +180,7 @@ public static class ReportBuilder
         sb.AppendLine();
     }
 
-    private static void AppendTensionRows(StringBuilder sb, System.Collections.Generic.IReadOnlyList<SegmentTensionRow> rows)
+    private static void AppendTensionRows(StringBuilder sb, IReadOnlyList<SegmentTensionRow> rows)
     {
         if (rows.Count == 0) return;
         var maxTension = rows.OrderByDescending(x => x.TensionKn).First();
@@ -175,6 +210,16 @@ public static class ReportBuilder
         foreach (var row in shape.Nodes.Take(90))
         {
             sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.AlongLineM:0.####} | {row.XOffsetM:0.####} | {row.ZDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.SegmentAngleFromVerticalDeg:0.####} | {row.SegmentTensionKn:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+    }
+
+    private static void AppendChecks(StringBuilder sb, CalculationResult result)
+    {
+        sb.AppendLine("## Проверки");
+        foreach (var check in result.Checks)
+        {
+            sb.AppendLine($"- {check}");
         }
         sb.AppendLine();
     }
