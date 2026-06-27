@@ -100,17 +100,12 @@ public sealed class Mooring2DCanvas : Control
         var drawingDepth = Math.Max(1, depth > 0 ? Math.Max(depth, maxNodeZ) : maxNodeZ);
         var horizontalSpanM = Math.Max(0.0001, maxNodeX - minNodeX);
 
-        var maxHorizontalPixels = Math.Max(90, width - 2 * padding - 170);
-        var xScale = maxHorizontalPixels / horizontalSpanM;
         var zScale = usableHeight / drawingDepth;
+        var xScale = zScale;
         var spanX = horizontalSpanM * xScale;
 
         var startX = width / 2.0 - spanX / 2.0;
-        startX = Math.Max(padding + 70, startX);
-        if (startX + spanX > width - padding - 90)
-        {
-            startX = Math.Max(padding + 70, width - padding - 90 - spanX);
-        }
+        startX = Math.Clamp(startX, padding + 80, width - padding - 80 - spanX);
 
         var points = nodes
             .Select(node => new Point(
@@ -138,7 +133,7 @@ public sealed class Mooring2DCanvas : Control
 
         DrawLabel(context, fromEngineeringCore ? "форма из MooringShapeSolver" : "форма из X/Z таблицы", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
         DrawLabel(context, DisplayBuoyState(buoyState), new Point(padding + 12, surfaceY + 50), 10, false, MutedTextBrush);
-        DrawLabel(context, "X/Z масштабы разные", new Point(padding + 12, surfaceY + 66), 10, false, MutedTextBrush);
+        DrawLabel(context, "масштаб X=Z, без увеличения по горизонтали", new Point(padding + 12, surfaceY + 66), 10, false, MutedTextBrush);
 
         var offsetText = offset > 0 ? $"снос расчётный {offset:0.##} м" : $"снос по узлам {horizontalSpanM:0.##} м";
         var y = bottomY + 48;
