@@ -14,6 +14,7 @@ public static class ReportBuilder
         CalculationResult result)
     {
         var sb = new StringBuilder();
+        var tensionRows = SegmentTensionAnalyzer.Build(result);
 
         sb.AppendLine("# BuoyCalc Windows — предварительный отчёт");
         sb.AppendLine();
@@ -85,6 +86,11 @@ public static class ReportBuilder
         sb.AppendLine($"- Запас якоря: {result.AnchorReserve:0.####}");
         sb.AppendLine($"- Длина линии: {result.LineLengthM:0.####} м");
         sb.AppendLine($"- Оценочный снос: {result.EstimatedOffsetM:0.####} м");
+        if (tensionRows.Count > 0)
+        {
+            var maxTension = tensionRows.OrderByDescending(x => x.TensionKn).First();
+            sb.AppendLine($"- Макс. натяжение по сегментной оценке: {maxTension.TensionKn:0.####} кН, сегмент №{maxTension.Number}, z≈{maxTension.EstimatedDepthM:0.####} м");
+        }
         sb.AppendLine();
 
         sb.AppendLine("## Таблица элементов");
@@ -116,6 +122,26 @@ public static class ReportBuilder
             sb.AppendLine();
         }
 
+        if (tensionRows.Count > 0)
+        {
+            sb.AppendLine("## Натяжения по сегментам линии");
+            var maxTension = tensionRows.OrderByDescending(x => x.TensionKn).First();
+            sb.AppendLine($"Расчёт ведётся снизу вверх: от якоря к бую. Показаны первые {System.Math.Min(80, tensionRows.Count)} сегментов.");
+            sb.AppendLine($"Максимальное оценочное натяжение: {maxTension.TensionKn:0.####} кН на сегменте №{maxTension.Number}.");
+            sb.AppendLine();
+            sb.AppendLine("| № | Элемент | z, м | L, м | Вес в воде, кг | Fтек, Н | ΣFгор, Н | ΣFверт, Н | T, кН | Угол от вертикали, ° | Статус |");
+            sb.AppendLine("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+            foreach (var row in tensionRows.Take(80))
+            {
+                sb.AppendLine($"| {row.Number} | {Escape(row.SourceElement)} | {row.EstimatedDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.WeightWaterKg:0.####} | {row.SegmentCurrentForceN:0.####} | {row.CumulativeHorizontalForceN:0.####} | {row.CumulativeVerticalForceN:0.####} | {row.TensionKn:0.####} | {row.AngleFromVerticalDeg:0.####} | {Escape(row.Status)} |");
+            }
+            if (tensionRows.Count > 80)
+            {
+                sb.AppendLine($"| ... | Остальные сегменты скрыты в кратком отчёте |  |  |  |  |  |  |  |  |  |");
+            }
+            sb.AppendLine();
+        }
+
         sb.AppendLine("## Проверки");
         foreach (var check in result.Checks)
         {
@@ -124,7 +150,7 @@ public static class ReportBuilder
 
         sb.AppendLine();
         sb.AppendLine("## Ограничения");
-        sb.AppendLine("Расчёт является предварительным. В v0.20 линия уже разбивается на сегменты с локальным течением по глубине, но итерационный расчёт формы равновесия и координат X/Y/Z будет добавлен следующим этапом.");
+        sb.AppendLine("Расчёт является предварительным. В v0.21 добавлена оценка натяжений по сегментам снизу вверх, но итерационный расчёт формы равновесия и координат X/Y/Z будет добавлен следующим этапом.");
 
         return sb.ToString();
     }
