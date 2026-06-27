@@ -82,15 +82,16 @@ public sealed class Mooring2DCanvas : Control
         double usableHeight,
         double padding)
     {
-        var maxNodeX = Math.Max(0.0001, nodes.Max(x => x.X));
+        var minNodeX = nodes.Min(x => x.X);
+        var maxNodeX = nodes.Max(x => x.X);
         var maxNodeZ = Math.Max(0.0001, nodes.Max(x => x.Z));
-        var drawingDepth = Math.Max(depth, maxNodeZ);
-        drawingDepth = Math.Max(1, drawingDepth);
+        var drawingDepth = Math.Max(1, Math.Max(depth, maxNodeZ));
+        var horizontalSpanM = Math.Max(0.0001, maxNodeX - minNodeX);
 
         var maxHorizontalPixels = Math.Max(90, width - 2 * padding - 170);
-        var equalScale = usableHeight / drawingDepth;
-        var scale = Math.Min(equalScale, maxHorizontalPixels / maxNodeX);
-        var spanX = maxNodeX * scale;
+        var xScale = maxHorizontalPixels / horizontalSpanM;
+        var zScale = usableHeight / drawingDepth;
+        var spanX = horizontalSpanM * xScale;
 
         var startX = width / 2.0 - spanX / 2.0;
         startX = Math.Max(padding + 70, startX);
@@ -100,7 +101,7 @@ public sealed class Mooring2DCanvas : Control
         }
 
         var points = nodes
-            .Select(node => new Point(startX + node.X * scale, surfaceY + node.Z * scale))
+            .Select(node => new Point(startX + (node.X - minNodeX) * xScale, surfaceY + node.Z * zScale))
             .ToList();
 
         for (var i = 1; i < points.Count; i++)
@@ -122,8 +123,9 @@ public sealed class Mooring2DCanvas : Control
         DrawAnchor(context, anchorPoint, vm?.AnchorName ?? "Якорь");
 
         DrawLabel(context, "форма по X/Z узлам", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
+        DrawLabel(context, "X/Z масштабы разные", new Point(padding + 12, surfaceY + 50), 10, false, MutedTextBrush);
 
-        var offsetText = offset > 0 ? $"снос расчётный {offset:0.##} м" : $"снос по узлам {maxNodeX:0.##} м";
+        var offsetText = offset > 0 ? $"снос расчётный {offset:0.##} м" : $"снос по узлам {horizontalSpanM:0.##} м";
         var y = bottomY + 48;
         context.DrawLine(ThinLinePen, new Point(buoyPoint.X, y), new Point(anchorPoint.X, y));
         DrawLabel(context, offsetText, new Point(Math.Min(buoyPoint.X, anchorPoint.X) + 8, y - 18), 11, false, MutedTextBrush);
