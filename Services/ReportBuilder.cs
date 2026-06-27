@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text;
 using BuoyCalc.Windows.Models;
 
@@ -95,6 +96,26 @@ public static class ReportBuilder
         }
         sb.AppendLine();
 
+        if (result.SegmentRows.Count > 0)
+        {
+            sb.AppendLine("## Расчётные сегменты линии");
+            sb.AppendLine($"Линия разбита на {result.SegmentRows.Count} сегментов. В таблице ниже показаны первые {System.Math.Min(80, result.SegmentRows.Count)} сегментов.");
+            sb.AppendLine();
+            sb.AppendLine("| № | Элемент | Пресет | s0, м | s1, м | L, м | z, м | U | V | W | |Uгор| | ρ | A, м² | Cd | Сила, Н |");
+            sb.AppendLine("|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            foreach (var row in result.SegmentRows.Take(80))
+            {
+                sb.AppendLine($"| {row.Number} | {Escape(row.SourceElement)} | {Escape(row.RopePresetName)} | {row.StartLengthM:0.####} | {row.EndLengthM:0.####} | {row.SegmentLengthM:0.####} | {row.EstimatedDepthM:0.####} | {row.EastCurrentMS:0.####} | {row.NorthCurrentMS:0.####} | {row.VerticalCurrentMS:0.####} | {row.LocalSpeedMS:0.####} | {row.WaterDensityKgM3:0.####} | {row.ProjectedAreaM2:0.####} | {row.DragCoefficient:0.####} | {row.CurrentForceN:0.####} |");
+            }
+            if (result.SegmentRows.Count > 80)
+            {
+                sb.AppendLine($"| ... | Остальные сегменты скрыты в кратком отчёте |  |  |  |  |  |  |  |  |  |  |  |  |  |");
+            }
+            sb.AppendLine();
+            sb.AppendLine($"Суммарная сила течения по сегментам линии: {result.SegmentRows.Sum(x => x.CurrentForceN):0.####} Н");
+            sb.AppendLine();
+        }
+
         sb.AppendLine("## Проверки");
         foreach (var check in result.Checks)
         {
@@ -103,7 +124,7 @@ public static class ReportBuilder
 
         sb.AppendLine();
         sb.AppendLine("## Ограничения");
-        sb.AppendLine("Расчёт является предварительным. В v0.19 профиль течения уже хранится и участвует как эффективная скорость, но послойная интеграция сил по сегментам будет добавлена следующим этапом.");
+        sb.AppendLine("Расчёт является предварительным. В v0.20 линия уже разбивается на сегменты с локальным течением по глубине, но итерационный расчёт формы равновесия и координат X/Y/Z будет добавлен следующим этапом.");
 
         return sb.ToString();
     }
