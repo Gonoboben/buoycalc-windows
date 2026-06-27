@@ -6,7 +6,7 @@
         MinWidth="760"
         MinHeight="560"
         Background="#F3F6FA"
-        Title="Полный текстовый отчёт v0.21.1">
+        Title="Полный текстовый отчёт v0.21.2">
 
   <Border Background="White" CornerRadius="16" Padding="16" Margin="18" BoxShadow="0 2 12 #18000000">
     <Grid RowDefinitions="Auto,*" RowSpacing="12">
@@ -16,22 +16,25 @@
           <TextBlock Text="Markdown-отчёт без обрезки. Текст можно выделить и скопировать." FontSize="12" Foreground="#697386" />
         </StackPanel>
         <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Top">
-          <TextBlock Text="v0.21.1" FontSize="12" Foreground="#263653" FontWeight="Bold" />
+          <TextBlock Text="v0.21.2" FontSize="12" Foreground="#263653" FontWeight="Bold" />
         </Border>
       </Grid>
 
-      <TextBox Grid.Row="1"
-               Text="{Binding ReportText}"
-               AcceptsReturn="True"
-               IsReadOnly="True"
-               Background="#F7F9FC"
-               BorderBrush="#D7DEE9"
-               BorderThickness="1"
-               FontFamily="Consolas"
-               FontSize="12"
-               TextWrapping="NoWrap"
-               HorizontalScrollBarVisibility="Auto"
-               VerticalScrollBarVisibility="Auto" />
+      <ScrollViewer Grid.Row="1"
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Auto">
+        <TextBox Text="{Binding ReportText}"
+                 AcceptsReturn="True"
+                 IsReadOnly="True"
+                 Background="#F7F9FC"
+                 BorderBrush="#D7DEE9"
+                 BorderThickness="1"
+                 FontFamily="Consolas"
+                 FontSize="12"
+                 TextWrapping="NoWrap"
+                 MinWidth="1200"
+                 MinHeight="900" />
+      </ScrollViewer>
     </Grid>
   </Border>
 </Window>
