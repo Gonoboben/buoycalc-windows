@@ -22,14 +22,29 @@ public static class ReportBuilder
         sb.AppendLine();
 
         sb.AppendLine("## Условия");
-        sb.AppendLine($"- Плотность воды: {environment.WaterDensityKgM3:0.####} кг/м³");
+        sb.AppendLine($"- Плотность воды базовая: {environment.WaterDensityKgM3:0.####} кг/м³");
+        sb.AppendLine($"- Плотность воды расчётная: {environment.EffectiveWaterDensityKgM3:0.####} кг/м³");
         sb.AppendLine($"- Глубина: {environment.DepthM:0.####} м");
-        sb.AppendLine($"- Течение: {environment.CurrentSpeedMS:0.####} м/с");
+        sb.AppendLine($"- Течение базовое: {environment.CurrentSpeedMS:0.####} м/с");
+        sb.AppendLine($"- Течение расчётное: {environment.EffectiveCurrentSpeedMS:0.####} м/с");
+        sb.AppendLine($"- Профиль течения: {(environment.UseCurrentProfile ? "используется" : "не используется")}");
         sb.AppendLine($"- Волна: {environment.WaveHeightM:0.####} м / {environment.WavePeriodS:0.####} с");
         sb.AppendLine($"- Грунт: {environment.Seabed.Name}");
         sb.AppendLine($"- Множитель грунта: {environment.Seabed.HoldingMultiplier:0.####}");
         sb.AppendLine($"- Примечание по грунту: {environment.Seabed.Note}");
         sb.AppendLine();
+
+        if (environment.EffectiveCurrentProfile.Count > 0)
+        {
+            sb.AppendLine("## Профиль течения по глубине");
+            sb.AppendLine("| Глубина, м | U East, м/с | V North, м/с | W Vertical, м/с | |U|, м/с | ρ, кг/м³ |");
+            sb.AppendLine("|---:|---:|---:|---:|---:|---:|");
+            foreach (var point in environment.EffectiveCurrentProfile)
+            {
+                sb.AppendLine($"| {point.DepthM:0.####} | {point.EastCurrentMS:0.####} | {point.NorthCurrentMS:0.####} | {point.VerticalCurrentMS:0.####} | {point.SpeedMS:0.####} | {point.WaterDensityKgM3:0.####} |");
+            }
+            sb.AppendLine();
+        }
 
         sb.AppendLine("## Буй");
         sb.AppendLine($"- Название: {buoy.Name}");
@@ -88,7 +103,7 @@ public static class ReportBuilder
 
         sb.AppendLine();
         sb.AppendLine("## Ограничения");
-        sb.AppendLine("Расчёт является предварительным. Для реального проектирования нужны паспортные данные элементов, проверка грунта, динамика, усталость, взаимодействие с грунтом и инженерная верификация.");
+        sb.AppendLine("Расчёт является предварительным. В v0.19 профиль течения уже хранится и участвует как эффективная скорость, но послойная интеграция сил по сегментам будет добавлена следующим этапом.");
 
         return sb.ToString();
     }
