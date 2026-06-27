@@ -79,6 +79,27 @@ public partial class MainWindow : Window
         await window.ShowDialog(this);
     }
 
+    private async void OpenReportTextButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(viewModel.ReportText))
+        {
+            viewModel.ProjectStatusText = "Сначала выполните расчёт, затем откройте полный отчёт.";
+            return;
+        }
+
+        var window = new ReportTextWindow
+        {
+            DataContext = viewModel
+        };
+
+        await window.ShowDialog(this);
+    }
+
     private async void ExportPdfButton_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel)
