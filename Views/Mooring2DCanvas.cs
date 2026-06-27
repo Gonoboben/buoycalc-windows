@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Avalonia;
@@ -56,7 +57,88 @@ public sealed class Mooring2DCanvas : Control
         DrawLabel(context, "поверхность воды", new Point(padding + 12, surfaceY - 28), 12, true, TextBrush);
         DrawLabel(context, "дно / грунт", new Point(padding + 12, bottomY + 8), 12, true, AnchorBrush);
         DrawLabel(context, depth > 0 ? $"глубина {depth:0.##} м" : "глубина не задана", new Point(padding + 12, surfaceY + 12), 11, false, MutedTextBrush);
+        DrawLabel(context, lineLength > 0 ? $"линия {lineLength:0.##} м" : "линия не задана", new Point(width - padding - 145, surfaceY + 12), 11, false, MutedTextBrush);
 
+        var calculatedNodes = ParseCalculatedNodes(vm?.ReportText);
+        if (calculatedNodes.Count >= 2)
+        {
+            DrawCalculatedLine(context, calculatedNodes, vm, depth, offset, width, surfaceY, bottomY, usableHeight, padding);
+        }
+        else
+        {
+            DrawFallbackLine(context, vm, depth, offset, width, surfaceY, bottomY, padding);
+        }
+    }
+
+    private static void DrawCalculatedLine(
+        DrawingContext context,
+        IReadOnlyList<CalculatedNode> nodes,
+        MainWindowViewModel? vm,
+        double depth,
+        double offset,
+        double width,
+        double surfaceY,
+        double bottomY,
+        double usableHeight,
+        double padding)
+    {
+        var maxNodeX = Math.Max(0.0001, nodes.Max(x => x.X));
+        var maxNodeZ = Math.Max(0.0001, nodes.Max(x => x.Z));
+        var drawingDepth = Math.Max(depth, maxNodeZ);
+        drawingDepth = Math.Max(1, drawingDepth);
+
+        var maxHorizontalPixels = Math.Max(90, width - 2 * padding - 170);
+        var equalScale = usableHeight / drawingDepth;
+        var scale = Math.Min(equalScale, maxHorizontalPixels / maxNodeX);
+        var spanX = maxNodeX * scale;
+
+        var startX = width / 2.0 - spanX / 2.0;
+        startX = Math.Max(padding + 70, startX);
+        if (startX + spanX > width - padding - 90)
+        {
+            startX = Math.Max(padding + 70, width - padding - 90 - spanX);
+        }
+
+        var points = nodes
+            .Select(node => new Point(startX + node.X * scale, surfaceY + node.Z * scale))
+            .ToList();
+
+        for (var i = 1; i < points.Count; i++)
+        {
+            context.DrawLine(LinePen, points[i - 1], points[i]);
+        }
+
+        var buoyPoint = points[0];
+        var anchorPoint = points[^1];
+        context.DrawLine(ThinLinePen, new Point(anchorPoint.X, anchorPoint.Y), new Point(anchorPoint.X, bottomY));
+
+        var nodeStep = Math.Max(1, points.Count / 24);
+        for (var i = 1; i < points.Count - 1; i += nodeStep)
+        {
+            context.DrawEllipse(NodeBrush, NodePen, points[i], 4.2, 4.2);
+        }
+
+        DrawBuoy(context, buoyPoint, vm?.BuoyName ?? "Буй");
+        DrawAnchor(context, anchorPoint, vm?.AnchorName ?? "Якорь");
+
+        DrawLabel(context, "форма по X/Z узлам", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
+
+        var offsetText = offset > 0 ? $"снос расчётный {offset:0.##} м" : $"снос по узлам {maxNodeX:0.##} м";
+        var y = bottomY + 48;
+        context.DrawLine(ThinLinePen, new Point(buoyPoint.X, y), new Point(anchorPoint.X, y));
+        DrawLabel(context, offsetText, new Point(Math.Min(buoyPoint.X, anchorPoint.X) + 8, y - 18), 11, false, MutedTextBrush);
+    }
+
+    private static void DrawFallbackLine(
+        DrawingContext context,
+        MainWindowViewModel? vm,
+        double depth,
+        double offset,
+        double width,
+        double surfaceY,
+        double bottomY,
+        double padding)
+    {
         var maxHorizontalMeters = Math.Max(depth, Math.Max(offset, 1));
         var maxHorizontalPixels = Math.Max(90, width - 2 * padding - 170);
         var offsetPixels = offset > 0 ? Math.Min(maxHorizontalPixels, offset / maxHorizontalMeters * maxHorizontalPixels) : 0;
@@ -87,8 +169,55 @@ public sealed class Mooring2DCanvas : Control
         {
             DrawLabel(context, "снос: после расчёта или 0 м", new Point(width - padding - 170, bottomY + 40), 11, false, MutedTextBrush);
         }
+    }
 
-        DrawLabel(context, lineLength > 0 ? $"линия {lineLength:0.##} м" : "линия не задана", new Point(width - padding - 145, surfaceY + 12), 11, false, MutedTextBrush);
+    private static List<CalculatedNode> ParseCalculatedNodes(string? reportText)
+    {
+        var nodes = new List<CalculatedNode>();
+        if (string.IsNullOrWhiteSpace(reportText))
+        {
+            return nodes;
+        }
+
+        var inNodeSection = false;
+        foreach (var rawLine in reportText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.StartsWith("## Расчётные узлы линии X/Z", StringComparison.OrdinalIgnoreCase))
+            {
+                inNodeSection = true;
+                continue;
+            }
+
+            if (inNodeSection && line.StartsWith("## ", StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            if (!inNodeSection || !line.StartsWith("|", StringComparison.Ordinal) || line.Contains("---"))
+            {
+                continue;
+            }
+
+            var parts = line.Split('|').Select(x => x.Trim()).ToArray();
+            if (parts.Length < 7 || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
+            {
+                continue;
+            }
+
+            if (TryParseNumber(parts[5], out var x) && TryParseNumber(parts[6], out var z))
+            {
+                nodes.Add(new CalculatedNode(number, x, z, parts[3]));
+            }
+        }
+
+        return nodes.OrderBy(x => x.Number).ToList();
+    }
+
+    private static bool TryParseNumber(string value, out double number)
+    {
+        value = (value ?? string.Empty).Replace(',', '.');
+        return double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out number);
     }
 
     private static void DrawElementNodes(DrawingContext context, MainWindowViewModel? vm, Point buoyPoint, Point anchorPoint)
@@ -140,14 +269,7 @@ public sealed class Mooring2DCanvas : Control
     private static void DrawLabel(DrawingContext context, string text, Point origin, double size, bool bold, IBrush brush)
     {
         var typeface = new Typeface("Arial", FontStyle.Normal, bold ? FontWeight.Bold : FontWeight.Normal);
-        var formattedText = new FormattedText(
-            text ?? string.Empty,
-            CultureInfo.CurrentCulture,
-            FlowDirection.LeftToRight,
-            typeface,
-            size,
-            brush);
-
+        var formattedText = new FormattedText(text ?? string.Empty, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, size, brush);
         context.DrawText(formattedText, origin);
     }
 
@@ -156,4 +278,6 @@ public sealed class Mooring2DCanvas : Control
         value ??= string.Empty;
         return value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 1)] + "…";
     }
+
+    private sealed record CalculatedNode(int Number, double X, double Z, string Label);
 }
