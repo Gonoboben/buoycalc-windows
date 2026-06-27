@@ -6,7 +6,7 @@
         MinWidth="1160"
         MinHeight="760"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.19">
+        Title="BuoyCalc Windows v0.21.1">
 
   <Grid RowDefinitions="Auto,*">
     <Border Grid.Row="0" Background="#172033" Padding="20,16">
@@ -19,10 +19,13 @@
           <Button Click="OpenCurrentProfileButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
             <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Профиль течения..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
           </Button>
+          <Button Click="OpenReportTextButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
+            <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Отчёт текстом..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
+          </Button>
           <Button Click="OpenLibraryButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
             <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8"><TextBlock Text="Библиотека элементов..." Foreground="White" FontSize="13" FontWeight="SemiBold" /></Border>
           </Button>
-          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center"><TextBlock Text="v0.19 current profile" Foreground="#C7D2E5" FontSize="13" /></Border>
+          <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center"><TextBlock Text="v0.21.1 report" Foreground="#C7D2E5" FontSize="13" /></Border>
         </StackPanel>
       </Grid>
     </Border>
