@@ -19,7 +19,7 @@ public sealed record MooringNodeRow(
 
 public static class MooringNodeAnalyzer
 {
-    public static IReadOnlyList<MooringNodeRow> Build(CalculationResult result, double targetDepthM)
+    public static IReadOnlyList<MooringNodeRow> Build(CalculationResult result)
     {
         if (result.SegmentRows.Count == 0)
         {
@@ -68,21 +68,18 @@ public static class MooringNodeAnalyzer
             workRows.Add(new NodeWorkRow(
                 workRows.Count,
                 segment.Number,
-                isBottomNode ? "Якорь / нижний конец линии" : segment.SourceElement,
+                isBottomNode ? "Якорь / точка крепления линии" : segment.SourceElement,
                 alongLineM,
                 rawX,
                 rawZ,
                 isBottomNode ? 0 : segment.SegmentLengthM,
                 angleDeg,
                 tension?.TensionKn ?? 0,
-                isBottomNode ? "INFO: якорь, граничный узел" : "OK"));
+                isBottomNode ? "INFO: якорь, точка крепления" : "OK"));
         }
 
-        var safeTargetDepthM = Math.Max(0, targetDepthM);
-        var fallbackDepthM = result.SegmentRows.Max(x => x.EstimatedDepthM);
-        var scaleZ = rawZ > 0
-            ? (safeTargetDepthM > 0 ? safeTargetDepthM : fallbackDepthM) / rawZ
-            : 1.0;
+        var anchorConnectionDepthM = result.SegmentRows.Max(x => x.EstimatedDepthM);
+        var scaleZ = rawZ > 0 && anchorConnectionDepthM > 0 ? anchorConnectionDepthM / rawZ : 1.0;
         var scaleX = scaleZ;
 
         return workRows
