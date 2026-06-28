@@ -6,8 +6,8 @@ namespace BuoyCalc.Windows.Views;
 
 internal static class WindowVersionHelper
 {
-    private const string CurrentVersion = "v0.34";
-    private const string CurrentVersionNote = "tension report";
+    private const string CurrentVersion = "v0.35";
+    private const string CurrentVersionNote = "alt shape report";
 
     private static readonly string[] LegacyVersionTexts =
     {
