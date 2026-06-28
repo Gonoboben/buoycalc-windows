@@ -54,6 +54,7 @@ public static class EngineeringDiagnostics
         var anchorDepthResidualM = double.IsNaN(anchorDepthM) ? double.NaN : Math.Abs(anchorDepthM - depthM);
         var maxTensionKn = tensionRows.Count > 0 ? tensionRows.Max(x => x.TensionKn) : result.TensionKn;
         var forceResiduals = BuildForceResiduals(tensionRows);
+        var vectorBalance = MooringVectorBalance.Build(result);
 
         rows.Add(Check(
             "Якорь на проектной глубине",
@@ -126,11 +127,39 @@ public static class EngineeringDiagnostics
             "Внутренний контроль накопления сил: сравнение суммы весовых сил линии с верхней вертикальной компонентой натяжения. Не является проверкой полного равновесия постановки."));
 
         rows.Add(new EngineeringDiagnosticRow(
+            "ΣFx учтённых сил постановки",
+            $"{vectorBalance.SumExternalFxN:0.####} Н",
+            "информационно",
+            EngineeringCheckSeverity.Info,
+            "Сумма горизонтальных внешних сил по векторной ведомости: буй, соединители, приборы, линия, якорь и волновая добавка, если она есть."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "ΣFz учтённых сил постановки",
+            $"{vectorBalance.SumExternalFzN:0.####} Н",
+            "информационно",
+            EngineeringCheckSeverity.Info,
+            "Сумма вертикальных внешних сил по векторной ведомости. Положительное направление Z принято вверх."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Требуемая реакция якоря Rx",
+            $"{vectorBalance.RequiredReactionFxN:0.####} Н; запас удержания {vectorBalance.AnchorHorizontalReserve:0.####}",
+            "информационно",
+            EngineeringCheckSeverity.Info,
+            "Реакция, которая потребовалась бы для замыкания ΣFx=0 по текущей векторной ведомости. Это ещё не результат итерационного solver."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Требуемая реакция якоря Rz",
+            $"{vectorBalance.RequiredReactionFzN:0.####} Н",
+            "информационно",
+            EngineeringCheckSeverity.Info,
+            "Реакция, которая потребовалась бы для замыкания ΣFz=0 по текущей векторной ведомости. Вертикальная реакция пока не распределяется через контакт/грунт."));
+
+        rows.Add(new EngineeringDiagnosticRow(
             "Полный баланс всей постановки",
-            "ещё не решается",
+            vectorBalance.IsSolved ? "решён" : "каркас собран; реакции не решены",
             "требуется итерационный solver",
             EngineeringCheckSeverity.Warning,
-            "Силы буя, соединителей, приборов и якоря ещё не сведены в единую систему ΣFx≈0, ΣFz≈0. Это задача следующего итерационного solver."));
+            vectorBalance.MethodNote));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Максимальное натяжение",
