@@ -39,7 +39,7 @@ public static class ReportBuilder
         sb.AppendLine("## Ограничения");
         sb.AppendLine(shape.MethodNote);
         sb.AppendLine(vectorBalance.MethodNote);
-        sb.AppendLine("v0.28.1 показывает подробную векторную ведомость сил, но полная итерационная сходимость формы ещё не включена.");
+        sb.AppendLine("v0.29 включает итерационную геометрическую сходимость формы, но полный нелинейный баланс сил, реакций и новой формы ещё не замкнут.");
 
         return sb.ToString();
     }
@@ -135,6 +135,8 @@ public static class ReportBuilder
             sb.AppendLine($"- Предварительный горизонтальный снос по узлам X/Z: {shape.HorizontalOffsetM:0.####} м");
             sb.AppendLine($"- Глубина якорного узла X/Z: {shape.AnchorPoint?.ZDepthM ?? 0:0.####} м");
             sb.AppendLine($"- Невязка якорной глубины: {shape.VerticalResidualM:0.####} м");
+            sb.AppendLine($"- Невязка solver формы: {shape.ConvergenceResidualM:0.####} м");
+            sb.AppendLine($"- Итераций solver формы: {shape.IterationCount}");
             sb.AppendLine($"- Узлов формы: {shape.Nodes.Count}");
         }
         sb.AppendLine();
@@ -228,7 +230,8 @@ public static class ReportBuilder
         if (shape.Nodes.Count == 0) return;
         sb.AppendLine("## Расчётная форма постановки X/Z");
         sb.AppendLine("Координаты являются выходом инженерного слоя MooringShapeSolver. Визуализация должна только отображать эти точки.");
-        sb.AppendLine($"Состояние буя: {DisplayBuoyState(shape.BuoyState)}. Сходимость: {(shape.Converged ? "да" : "нет, предварительная модель")}.");
+        sb.AppendLine($"Состояние буя: {DisplayBuoyState(shape.BuoyState)}. Сходимость: {(shape.Converged ? "да" : "нет")}.");
+        sb.AppendLine($"Итерации solver: {shape.IterationCount}, невязка: {shape.ConvergenceResidualM:0.####} м, scale={shape.AngleScale:0.####}. Критерий: {shape.ConvergenceCriterion}.");
         sb.AppendLine($"Показаны первые {System.Math.Min(90, shape.Nodes.Count)} узлов из {shape.Nodes.Count}.");
         sb.AppendLine();
         sb.AppendLine("| Узел | Сегмент | Элемент | s, м | X, м | Z, м | Lсег, м | Угол, ° | T, кН | Статус |");
