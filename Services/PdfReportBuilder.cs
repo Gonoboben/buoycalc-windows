@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using BuoyCalc.Windows.Models;
@@ -36,6 +37,10 @@ public static class PdfReportBuilder
 
         var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
         var sequence = sequenceLines.ToList();
+        var shapeOffsetM = TryReadReportMetric(reportText, "- Снос формы X/Z:")
+            ?? TryReadReportMetric(reportText, "- Горизонтальный снос по узлам X/Z:")
+            ?? visualizationOffsetM;
+        var clarifiedResultText = NormalizeResultText(resultText, shapeOffsetM);
 
         writer.BeginPage();
         writer.Title("BuoyCalc Windows - предварительный отчёт");
@@ -43,14 +48,14 @@ public static class PdfReportBuilder
         writer.Space(12);
 
         writer.Section("Результат");
-        writer.Multiline(resultText, 11);
+        writer.Multiline(clarifiedResultText, 11);
         writer.EndPage();
 
         writer.BeginPage();
         writer.Title("Схема постановки");
-        writer.Text("Геометрическая 2D-схема: поверхность воды, буй, линия, активные элементы, якорь, дно и оценочный снос.", 10);
+        writer.Text("Геометрическая 2D-схема: поверхность воды, буй, линия, активные элементы, якорь, дно и снос формы X/Z.", 10);
         writer.Space(10);
-        writer.MooringDiagram(sequence, visualizationDepthM, visualizationLineLengthM, visualizationOffsetM);
+        writer.MooringDiagram(sequence, visualizationDepthM, visualizationLineLengthM, shapeOffsetM);
         writer.Space(12);
         writer.Section("Текстовая цепочка");
         foreach (var line in sequence)
@@ -68,6 +73,51 @@ public static class PdfReportBuilder
 
         writer.EndPage();
         document.Close();
+    }
+
+    private static string NormalizeResultText(string resultText, double shapeOffsetM)
+    {
+        var lines = (resultText ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (lines[i].StartsWith("Плавучесть:", StringComparison.OrdinalIgnoreCase))
+            {
+                lines[i] = "Чистая плавучесть:" + lines[i]["Плавучесть:".Length..];
+            }
+            else if (lines[i].StartsWith("Натяжение:", StringComparison.OrdinalIgnoreCase))
+            {
+                lines[i] = "Нагрузка слабого звена:" + lines[i]["Натяжение:".Length..];
+            }
+        }
+
+        if (shapeOffsetM > 0 && !lines.Any(x => x.StartsWith("Снос формы X/Z:", StringComparison.OrdinalIgnoreCase)))
+        {
+            lines.Add($"Снос формы X/Z: {shapeOffsetM:0.##} м");
+        }
+
+        return string.Join("\n", lines);
+    }
+
+    private static double? TryReadReportMetric(string reportText, string label)
+    {
+        foreach (var line in (reportText ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+        {
+            var index = line.IndexOf(label, StringComparison.OrdinalIgnoreCase);
+            if (index < 0)
+            {
+                continue;
+            }
+
+            var valuePart = line[(index + label.Length)..].Trim();
+            var token = new string(valuePart.TakeWhile(ch => char.IsDigit(ch) || ch == '-' || ch == '+' || ch == ',' || ch == '.').ToArray());
+            token = token.Replace(',', '.');
+            if (double.TryParse(token, NumberStyles.Any, CultureInfo.InvariantCulture, out var value))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 
     private sealed class PdfCanvasWriter
@@ -214,11 +264,11 @@ public static class PdfReportBuilder
             {
                 var offsetY = bottomY + 52;
                 _canvas.DrawLine(new SKPoint(buoyPoint.X, offsetY), new SKPoint(anchorPoint.X, offsetY), thinPaint);
-                DrawTextAt($"снос {safeOffset:0.##} м", Math.Min(buoyPoint.X, anchorPoint.X) + 8, offsetY - 8, 9, false, new SKColor(80, 92, 112));
+                DrawTextAt($"снос X/Z {safeOffset:0.##} м", Math.Min(buoyPoint.X, anchorPoint.X) + 8, offsetY - 8, 9, false, new SKColor(80, 92, 112));
             }
             else
             {
-                DrawTextAt("снос: 0 м / после расчёта", x + width - 160, bottomY + 52, 9, false, new SKColor(80, 92, 112));
+                DrawTextAt("снос X/Z: 0 м / после расчёта", x + width - 180, bottomY + 52, 9, false, new SKColor(80, 92, 112));
             }
 
             _y += diagramHeight + 10;
