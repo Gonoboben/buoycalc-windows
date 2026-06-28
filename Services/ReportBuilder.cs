@@ -34,6 +34,7 @@ public static class ReportBuilder
         AppendDiagnostics(sb, diagnostics);
         AppendVectorBalanceRows(sb, vectorBalance);
         AppendElementRows(sb, result);
+        AppendModelCoverageRows(sb, result);
         AppendSegmentRows(sb, result);
         AppendTensionRows(sb, tensionRows);
         AppendShapeRows(sb, shape);
@@ -48,7 +49,7 @@ public static class ReportBuilder
         sb.AppendLine(shapeForces.MethodNote);
         sb.AppendLine(shapeTensions.MethodNote);
         sb.AppendLine(vectorBalance.MethodNote);
-        sb.AppendLine("v0.32 считает альтернативные натяжения от shape-based сил, но ещё не перестраивает форму по этим натяжениям.");
+        sb.AppendLine("v0.32.1 уточняет отчёт: различает старую оценку сноса и X/Z-снос формы, разводит виды натяжения и показывает, какие элементы пока не участвуют в форме как дискретные узлы.");
 
         return sb.ToString();
     }
@@ -115,13 +116,13 @@ public static class ReportBuilder
     private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, MooringShapeForceResult shapeForces, MooringShapeTensionResult shapeTensions, EngineeringDiagnosticsResult diagnostics)
     {
         sb.AppendLine("## Итоги");
-        sb.AppendLine($"- Плавучесть: {result.BuoyancyKg:0.####} кг");
-        sb.AppendLine($"- Вес в воде: {result.TotalWeightWaterKg:0.####} кг");
+        sb.AppendLine($"- Полная плавучесть буя: {result.BuoyancyKg:0.####} кг");
+        sb.AppendLine($"- Вес постановки в воде: {result.TotalWeightWaterKg:0.####} кг");
         sb.AppendLine($"- Чистая плавучесть: {result.NetBuoyancyKg:0.####} кг");
-        sb.AppendLine($"- Сила течения: {result.CurrentForceN:0.####} Н");
+        sb.AppendLine($"- Сила течения исходной модели: {result.CurrentForceN:0.####} Н");
         sb.AppendLine($"- Волновая составляющая: {result.WaveForceN:0.####} Н");
-        sb.AppendLine($"- Горизонтальная сила: {result.HorizontalForceN:0.####} Н");
-        sb.AppendLine($"- Натяжение: {result.TensionKn:0.####} кН");
+        sb.AppendLine($"- Горизонтальная сила исходной модели: {result.HorizontalForceN:0.####} Н");
+        sb.AppendLine($"- Расчётная нагрузка для проверки слабого звена: {result.TensionKn:0.####} кН");
         sb.AppendLine($"- Слабое звено: {result.WeakLinkName}");
         sb.AppendLine($"- MBL слабого звена: {result.WeakLinkBreakingLoadKn:0.####} кН");
         sb.AppendLine($"- WLL слабого звена: {result.WorkingLoadKn:0.####} кН");
@@ -130,18 +131,18 @@ public static class ReportBuilder
         sb.AppendLine($"- Удержание якоря: {result.AnchorHoldingKg:0.####} кг");
         sb.AppendLine($"- Запас якоря: {result.AnchorReserve:0.####}");
         sb.AppendLine($"- Длина линии: {result.LineLengthM:0.####} м");
-        sb.AppendLine($"- Оценочный снос: {result.EstimatedOffsetM:0.####} м");
+        sb.AppendLine($"- Старая оценка сноса: {result.EstimatedOffsetM:0.####} м");
         sb.AppendLine($"- Диагностика: {diagnostics.Summary}");
 
         if (tensionRows.Count > 0)
         {
             var maxTension = tensionRows.OrderByDescending(x => x.TensionKn).First();
-            sb.AppendLine($"- Макс. натяжение по сегментной оценке: {maxTension.TensionKn:0.####} кН, сегмент №{maxTension.Number}, z≈{maxTension.EstimatedDepthM:0.####} м");
+            sb.AppendLine($"- Макс. натяжение линии по сегментной модели: {maxTension.TensionKn:0.####} кН, сегмент №{maxTension.Number}, z≈{maxTension.EstimatedDepthM:0.####} м");
         }
 
         if (shape.Nodes.Count > 0)
         {
-            sb.AppendLine($"- Горизонтальный снос по узлам X/Z: {shape.HorizontalOffsetM:0.####} м");
+            sb.AppendLine($"- Снос формы X/Z: {shape.HorizontalOffsetM:0.####} м");
             sb.AppendLine($"- Глубина якорного узла X/Z: {shape.AnchorPoint?.ZDepthM ?? 0:0.####} м");
             sb.AppendLine($"- Невязка якорной глубины: {shape.VerticalResidualM:0.####} м");
             sb.AppendLine($"- Невязка solver формы: {shape.ConvergenceResidualM:0.####} м");
@@ -209,15 +210,44 @@ public static class ReportBuilder
         sb.AppendLine();
     }
 
+    private static void AppendModelCoverageRows(StringBuilder sb, CalculationResult result)
+    {
+        sb.AppendLine("## Область учёта элементов в текущей модели");
+        sb.AppendLine("Эта таблица показывает, где элемент уже участвует в расчётах. Линии входят в форму и натяжения как сегменты; приборы и соединители пока учтены в таблице элементов и векторной ведомости, но не вставлены в форму как дискретные узлы.");
+        sb.AppendLine();
+        sb.AppendLine("| № | Элемент | Тип | Ведомость элементов | Векторный баланс | Форма X/Z | Натяжения линии | Примечание |");
+        sb.AppendLine("|---:|---|---|---|---|---|---|---|");
+        foreach (var row in result.ElementRows)
+        {
+            var shapeScope = row.Kind switch
+            {
+                "Буй" => "граничный узел",
+                "Якорь" => "граничный узел",
+                "Линия" => "да, сегменты",
+                _ => "нет, дискретный узел пока не вставлен"
+            };
+            var tensionScope = row.Kind == "Линия" ? "да" : "нет, только общая сила/вес";
+            var note = row.Kind switch
+            {
+                "Линия" => "используется в SegmentRows, ShapeRows, shape-based силах и натяжениях",
+                "Буй" => "задаёт верхнее граничное условие и плавучесть",
+                "Якорь" => "задаёт нижнее граничное условие и удержание",
+                _ => "следующий слой: назначить координату s и добавить локальный скачок веса/силы"
+            };
+            sb.AppendLine($"| {row.Number} | {Escape(row.Title)} | {Escape(row.Kind)} | да | да | {shapeScope} | {tensionScope} | {Escape(note)} |");
+        }
+        sb.AppendLine();
+    }
+
     private static void AppendSegmentRows(StringBuilder sb, CalculationResult result)
     {
         if (result.SegmentRows.Count == 0) return;
         sb.AppendLine("## Расчётные сегменты линии");
-        sb.AppendLine($"Линия разбита на {result.SegmentRows.Count} сегментов. В таблице ниже показаны первые {System.Math.Min(80, result.SegmentRows.Count)} сегментов.");
+        sb.AppendLine($"Линия разбита на {result.SegmentRows.Count} сегментов. В таблице показаны первые 40 и последние 40 сегментов, чтобы были видны верхние и нижние участки линии.");
         sb.AppendLine();
         sb.AppendLine("| № | Элемент | Пресет | s0, м | s1, м | L, м | z, м | U | V | W | |Uгор| | ρ | A, м² | Cd | Сила, Н |");
         sb.AppendLine("|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
-        foreach (var row in result.SegmentRows.Take(80))
+        foreach (var row in SampleRows(result.SegmentRows, 40, 40))
         {
             sb.AppendLine($"| {row.Number} | {Escape(row.SourceElement)} | {Escape(row.RopePresetName)} | {row.StartLengthM:0.####} | {row.EndLengthM:0.####} | {row.SegmentLengthM:0.####} | {row.EstimatedDepthM:0.####} | {row.EastCurrentMS:0.####} | {row.NorthCurrentMS:0.####} | {row.VerticalCurrentMS:0.####} | {row.LocalSpeedMS:0.####} | {row.WaterDensityKgM3:0.####} | {row.ProjectedAreaM2:0.####} | {row.DragCoefficient:0.####} | {row.CurrentForceN:0.####} |");
         }
@@ -231,12 +261,12 @@ public static class ReportBuilder
         if (rows.Count == 0) return;
         var maxTension = rows.OrderByDescending(x => x.TensionKn).First();
         sb.AppendLine("## Натяжения по сегментам линии");
-        sb.AppendLine($"Расчёт ведётся снизу вверх: от якоря к бую. Показаны первые {System.Math.Min(80, rows.Count)} сегментов.");
-        sb.AppendLine($"Максимальное оценочное натяжение: {maxTension.TensionKn:0.####} кН на сегменте №{maxTension.Number}.");
+        sb.AppendLine($"Расчёт ведётся снизу вверх: от якоря к бую. Показаны первые 40 и последние 40 сегментов.");
+        sb.AppendLine($"Максимальное оценочное натяжение линии: {maxTension.TensionKn:0.####} кН на сегменте №{maxTension.Number}.");
         sb.AppendLine();
         sb.AppendLine("| № | Элемент | z, м | L, м | Вес в воде, кг | Fтек, Н | ΣFгор, Н | ΣFверт, Н | T, кН | Угол от вертикали, ° | Статус |");
         sb.AppendLine("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
-        foreach (var row in rows.Take(80))
+        foreach (var row in SampleRows(rows, 40, 40))
         {
             sb.AppendLine($"| {row.Number} | {Escape(row.SourceElement)} | {row.EstimatedDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.WeightWaterKg:0.####} | {row.SegmentCurrentForceN:0.####} | {row.CumulativeHorizontalForceN:0.####} | {row.CumulativeVerticalForceN:0.####} | {row.TensionKn:0.####} | {row.AngleFromVerticalDeg:0.####} | {Escape(row.Status)} |");
         }
@@ -250,11 +280,11 @@ public static class ReportBuilder
         sb.AppendLine("Координаты являются выходом инженерного слоя MooringShapeSolver. Визуализация должна только отображать эти точки.");
         sb.AppendLine($"Состояние буя: {DisplayBuoyState(shape.BuoyState)}. Сходимость: {(shape.Converged ? "да" : "нет")}.");
         sb.AppendLine($"Итерации solver: {shape.IterationCount}, невязка: {shape.ConvergenceResidualM:0.####} м, scale={shape.AngleScale:0.####}. Критерий: {shape.ConvergenceCriterion}.");
-        sb.AppendLine($"Показаны первые {System.Math.Min(90, shape.Nodes.Count)} узлов из {shape.Nodes.Count}.");
+        sb.AppendLine($"Показаны первые 45 и последние 45 узлов из {shape.Nodes.Count}.");
         sb.AppendLine();
         sb.AppendLine("| Узел | Сегмент | Элемент | s, м | X, м | Z, м | Lсег, м | Угол, ° | T, кН | Статус |");
         sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---|");
-        foreach (var row in shape.Nodes.Take(90))
+        foreach (var row in SampleRows(shape.Nodes, 45, 45))
         {
             sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.AlongLineM:0.####} | {row.XOffsetM:0.####} | {row.ZDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.SegmentAngleFromVerticalDeg:0.####} | {row.SegmentTensionKn:0.####} | {Escape(row.Status)} |");
         }
@@ -272,7 +302,7 @@ public static class ReportBuilder
         sb.AppendLine();
         sb.AppendLine("| № | Сегмент | Элемент | L, м | dX, м | dZ, м | L по X/Z, м | Невязка L, м | Угол, ° | T, кН | Статус |");
         sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---|");
-        foreach (var row in projection.Rows.Take(90))
+        foreach (var row in SampleRows(projection.Rows, 45, 45))
         {
             sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.SegmentLengthM:0.####} | {row.DeltaXM:0.####} | {row.DeltaZM:0.####} | {row.ProjectedLengthM:0.####} | {row.LengthResidualM:0.####} | {row.AngleFromVerticalDeg:0.####} | {row.TensionKn:0.####} | {Escape(row.Status)} |");
         }
@@ -291,7 +321,7 @@ public static class ReportBuilder
         sb.AppendLine();
         sb.AppendLine("| № | Сегмент | Элемент | L, м | U, м/с | Uнорм, м/с | Угол, ° | F старая, Н | F shape, Н | ΔF, Н | Ratio | Статус |");
         sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
-        foreach (var row in forces.Rows.Take(90))
+        foreach (var row in SampleRows(forces.Rows, 45, 45))
         {
             sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.SegmentLengthM:0.####} | {row.LocalSpeedMS:0.####} | {row.NormalSpeedMS:0.####} | {row.AngleFromVerticalDeg:0.####} | {row.OriginalForceN:0.####} | {row.ShapeForceN:0.####} | {row.DifferenceN:0.####} | {row.Ratio:0.####} | {Escape(row.Status)} |");
         }
@@ -311,7 +341,7 @@ public static class ReportBuilder
         sb.AppendLine();
         sb.AppendLine("| № | Сегмент | Элемент | z, м | L, м | Вес, кг | F старая, Н | F shape, Н | T старая, кН | T shape, кН | ΔT, кН | Угол старый, ° | Угол shape, ° | Δугла, ° | Статус |");
         sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
-        foreach (var row in tensions.Rows.Take(90))
+        foreach (var row in SampleRows(tensions.Rows, 45, 45))
         {
             sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.SourceElement)} | {row.EstimatedDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.WeightWaterKg:0.####} | {row.OriginalSegmentForceN:0.####} | {row.ShapeSegmentForceN:0.####} | {row.OriginalTensionKn:0.####} | {row.ShapeTensionKn:0.####} | {row.TensionDifferenceKn:0.####} | {row.OriginalAngleFromVerticalDeg:0.####} | {row.ShapeAngleFromVerticalDeg:0.####} | {row.AngleDifferenceDeg:0.####} | {Escape(row.Status)} |");
         }
@@ -328,6 +358,16 @@ public static class ReportBuilder
             sb.AppendLine($"- {check}");
         }
         sb.AppendLine();
+    }
+
+    private static IEnumerable<T> SampleRows<T>(IReadOnlyList<T> rows, int firstCount, int lastCount)
+    {
+        if (rows.Count <= firstCount + lastCount)
+        {
+            return rows;
+        }
+
+        return rows.Take(firstCount).Concat(rows.Skip(rows.Count - lastCount));
     }
 
     private static string DisplayBuoyState(BuoyShapeState state)
