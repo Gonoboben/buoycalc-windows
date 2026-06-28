@@ -70,7 +70,7 @@ public static class MooringShapeSolver
         var anchorDepthM = anchorPoint?.ZDepthM ?? 0;
         var verticalResidualM = Math.Abs(targetAnchorDepthM - anchorDepthM);
         var buoyState = DetermineBuoyState(result, targetAnchorDepthM, lineLengthM, buoyPoint);
-        var converged = verticalResidualM <= DepthToleranceM && iteration.Converged;
+        var converged = iteration.ResidualM <= DepthToleranceM && iteration.Converged;
 
         return new MooringShapeResult(
             nodes,
@@ -84,7 +84,7 @@ public static class MooringShapeSolver
             converged,
             $"v0.29: итерационная геометрическая сходимость формы включена. Углы сегментов берутся из накопленных сил, затем масштаб углов подбирается бисекцией так, чтобы якорный узел попал на проектную глубину. Это ещё не полный нелинейный solver равновесия сил и формы.",
             iteration.Iterations,
-            verticalResidualM,
+            iteration.ResidualM,
             iteration.AngleScale,
             $"|Zякоря - Depth| ≤ {DepthToleranceM:0.####} м");
     }
@@ -116,7 +116,7 @@ public static class MooringShapeSolver
     {
         if (lineLengthM <= targetAnchorDepthM)
         {
-            return new IterationResult(1.0, 0, true);
+            return new IterationResult(1.0, 0, true, 0);
         }
 
         var targetVerticalSpanM = targetAnchorDepthM;
@@ -138,7 +138,7 @@ public static class MooringShapeSolver
 
             if (residual <= DepthToleranceM)
             {
-                return new IterationResult(mid, iterations + 1, true);
+                return new IterationResult(mid, iterations + 1, true, residual);
             }
 
             if (span > targetVerticalSpanM)
@@ -153,7 +153,7 @@ public static class MooringShapeSolver
 
         var finalScale = (low + high) / 2.0;
         var finalResidual = Math.Abs(VerticalSpan(orderedSegments, tensionRows, finalScale, lineLengthM, targetAnchorDepthM) - targetVerticalSpanM);
-        return new IterationResult(finalScale, iterations, finalResidual <= DepthToleranceM);
+        return new IterationResult(finalScale, iterations, finalResidual <= DepthToleranceM, finalResidual);
     }
 
     private static IReadOnlyList<MooringShapePoint> BuildNodes(
@@ -265,7 +265,7 @@ public static class MooringShapeSolver
         return BuoyShapeState.Surface;
     }
 
-    private sealed record IterationResult(double AngleScale, int Iterations, bool Converged);
+    private sealed record IterationResult(double AngleScale, int Iterations, bool Converged, double ResidualM);
 }
 
 public static class MooringShapeStore
