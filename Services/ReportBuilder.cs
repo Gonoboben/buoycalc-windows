@@ -15,6 +15,7 @@ public static class ReportBuilder
         var shapeProjection = MooringShapeProjection.Build(shape);
         var shapeForces = MooringShapeForceAnalyzer.Build(result, shapeProjection);
         var shapeTensions = MooringShapeTensionAnalyzer.Build(result, tensionRows, shapeForces);
+        var sequencePositions = MooringSequencePositioner.Build(result);
         var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
         var vectorBalance = MooringVectorBalance.Build(result);
         MooringShapeStore.Set(shape);
@@ -30,10 +31,11 @@ public static class ReportBuilder
         AppendEnvironment(sb, environment);
         AppendBuoy(sb, buoy, shape);
         AppendAnchor(sb, anchor, result);
-        AppendTotals(sb, result, tensionRows, shape, shapeProjection, shapeForces, shapeTensions, diagnostics);
+        AppendTotals(sb, result, tensionRows, shape, shapeProjection, shapeForces, shapeTensions, sequencePositions, diagnostics);
         AppendDiagnostics(sb, diagnostics);
         AppendVectorBalanceRows(sb, vectorBalance);
         AppendElementRows(sb, result);
+        AppendSequencePositionRows(sb, sequencePositions);
         AppendModelCoverageRows(sb, result);
         AppendSegmentRows(sb, result);
         AppendTensionRows(sb, tensionRows);
@@ -48,8 +50,9 @@ public static class ReportBuilder
         sb.AppendLine(shapeProjection.MethodNote);
         sb.AppendLine(shapeForces.MethodNote);
         sb.AppendLine(shapeTensions.MethodNote);
+        sb.AppendLine(sequencePositions.MethodNote);
         sb.AppendLine(vectorBalance.MethodNote);
-        sb.AppendLine("v0.32.1 уточняет отчёт: различает старую оценку сноса и X/Z-снос формы, разводит виды натяжения и показывает, какие элементы пока не участвуют в форме как дискретные узлы.");
+        sb.AppendLine("v0.33 добавляет позиционную модель последовательности по координате s. Дискретные элементы уже имеют место вдоль линии, но их локальные скачки веса и силы ещё не подставлены в solver формы.");
 
         return sb.ToString();
     }
@@ -113,7 +116,7 @@ public static class ReportBuilder
         sb.AppendLine();
     }
 
-    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, MooringShapeForceResult shapeForces, MooringShapeTensionResult shapeTensions, EngineeringDiagnosticsResult diagnostics)
+    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, MooringShapeForceResult shapeForces, MooringShapeTensionResult shapeTensions, MooringSequencePositionResult sequencePositions, EngineeringDiagnosticsResult diagnostics)
     {
         sb.AppendLine("## Итоги");
         sb.AppendLine($"- Полная плавучесть буя: {result.BuoyancyKg:0.####} кг");
@@ -132,6 +135,7 @@ public static class ReportBuilder
         sb.AppendLine($"- Запас якоря: {result.AnchorReserve:0.####}");
         sb.AppendLine($"- Длина линии: {result.LineLengthM:0.####} м");
         sb.AppendLine($"- Старая оценка сноса: {result.EstimatedOffsetM:0.####} м");
+        sb.AppendLine($"- Дискретных элементов с координатой s: {sequencePositions.DiscreteElementCount}; вес в воде: {sequencePositions.DiscreteWeightWaterKg:0.####} кг; Fx: {sequencePositions.DiscreteCurrentForceN:0.####} Н");
         sb.AppendLine($"- Диагностика: {diagnostics.Summary}");
 
         if (tensionRows.Count > 0)
@@ -210,13 +214,30 @@ public static class ReportBuilder
         sb.AppendLine();
     }
 
+    private static void AppendSequencePositionRows(StringBuilder sb, MooringSequencePositionResult positions)
+    {
+        sb.AppendLine("## Позиционная модель последовательности по s");
+        sb.AppendLine("Координата s отсчитывается вдоль линии от верхнего конца к якорю. Линейные элементы занимают интервал s0–s1; соединители, приборы, буй и якорь имеют точечную позицию s.");
+        sb.AppendLine($"Длина линии по позиционной модели: {positions.TotalLineLengthM:0.####} м; распределённых участков: {positions.DistributedElementCount}; дискретных элементов без буя/якоря: {positions.DiscreteElementCount}.");
+        sb.AppendLine();
+        sb.AppendLine("| № | Тип | Элемент | Пресет | s0, м | s1, м | s, м | L, м | Вес в воде, кг | Fx, Н | Роль в solver | Следующий шаг |");
+        sb.AppendLine("|---:|---|---|---|---:|---:|---:|---:|---:|---:|---|---|");
+        foreach (var row in positions.Rows)
+        {
+            sb.AppendLine($"| {row.Number} | {Escape(row.Kind)} | {Escape(row.Title)} | {Escape(row.PresetName)} | {row.StartAlongLineM:0.####} | {row.EndAlongLineM:0.####} | {row.PositionAlongLineM:0.####} | {row.LengthM:0.####} | {row.WeightWaterKg:0.####} | {row.CurrentForceN:0.####} | {Escape(row.SolverRole)} | {Escape(row.NextStepNote)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine(positions.MethodNote);
+        sb.AppendLine();
+    }
+
     private static void AppendModelCoverageRows(StringBuilder sb, CalculationResult result)
     {
         sb.AppendLine("## Область учёта элементов в текущей модели");
-        sb.AppendLine("Эта таблица показывает, где элемент уже участвует в расчётах. Линии входят в форму и натяжения как сегменты; приборы и соединители пока учтены в таблице элементов и векторной ведомости, но не вставлены в форму как дискретные узлы.");
+        sb.AppendLine("Эта таблица показывает, где элемент уже участвует в расчётах. В v0.33 дискретные элементы уже получили координату s в позиционной модели, но их локальные скачки веса/силы ещё не вставлены в форму и натяжения.");
         sb.AppendLine();
-        sb.AppendLine("| № | Элемент | Тип | Ведомость элементов | Векторный баланс | Форма X/Z | Натяжения линии | Примечание |");
-        sb.AppendLine("|---:|---|---|---|---|---|---|---|");
+        sb.AppendLine("| № | Элемент | Тип | Ведомость элементов | Векторный баланс | Позиция s | Форма X/Z | Натяжения линии | Примечание |");
+        sb.AppendLine("|---:|---|---|---|---|---|---|---|---|");
         foreach (var row in result.ElementRows)
         {
             var shapeScope = row.Kind switch
@@ -232,9 +253,9 @@ public static class ReportBuilder
                 "Линия" => "используется в SegmentRows, ShapeRows, shape-based силах и натяжениях",
                 "Буй" => "задаёт верхнее граничное условие и плавучесть",
                 "Якорь" => "задаёт нижнее граничное условие и удержание",
-                _ => "следующий слой: назначить координату s и добавить локальный скачок веса/силы"
+                _ => "следующий слой: использовать координату s для локального скачка веса/силы"
             };
-            sb.AppendLine($"| {row.Number} | {Escape(row.Title)} | {Escape(row.Kind)} | да | да | {shapeScope} | {tensionScope} | {Escape(note)} |");
+            sb.AppendLine($"| {row.Number} | {Escape(row.Title)} | {Escape(row.Kind)} | да | да | да | {shapeScope} | {tensionScope} | {Escape(note)} |");
         }
         sb.AppendLine();
     }
