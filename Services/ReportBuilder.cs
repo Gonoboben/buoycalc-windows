@@ -14,6 +14,7 @@ public static class ReportBuilder
         var shape = MooringShapeSolver.Build(environment, result);
         var shapeProjection = MooringShapeProjection.Build(shape);
         var shapeForces = MooringShapeForceAnalyzer.Build(result, shapeProjection);
+        var shapeTensions = MooringShapeTensionAnalyzer.Build(result, tensionRows, shapeForces);
         var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
         var vectorBalance = MooringVectorBalance.Build(result);
         MooringShapeStore.Set(shape);
@@ -29,7 +30,7 @@ public static class ReportBuilder
         AppendEnvironment(sb, environment);
         AppendBuoy(sb, buoy, shape);
         AppendAnchor(sb, anchor, result);
-        AppendTotals(sb, result, tensionRows, shape, shapeProjection, shapeForces, diagnostics);
+        AppendTotals(sb, result, tensionRows, shape, shapeProjection, shapeForces, shapeTensions, diagnostics);
         AppendDiagnostics(sb, diagnostics);
         AppendVectorBalanceRows(sb, vectorBalance);
         AppendElementRows(sb, result);
@@ -38,14 +39,16 @@ public static class ReportBuilder
         AppendShapeRows(sb, shape);
         AppendShapeProjectionRows(sb, shapeProjection);
         AppendShapeForceRows(sb, shapeForces);
+        AppendShapeTensionRows(sb, shapeTensions);
         AppendChecks(sb, result);
 
         sb.AppendLine("## Ограничения");
         sb.AppendLine(shape.MethodNote);
         sb.AppendLine(shapeProjection.MethodNote);
         sb.AppendLine(shapeForces.MethodNote);
+        sb.AppendLine(shapeTensions.MethodNote);
         sb.AppendLine(vectorBalance.MethodNote);
-        sb.AppendLine("v0.31 считает shape-based силы по ориентации сегментов, но ещё не подставляет их обратно в итерационный solver формы.");
+        sb.AppendLine("v0.32 считает альтернативные натяжения от shape-based сил, но ещё не перестраивает форму по этим натяжениям.");
 
         return sb.ToString();
     }
@@ -109,7 +112,7 @@ public static class ReportBuilder
         sb.AppendLine();
     }
 
-    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, MooringShapeForceResult shapeForces, EngineeringDiagnosticsResult diagnostics)
+    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, MooringShapeForceResult shapeForces, MooringShapeTensionResult shapeTensions, EngineeringDiagnosticsResult diagnostics)
     {
         sb.AppendLine("## Итоги");
         sb.AppendLine($"- Плавучесть: {result.BuoyancyKg:0.####} кг");
@@ -149,6 +152,9 @@ public static class ReportBuilder
             sb.AppendLine($"- Shape-based сила линии: {shapeForces.ShapeLineForceN:0.####} Н");
             sb.AppendLine($"- Отличие shape-based силы линии: {shapeForces.DifferenceN:0.####} Н ({shapeForces.RelativeDifference:0.####})");
             sb.AppendLine($"- Статус shape-based сил: {(shapeForces.WithinTolerance ? "OK" : "INFO: отличается от старой оценки")}");
+            sb.AppendLine($"- Top T старая / shape: {shapeTensions.TopOriginalTensionKn:0.####} / {shapeTensions.TopShapeTensionKn:0.####} кН");
+            sb.AppendLine($"- Макс. отличие shape-based натяжения: {shapeTensions.MaxTensionDifferenceKn:0.####} кН; угол Δmax={shapeTensions.MaxAngleDifferenceDeg:0.####}°");
+            sb.AppendLine($"- Статус shape-based натяжений: {(shapeTensions.WithinTolerance ? "OK" : "INFO: отличается от старой оценки")}");
             sb.AppendLine($"- Узлов формы: {shape.Nodes.Count}");
         }
         sb.AppendLine();
@@ -291,6 +297,26 @@ public static class ReportBuilder
         }
         sb.AppendLine();
         sb.AppendLine(forces.MethodNote);
+        sb.AppendLine();
+    }
+
+    private static void AppendShapeTensionRows(StringBuilder sb, MooringShapeTensionResult tensions)
+    {
+        if (tensions.Rows.Count == 0) return;
+        sb.AppendLine("## Shape-based натяжения линии");
+        sb.AppendLine("Эта таблица пересчитывает накопленные натяжения снизу вверх, используя shape-based силы сегментов вместо старых сил SegmentCalculationRow.");
+        sb.AppendLine($"Top T старая={tensions.TopOriginalTensionKn:0.####} кН; Top T shape={tensions.TopShapeTensionKn:0.####} кН; относительное отличие={tensions.RelativeTopTensionDifference:0.####}.");
+        sb.AppendLine($"Max T старая={tensions.MaxOriginalTensionKn:0.####} кН; Max T shape={tensions.MaxShapeTensionKn:0.####} кН; Max ΔT={tensions.MaxTensionDifferenceKn:0.####} кН; Max Δугла={tensions.MaxAngleDifferenceDeg:0.####}°.");
+        sb.AppendLine($"Статус={(tensions.WithinTolerance ? "OK" : "INFO: shape-based натяжение заметно отличается от старого")}");
+        sb.AppendLine();
+        sb.AppendLine("| № | Сегмент | Элемент | z, м | L, м | Вес, кг | F старая, Н | F shape, Н | T старая, кН | T shape, кН | ΔT, кН | Угол старый, ° | Угол shape, ° | Δугла, ° | Статус |");
+        sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+        foreach (var row in tensions.Rows.Take(90))
+        {
+            sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.SourceElement)} | {row.EstimatedDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.WeightWaterKg:0.####} | {row.OriginalSegmentForceN:0.####} | {row.ShapeSegmentForceN:0.####} | {row.OriginalTensionKn:0.####} | {row.ShapeTensionKn:0.####} | {row.TensionDifferenceKn:0.####} | {row.OriginalAngleFromVerticalDeg:0.####} | {row.ShapeAngleFromVerticalDeg:0.####} | {row.AngleDifferenceDeg:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine(tensions.MethodNote);
         sb.AppendLine();
     }
 
