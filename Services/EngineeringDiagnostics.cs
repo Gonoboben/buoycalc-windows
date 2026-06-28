@@ -183,9 +183,23 @@ public static class EngineeringDiagnostics
             $"Удержание = {result.AnchorHoldingKg:0.####} кг, требуется = {result.RequiredAnchorHoldingKg:0.####} кг."));
 
         rows.Add(new EngineeringDiagnosticRow(
+            "Итерации solver формы",
+            $"{shape.IterationCount}; scale={shape.AngleScale:0.####}",
+            "информационно",
+            EngineeringCheckSeverity.Info,
+            "Масштаб углов сегментов подбирается итерационно для геометрического замыкания якорной глубины."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Невязка сходимости формы",
+            $"{shape.ConvergenceResidualM:0.####} м",
+            shape.ConvergenceCriterion,
+            shape.Converged ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Warning,
+            "Геометрическая невязка между глубиной якорного узла и проектной глубиной."));
+
+        rows.Add(new EngineeringDiagnosticRow(
             "Статус сходимости формы",
-            shape.Converged ? "Converged" : "Preliminary",
-            "Converged для финального solver",
+            shape.Converged ? "Converged" : "Not converged",
+            shape.ConvergenceCriterion,
             shape.Converged ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Warning,
             shape.MethodNote));
 
