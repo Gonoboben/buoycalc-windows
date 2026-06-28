@@ -13,6 +13,7 @@ public static class ReportBuilder
         var tensionRows = SegmentTensionAnalyzer.Build(result);
         var shape = MooringShapeSolver.Build(environment, result);
         var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
+        var vectorBalance = MooringVectorBalance.Build(result);
         MooringShapeStore.Set(shape);
 
         sb.AppendLine("# BuoyCalc Windows — предварительный отчёт");
@@ -28,6 +29,7 @@ public static class ReportBuilder
         AppendAnchor(sb, anchor, result);
         AppendTotals(sb, result, tensionRows, shape, diagnostics);
         AppendDiagnostics(sb, diagnostics);
+        AppendVectorBalanceRows(sb, vectorBalance);
         AppendElementRows(sb, result);
         AppendSegmentRows(sb, result);
         AppendTensionRows(sb, tensionRows);
@@ -36,7 +38,8 @@ public static class ReportBuilder
 
         sb.AppendLine("## Ограничения");
         sb.AppendLine(shape.MethodNote);
-        sb.AppendLine("v0.26 добавляет инженерную диагностику и невязки, но полная итерационная сходимость формы ещё не включена.");
+        sb.AppendLine(vectorBalance.MethodNote);
+        sb.AppendLine("v0.28.1 показывает подробную векторную ведомость сил, но полная итерационная сходимость формы ещё не включена.");
 
         return sb.ToString();
     }
@@ -148,6 +151,29 @@ public static class ReportBuilder
         {
             sb.AppendLine($"| {Escape(row.CheckName)} | {Escape(row.Value)} | {Escape(row.Tolerance)} | {EngineeringDiagnostics.DisplaySeverity(row.Severity)} | {Escape(row.Note)} |");
         }
+        sb.AppendLine();
+    }
+
+    private static void AppendVectorBalanceRows(StringBuilder sb, MooringVectorBalanceResult balance)
+    {
+        sb.AppendLine("## Векторная ведомость сил постановки");
+        sb.AppendLine("Положительное направление X принято по направлению горизонтальной нагрузки. Положительное направление Z принято вверх.");
+        sb.AppendLine("Эта таблица показывает силовые члены, уже переданные расчётным ядром. Она не является результатом итерационного solver равновесной формы.");
+        sb.AppendLine();
+        sb.AppendLine("| № | Тип | Элемент | Fx, Н | Fz, Н | Примечание |");
+        sb.AppendLine("|---:|---|---|---:|---:|---|");
+        var number = 1;
+        foreach (var term in balance.Terms)
+        {
+            sb.AppendLine($"| {number++} | {Escape(term.Kind)} | {Escape(term.Name)} | {term.FxN:0.####} | {term.FzN:0.####} | {Escape(term.Note)} |");
+        }
+        sb.AppendLine($"|  | **Σ** | **Сумма учтённых сил** | **{balance.SumExternalFxN:0.####}** | **{balance.SumExternalFzN:0.####}** | Сумма строк таблицы. |");
+        sb.AppendLine($"|  | **R** | **Требуемая реакция для ΣF=0** | **{balance.RequiredReactionFxN:0.####}** | **{balance.RequiredReactionFzN:0.####}** | Вычислена как минус сумма учтённых сил; пока не найдена solver-ом. |");
+        sb.AppendLine();
+        sb.AppendLine($"- Горизонтальная удерживающая способность якоря: {balance.AnchorHorizontalCapacityN:0.####} Н");
+        sb.AppendLine($"- Запас горизонтального удержания по требуемой реакции Rx: {balance.AnchorHorizontalReserve:0.####}");
+        sb.AppendLine($"- Статус баланса: {(balance.IsSolved ? "решён" : "каркас собран; реакции не решены")}");
+        sb.AppendLine($"- Методическое примечание: {balance.MethodNote}");
         sb.AppendLine();
     }
 
