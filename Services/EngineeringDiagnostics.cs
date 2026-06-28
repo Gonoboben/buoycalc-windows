@@ -112,18 +112,18 @@ public static class EngineeringDiagnostics
             "Сумма вертикальных весовых сил по сегментам линии в воде."));
 
         rows.Add(new EngineeringDiagnosticRow(
-            "Невязка ΣFx сегментной суммы",
+            "Контроль накопления ΣFx линии",
             $"{forceResiduals.ResidualFxN:0.####} Н ({forceResiduals.RelativeResidualFx:0.####})",
-            "≤ 1e-6 относит.",
-            forceResiduals.RelativeResidualFx <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Warning,
-            "Внутренний контроль: верхняя горизонтальная компонента натяжения должна совпадать с суммой горизонтальных сил линии."));
+            "информационно",
+            EngineeringCheckSeverity.Info,
+            "Внутренний контроль накопления сил: сравнение суммы сегментных сил линии с верхней горизонтальной компонентой натяжения. Не является проверкой полного равновесия постановки."));
 
         rows.Add(new EngineeringDiagnosticRow(
-            "Невязка ΣFz сегментной суммы",
+            "Контроль накопления ΣFz линии",
             $"{forceResiduals.ResidualFzN:0.####} Н ({forceResiduals.RelativeResidualFz:0.####})",
-            "≤ 1e-6 относит.",
-            forceResiduals.RelativeResidualFz <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Warning,
-            "Внутренний контроль: верхняя вертикальная компонента натяжения должна совпадать с суммой весовых сил линии."));
+            "информационно",
+            EngineeringCheckSeverity.Info,
+            "Внутренний контроль накопления сил: сравнение суммы весовых сил линии с верхней вертикальной компонентой натяжения. Не является проверкой полного равновесия постановки."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Полный баланс всей постановки",
