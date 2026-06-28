@@ -16,6 +16,7 @@ public static class ReportBuilder
         var shapeForces = MooringShapeForceAnalyzer.Build(result, shapeProjection);
         var shapeTensions = MooringShapeTensionAnalyzer.Build(result, tensionRows, shapeForces);
         var sequencePositions = MooringSequencePositioner.Build(result);
+        var discreteLoadTensions = MooringDiscreteLoadTensionAnalyzer.Build(result, tensionRows, sequencePositions);
         var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
         var vectorBalance = MooringVectorBalance.Build(result);
         MooringShapeStore.Set(shape);
@@ -31,7 +32,7 @@ public static class ReportBuilder
         AppendEnvironment(sb, environment);
         AppendBuoy(sb, buoy, shape);
         AppendAnchor(sb, anchor, result);
-        AppendTotals(sb, result, tensionRows, shape, shapeProjection, shapeForces, shapeTensions, sequencePositions, diagnostics);
+        AppendTotals(sb, result, tensionRows, shape, shapeProjection, shapeForces, shapeTensions, sequencePositions, discreteLoadTensions, diagnostics);
         AppendDiagnostics(sb, diagnostics);
         AppendVectorBalanceRows(sb, vectorBalance);
         AppendElementRows(sb, result);
@@ -43,6 +44,7 @@ public static class ReportBuilder
         AppendShapeProjectionRows(sb, shapeProjection);
         AppendShapeForceRows(sb, shapeForces);
         AppendShapeTensionRows(sb, shapeTensions);
+        AppendDiscreteLoadTensionRows(sb, discreteLoadTensions);
         AppendChecks(sb, result);
 
         sb.AppendLine("## Ограничения");
@@ -51,8 +53,9 @@ public static class ReportBuilder
         sb.AppendLine(shapeForces.MethodNote);
         sb.AppendLine(shapeTensions.MethodNote);
         sb.AppendLine(sequencePositions.MethodNote);
+        sb.AppendLine(discreteLoadTensions.MethodNote);
         sb.AppendLine(vectorBalance.MethodNote);
-        sb.AppendLine("v0.33 добавляет позиционную модель последовательности по координате s. Дискретные элементы уже имеют место вдоль линии, но их локальные скачки веса и силы ещё не подставлены в solver формы.");
+        sb.AppendLine("v0.34 добавляет альтернативную ведомость натяжений с дискретными нагрузками по координате s. Форма X/Z пока не перестраивается по этим натяжениям.");
 
         return sb.ToString();
     }
@@ -116,7 +119,7 @@ public static class ReportBuilder
         sb.AppendLine();
     }
 
-    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, MooringShapeForceResult shapeForces, MooringShapeTensionResult shapeTensions, MooringSequencePositionResult sequencePositions, EngineeringDiagnosticsResult diagnostics)
+    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, MooringShapeForceResult shapeForces, MooringShapeTensionResult shapeTensions, MooringSequencePositionResult sequencePositions, MooringDiscreteLoadTensionResult discreteLoadTensions, EngineeringDiagnosticsResult diagnostics)
     {
         sb.AppendLine("## Итоги");
         sb.AppendLine($"- Полная плавучесть буя: {result.BuoyancyKg:0.####} кг");
@@ -160,6 +163,9 @@ public static class ReportBuilder
             sb.AppendLine($"- Top T старая / shape: {shapeTensions.TopOriginalTensionKn:0.####} / {shapeTensions.TopShapeTensionKn:0.####} кН");
             sb.AppendLine($"- Макс. отличие shape-based натяжения: {shapeTensions.MaxTensionDifferenceKn:0.####} кН; угол Δmax={shapeTensions.MaxAngleDifferenceDeg:0.####}°");
             sb.AppendLine($"- Статус shape-based натяжений: {(shapeTensions.WithinTolerance ? "OK" : "INFO: отличается от старой оценки")}");
+            sb.AppendLine($"- Top T старая / с дискретными нагрузками: {discreteLoadTensions.TopOriginalTensionKn:0.####} / {discreteLoadTensions.TopDiscreteTensionKn:0.####} кН");
+            sb.AppendLine($"- Макс. отличие натяжения от дискретных нагрузок: {discreteLoadTensions.MaxTensionDifferenceKn:0.####} кН; угол Δmax={discreteLoadTensions.MaxAngleDifferenceDeg:0.####}°");
+            sb.AppendLine($"- Статус натяжений с дискретными нагрузками: {(discreteLoadTensions.WithinTolerance ? "OK" : "INFO: дискретные нагрузки заметно меняют натяжение")}");
             sb.AppendLine($"- Узлов формы: {shape.Nodes.Count}");
         }
         sb.AppendLine();
@@ -234,10 +240,10 @@ public static class ReportBuilder
     private static void AppendModelCoverageRows(StringBuilder sb, CalculationResult result)
     {
         sb.AppendLine("## Область учёта элементов в текущей модели");
-        sb.AppendLine("Эта таблица показывает, где элемент уже участвует в расчётах. В v0.33 дискретные элементы уже получили координату s в позиционной модели, но их локальные скачки веса/силы ещё не вставлены в форму и натяжения.");
+        sb.AppendLine("Эта таблица показывает, где элемент уже участвует в расчётах. В v0.34 дискретные элементы получили координату s и добавлены в альтернативную ведомость натяжений, но ещё не перестраивают форму X/Z.");
         sb.AppendLine();
-        sb.AppendLine("| № | Элемент | Тип | Ведомость элементов | Векторный баланс | Позиция s | Форма X/Z | Натяжения линии | Примечание |");
-        sb.AppendLine("|---:|---|---|---|---|---|---|---|---|");
+        sb.AppendLine("| № | Элемент | Тип | Ведомость элементов | Векторный баланс | Позиция s | Дискретные натяжения | Форма X/Z | Натяжения линии | Примечание |");
+        sb.AppendLine("|---:|---|---|---|---|---|---|---|---|---|");
         foreach (var row in result.ElementRows)
         {
             var shapeScope = row.Kind switch
@@ -248,14 +254,21 @@ public static class ReportBuilder
                 _ => "нет, дискретный узел пока не вставлен"
             };
             var tensionScope = row.Kind == "Линия" ? "да" : "нет, только общая сила/вес";
+            var discreteTensionScope = row.Kind switch
+            {
+                "Буй" => "нет, граничное условие",
+                "Якорь" => "нет, граничное условие",
+                "Линия" => "как распределённый участок",
+                _ => "да, как локальная нагрузка по s"
+            };
             var note = row.Kind switch
             {
                 "Линия" => "используется в SegmentRows, ShapeRows, shape-based силах и натяжениях",
                 "Буй" => "задаёт верхнее граничное условие и плавучесть",
                 "Якорь" => "задаёт нижнее граничное условие и удержание",
-                _ => "следующий слой: использовать координату s для локального скачка веса/силы"
+                _ => "следующий слой: вставить как локальный узел формы и пересчитать X/Z"
             };
-            sb.AppendLine($"| {row.Number} | {Escape(row.Title)} | {Escape(row.Kind)} | да | да | да | {shapeScope} | {tensionScope} | {Escape(note)} |");
+            sb.AppendLine($"| {row.Number} | {Escape(row.Title)} | {Escape(row.Kind)} | да | да | да | {discreteTensionScope} | {shapeScope} | {tensionScope} | {Escape(note)} |");
         }
         sb.AppendLine();
     }
@@ -365,6 +378,36 @@ public static class ReportBuilder
         foreach (var row in SampleRows(tensions.Rows, 45, 45))
         {
             sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.SourceElement)} | {row.EstimatedDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.WeightWaterKg:0.####} | {row.OriginalSegmentForceN:0.####} | {row.ShapeSegmentForceN:0.####} | {row.OriginalTensionKn:0.####} | {row.ShapeTensionKn:0.####} | {row.TensionDifferenceKn:0.####} | {row.OriginalAngleFromVerticalDeg:0.####} | {row.ShapeAngleFromVerticalDeg:0.####} | {row.AngleDifferenceDeg:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine(tensions.MethodNote);
+        sb.AppendLine();
+    }
+
+    private static void AppendDiscreteLoadTensionRows(StringBuilder sb, MooringDiscreteLoadTensionResult tensions)
+    {
+        if (tensions.Rows.Count == 0) return;
+        sb.AppendLine("## Натяжения линии с дискретными нагрузками по s");
+        sb.AppendLine("Эта таблица добавляет к распределённой линии локальные нагрузки приборов и соединителей, у которых в v0.33 появилась координата s. Расчёт идёт снизу вверх: в каждом сечении учитываются дискретные элементы ниже или на этом s.");
+        sb.AppendLine($"Дискретные нагрузки: вес в воде={tensions.TotalDiscreteWeightWaterKg:0.####} кг; Fx={tensions.TotalDiscreteForceN:0.####} Н.");
+        sb.AppendLine($"Top T старая={tensions.TopOriginalTensionKn:0.####} кН; Top T с дискретными нагрузками={tensions.TopDiscreteTensionKn:0.####} кН; относительное отличие={tensions.RelativeTopTensionDifference:0.####}.");
+        sb.AppendLine($"Max T старая={tensions.MaxOriginalTensionKn:0.####} кН; Max T с дискретными нагрузками={tensions.MaxDiscreteTensionKn:0.####} кН; Max ΔT={tensions.MaxTensionDifferenceKn:0.####} кН; Max Δугла={tensions.MaxAngleDifferenceDeg:0.####}°.");
+        sb.AppendLine($"Статус={(tensions.WithinTolerance ? "OK" : "INFO: дискретные нагрузки заметно меняют натяжение")}");
+        sb.AppendLine();
+        sb.AppendLine("### Дискретные нагрузки по s");
+        sb.AppendLine("| № | Тип | Элемент | s, м | Вес в воде, кг | Fx, Н |");
+        sb.AppendLine("|---:|---|---|---:|---:|---:|");
+        foreach (var load in tensions.DiscreteLoads)
+        {
+            sb.AppendLine($"| {load.Number} | {Escape(load.Kind)} | {Escape(load.Title)} | {load.PositionAlongLineM:0.####} | {load.WeightWaterKg:0.####} | {load.CurrentForceN:0.####} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine("### Накопленные натяжения с дискретными нагрузками");
+        sb.AppendLine("| № | Сегмент | Элемент | s0, м | s1, м | z, м | Fсег, Н | Вес дискр. ниже, кг | Fx дискр. ниже, Н | T старая, кН | T дискр., кН | ΔT, кН | Угол старый, ° | Угол дискр., ° | Δугла, ° | Статус |");
+        sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+        foreach (var row in SampleRows(tensions.Rows, 45, 45))
+        {
+            sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.SourceElement)} | {row.StartAlongLineM:0.####} | {row.EndAlongLineM:0.####} | {row.EstimatedDepthM:0.####} | {row.SegmentForceN:0.####} | {row.DiscreteWeightBelowKg:0.####} | {row.DiscreteForceBelowN:0.####} | {row.OriginalTensionKn:0.####} | {row.DiscreteTensionKn:0.####} | {row.TensionDifferenceKn:0.####} | {row.OriginalAngleFromVerticalDeg:0.####} | {row.DiscreteAngleFromVerticalDeg:0.####} | {row.AngleDifferenceDeg:0.####} | {Escape(row.Status)} |");
         }
         sb.AppendLine();
         sb.AppendLine(tensions.MethodNote);
