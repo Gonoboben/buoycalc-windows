@@ -8,5 +8,6 @@ public partial class CurrentProfileWindow : Window
     public CurrentProfileWindow()
     {
         AvaloniaXamlLoader.Load(this);
+        WindowVersionHelper.Apply(this, "Профиль течения по глубине");
     }
 }
