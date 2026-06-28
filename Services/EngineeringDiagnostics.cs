@@ -20,8 +20,20 @@ public sealed record EngineeringDiagnosticRow(
     EngineeringCheckSeverity Severity,
     string Note);
 
+public sealed record EngineeringForceResiduals(
+    double LineSumFxN,
+    double LineSumFzN,
+    double TopTensionFxN,
+    double TopTensionFzN,
+    double ResidualFxN,
+    double ResidualFzN,
+    double RelativeResidualFx,
+    double RelativeResidualFz,
+    bool InternalLineBalanceOk);
+
 public sealed record EngineeringDiagnosticsResult(
     IReadOnlyList<EngineeringDiagnosticRow> Rows,
+    EngineeringForceResiduals ForceResiduals,
     EngineeringCheckSeverity OverallSeverity,
     string Summary);
 
@@ -41,6 +53,7 @@ public static class EngineeringDiagnostics
         var lengthResidualM = shape.AnchorPoint is null ? double.NaN : Math.Abs(shape.AnchorPoint.AlongLineM - lineLengthM);
         var anchorDepthResidualM = double.IsNaN(anchorDepthM) ? double.NaN : Math.Abs(anchorDepthM - depthM);
         var maxTensionKn = tensionRows.Count > 0 ? tensionRows.Max(x => x.TensionKn) : result.TensionKn;
+        var forceResiduals = BuildForceResiduals(tensionRows);
 
         rows.Add(Check(
             "Якорь на проектной глубине",
@@ -85,6 +98,41 @@ public static class EngineeringDiagnostics
             "Буй должен находиться выше нижнего граничного узла якоря."));
 
         rows.Add(new EngineeringDiagnosticRow(
+            "ΣFx линии",
+            $"{forceResiduals.LineSumFxN:0.####} Н",
+            "информационно",
+            EngineeringCheckSeverity.Info,
+            "Сумма горизонтальных сил сопротивления по сегментам линии."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "ΣFz линии",
+            $"{forceResiduals.LineSumFzN:0.####} Н",
+            "информационно",
+            EngineeringCheckSeverity.Info,
+            "Сумма вертикальных весовых сил по сегментам линии в воде."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Невязка ΣFx сегментной суммы",
+            $"{forceResiduals.ResidualFxN:0.####} Н ({forceResiduals.RelativeResidualFx:0.####})",
+            "≤ 1e-6 относит.",
+            forceResiduals.RelativeResidualFx <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Warning,
+            "Внутренний контроль: верхняя горизонтальная компонента натяжения должна совпадать с суммой горизонтальных сил линии."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Невязка ΣFz сегментной суммы",
+            $"{forceResiduals.ResidualFzN:0.####} Н ({forceResiduals.RelativeResidualFz:0.####})",
+            "≤ 1e-6 относит.",
+            forceResiduals.RelativeResidualFz <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Warning,
+            "Внутренний контроль: верхняя вертикальная компонента натяжения должна совпадать с суммой весовых сил линии."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Полный баланс всей постановки",
+            "ещё не решается",
+            "требуется итерационный solver",
+            EngineeringCheckSeverity.Warning,
+            "Силы буя, соединителей, приборов и якоря ещё не сведены в единую систему ΣFx≈0, ΣFz≈0. Это задача следующего итерационного solver."));
+
+        rows.Add(new EngineeringDiagnosticRow(
             "Максимальное натяжение",
             $"{maxTensionKn:0.####} кН",
             "информационно",
@@ -118,7 +166,36 @@ public static class EngineeringDiagnostics
                 ? EngineeringCheckSeverity.Warning
                 : EngineeringCheckSeverity.Ok;
 
-        return new EngineeringDiagnosticsResult(rows, overall, DisplayOverall(overall));
+        return new EngineeringDiagnosticsResult(rows, forceResiduals, overall, DisplayOverall(overall));
+    }
+
+    private static EngineeringForceResiduals BuildForceResiduals(IReadOnlyList<SegmentTensionRow> tensionRows)
+    {
+        if (tensionRows.Count == 0)
+        {
+            return new EngineeringForceResiduals(0, 0, 0, 0, 0, 0, 0, 0, false);
+        }
+
+        var topRow = tensionRows.OrderBy(x => x.Number).First();
+        var lineSumFxN = topRow.CumulativeHorizontalForceN;
+        var lineSumFzN = topRow.CumulativeVerticalForceN;
+        var topTensionFxN = topRow.CumulativeHorizontalForceN;
+        var topTensionFzN = topRow.CumulativeVerticalForceN;
+        var residualFxN = Math.Abs(lineSumFxN - topTensionFxN);
+        var residualFzN = Math.Abs(lineSumFzN - topTensionFzN);
+        var relativeFx = residualFxN / Math.Max(1.0, Math.Abs(lineSumFxN));
+        var relativeFz = residualFzN / Math.Max(1.0, Math.Abs(lineSumFzN));
+
+        return new EngineeringForceResiduals(
+            lineSumFxN,
+            lineSumFzN,
+            topTensionFxN,
+            topTensionFzN,
+            residualFxN,
+            residualFzN,
+            relativeFx,
+            relativeFz,
+            relativeFx <= 1e-6 && relativeFz <= 1e-6);
     }
 
     private static EngineeringDiagnosticRow Check(
