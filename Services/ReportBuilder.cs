@@ -12,6 +12,7 @@ public static class ReportBuilder
         var sb = new StringBuilder();
         var tensionRows = SegmentTensionAnalyzer.Build(result);
         var shape = MooringShapeSolver.Build(environment, result);
+        var shapeProjection = MooringShapeProjection.Build(shape);
         var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
         var vectorBalance = MooringVectorBalance.Build(result);
         MooringShapeStore.Set(shape);
@@ -27,19 +28,21 @@ public static class ReportBuilder
         AppendEnvironment(sb, environment);
         AppendBuoy(sb, buoy, shape);
         AppendAnchor(sb, anchor, result);
-        AppendTotals(sb, result, tensionRows, shape, diagnostics);
+        AppendTotals(sb, result, tensionRows, shape, shapeProjection, diagnostics);
         AppendDiagnostics(sb, diagnostics);
         AppendVectorBalanceRows(sb, vectorBalance);
         AppendElementRows(sb, result);
         AppendSegmentRows(sb, result);
         AppendTensionRows(sb, tensionRows);
         AppendShapeRows(sb, shape);
+        AppendShapeProjectionRows(sb, shapeProjection);
         AppendChecks(sb, result);
 
         sb.AppendLine("## Ограничения");
         sb.AppendLine(shape.MethodNote);
+        sb.AppendLine(shapeProjection.MethodNote);
         sb.AppendLine(vectorBalance.MethodNote);
-        sb.AppendLine("v0.29 включает итерационную геометрическую сходимость формы, но полный нелинейный баланс сил, реакций и новой формы ещё не замкнут.");
+        sb.AppendLine("v0.30 связывает форму X/Z с проекциями сегментов, но полный нелинейный баланс сил, реакций и новой формы ещё не замкнут.");
 
         return sb.ToString();
     }
@@ -103,7 +106,7 @@ public static class ReportBuilder
         sb.AppendLine();
     }
 
-    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, EngineeringDiagnosticsResult diagnostics)
+    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, EngineeringDiagnosticsResult diagnostics)
     {
         sb.AppendLine("## Итоги");
         sb.AppendLine($"- Плавучесть: {result.BuoyancyKg:0.####} кг");
@@ -132,11 +135,14 @@ public static class ReportBuilder
 
         if (shape.Nodes.Count > 0)
         {
-            sb.AppendLine($"- Предварительный горизонтальный снос по узлам X/Z: {shape.HorizontalOffsetM:0.####} м");
+            sb.AppendLine($"- Горизонтальный снос по узлам X/Z: {shape.HorizontalOffsetM:0.####} м");
             sb.AppendLine($"- Глубина якорного узла X/Z: {shape.AnchorPoint?.ZDepthM ?? 0:0.####} м");
             sb.AppendLine($"- Невязка якорной глубины: {shape.VerticalResidualM:0.####} м");
             sb.AppendLine($"- Невязка solver формы: {shape.ConvergenceResidualM:0.####} м");
             sb.AppendLine($"- Итераций solver формы: {shape.IterationCount}");
+            sb.AppendLine($"- ΣdX формы: {shapeProjection.SumDeltaXM:0.####} м");
+            sb.AppendLine($"- ΣdZ формы: {shapeProjection.SumDeltaZM:0.####} м");
+            sb.AppendLine($"- Статус проекций формы: {(shapeProjection.GeometryClosed ? "OK" : "WARNING")}");
             sb.AppendLine($"- Узлов формы: {shape.Nodes.Count}");
         }
         sb.AppendLine();
@@ -240,6 +246,26 @@ public static class ReportBuilder
         {
             sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.AlongLineM:0.####} | {row.XOffsetM:0.####} | {row.ZDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.SegmentAngleFromVerticalDeg:0.####} | {row.SegmentTensionKn:0.####} | {Escape(row.Status)} |");
         }
+        sb.AppendLine();
+    }
+
+    private static void AppendShapeProjectionRows(StringBuilder sb, MooringShapeProjectionResult projection)
+    {
+        if (projection.Rows.Count == 0) return;
+        sb.AppendLine("## Проекции формы X/Z по сегментам");
+        sb.AppendLine("Этот раздел связывает узлы MooringShapeSolver с геометрией сегментов: dX, dZ, фактическая длина по координатам и угол от вертикали.");
+        sb.AppendLine($"ΣdX={projection.SumDeltaXM:0.####} м; ΣdZ={projection.SumDeltaZM:0.####} м; Lпо координатам={projection.TotalProjectedLengthM:0.####} м; Lсегментов={projection.TotalSegmentLengthM:0.####} м.");
+        sb.AppendLine($"Невязка длины={projection.LengthResidualM:0.####} м; невязка X конечных точек={projection.EndpointResidualXM:0.####} м; невязка Z конечных точек={projection.EndpointResidualZM:0.####} м; статус={(projection.GeometryClosed ? "OK" : "WARNING")}.");
+        sb.AppendLine($"Максимальный угол от вертикали={projection.MaxAngleFromVerticalDeg:0.####}°; средний угол={projection.AverageAngleFromVerticalDeg:0.####}°.");
+        sb.AppendLine();
+        sb.AppendLine("| № | Сегмент | Элемент | L, м | dX, м | dZ, м | L по X/Z, м | Невязка L, м | Угол, ° | T, кН | Статус |");
+        sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---|");
+        foreach (var row in projection.Rows.Take(90))
+        {
+            sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.SegmentLengthM:0.####} | {row.DeltaXM:0.####} | {row.DeltaZM:0.####} | {row.ProjectedLengthM:0.####} | {row.LengthResidualM:0.####} | {row.AngleFromVerticalDeg:0.####} | {row.TensionKn:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine(projection.MethodNote);
         sb.AppendLine();
     }
 
