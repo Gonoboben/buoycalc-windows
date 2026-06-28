@@ -8,5 +8,6 @@ public partial class ReportTextWindow : Window
     public ReportTextWindow()
     {
         AvaloniaXamlLoader.Load(this);
+        WindowVersionHelper.Apply(this, "Полный текстовый отчёт");
     }
 }
