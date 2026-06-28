@@ -1,12 +1,14 @@
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
-using BuoyCalc.Windows.Services;
 
 namespace BuoyCalc.Windows.Views;
 
 internal static class WindowVersionHelper
 {
+    private const string CurrentVersion = "v0.31";
+    private const string CurrentVersionNote = "shape line report";
+
     private static readonly string[] LegacyVersionTexts =
     {
         "v0.19",
@@ -18,7 +20,7 @@ internal static class WindowVersionHelper
 
     public static void Apply(Window window, string titlePrefix)
     {
-        window.Title = titlePrefix + " " + AppInfo.Version;
+        window.Title = titlePrefix + " " + CurrentVersion;
         window.Opened += (_, _) => RefreshBadges(window);
     }
 
@@ -28,7 +30,7 @@ internal static class WindowVersionHelper
         {
             if (LegacyVersionTexts.Contains(textBlock.Text))
             {
-                textBlock.Text = AppInfo.DisplayVersion;
+                textBlock.Text = CurrentVersion + " - " + CurrentVersionNote;
             }
         }
     }
