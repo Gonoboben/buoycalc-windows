@@ -180,7 +180,7 @@ public static class MooringIterativeSolver
             finalStopReason,
             last?.StopReasonText ?? DescribeStopReason(finalStopReason),
             BuildConvergenceCriterion(criteria),
-            "v0.39.2: отчёт по итерациям расширен через диагностический статус каждой строки. В существующей таблице итераций теперь отображаются выполнение критериев ΔX/max Δузла/Z, признак расходимости и причина остановки solver.");
+            "v0.40: итерационный solver остаётся источником кандидатной формы с дискретными нагрузками. Решение о том, станет ли она основной формой, принимает MooringPrimaryShapeSelector через MooringPrimaryShapeGate.");
     }
 
     private static MooringIterativeSolverCriteria BuildCriteria(int requestedMaxIterations, MooringShapeResult initialShape)
@@ -330,7 +330,7 @@ public static class MooringIterativeSolver
 
     private static string BuildConvergenceCriterion(MooringIterativeSolverCriteria criteria)
     {
-        return $"v0.39.1/v0.39.2: сходимость = |ΔXсноса| ≤ {criteria.OffsetToleranceM:0.####} м, max Δузла ≤ {criteria.NodeDeltaToleranceM:0.####} м, |невязка Z| ≤ {criteria.GeometryResidualToleranceM:0.####} м. Лимит итераций: {criteria.MaxIterations}. Защитная остановка: |ΔX| > {criteria.DivergenceOffsetChangeM:0.####} м или max Δузла > {criteria.DivergenceNodeDeltaM:0.####} м.";
+        return $"v0.40: сходимость = |ΔXсноса| ≤ {criteria.OffsetToleranceM:0.####} м, max Δузла ≤ {criteria.NodeDeltaToleranceM:0.####} м, |невязка Z| ≤ {criteria.GeometryResidualToleranceM:0.####} м. Лимит итераций: {criteria.MaxIterations}. Защитная остановка: |ΔX| > {criteria.DivergenceOffsetChangeM:0.####} м или max Δузла > {criteria.DivergenceNodeDeltaM:0.####} м.";
     }
 
     private static MooringShapeResult ToShapeResult(
@@ -375,11 +375,11 @@ public static class MooringIterativeSolver
             horizontalOffsetM,
             verticalResidualM,
             converged,
-            $"v0.39.2: временная форма итерации {iteration}; получена из альтернативной формы с дискретными нагрузками и не заменяет основной MooringShapeSolver.",
+            $"v0.40: временная форма итерации {iteration}; получена из альтернативной формы с дискретными нагрузками. Может стать основной только через MooringPrimaryShapeGate.",
             iteration,
             verticalResidualM,
             nextShape.AngleScale,
-            $"v0.39.2 feedback: |ΔXсноса|={Math.Abs(offsetChangeM):0.####} м, max Δузла={nextShape.MaxNodeDeltaM:0.####} м");
+            $"v0.40 feedback: |ΔXсноса|={Math.Abs(offsetChangeM):0.####} м, max Δузла={nextShape.MaxNodeDeltaM:0.####} м");
     }
 }
 
@@ -390,10 +390,22 @@ public static class MooringIterativeSolverStore
     public static void Set(MooringIterativeSolverResult result)
     {
         Current = result;
+
+        var fallbackShape = MooringShapeStore.Current;
+        if (fallbackShape is null)
+        {
+            MooringPrimaryShapeSelectionStore.Clear();
+            return;
+        }
+
+        var selection = MooringPrimaryShapeSelector.Select(fallbackShape, result);
+        MooringPrimaryShapeSelectionStore.Set(selection);
+        MooringShapeStore.Set(selection.Shape);
     }
 
     public static void Clear()
     {
         Current = null;
+        MooringPrimaryShapeSelectionStore.Clear();
     }
 }
