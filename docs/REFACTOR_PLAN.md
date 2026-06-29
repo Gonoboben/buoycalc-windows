@@ -23,9 +23,24 @@
 
 ```text
 1. dotnet build / CI
-2. проверка BuoyCalc Windows Build: success
+2. проверка BuoyCalc Windows Build: success / failure / pending
 3. короткая запись в контрольные документы, если шаг меняет архитектурное состояние
 ```
+
+## 0.1. Рабочее правило, чтобы не терять ход проекта
+
+Перед каждым новым шагом нужно сверяться с этим файлом и явно называть пункт плана, который выполняется.
+
+После каждого выполненного шага нужно обновлять `docs/CONTROL_MARK_UPDATES.md` короткой записью:
+
+```text
+что изменено;
+что сознательно не трогали;
+какой следующий допустимый шаг;
+статус CI, если он доступен.
+```
+
+Если шаг отменён, нельзя продолжать поверх него. Сначала нужно зафиксировать отмену в `docs/CONTROL_MARK_UPDATES.md`, затем вернуться к этому плану.
 
 ## 1. Единый источник версии
 
@@ -134,10 +149,10 @@ OK / INFO / WARNING / FAILED / ERROR / Fail
 Сейчас есть несколько форм:
 
 ```text
-fallback  = MooringShapeSolver / MooringShapeStore
+fallback    = MooringShapeSolver / MooringShapeStore
 alternative = форма с дискретными нагрузками / MooringAlternativeShapeStore
-candidate = MooringIterativeSolver.FinalShape
-selected = MooringPrimaryShapeSelector / MooringPrimaryShapeSelectionStore
+candidate   = MooringIterativeSolver.FinalShape
+selected    = MooringPrimaryShapeSelector / MooringPrimaryShapeSelectionStore
 ```
 
 Нужно ввести явную модель:
@@ -291,10 +306,24 @@ developer/audit output
 ### Критерий готовности
 
 ```text
-Есть отдельный тестовый проект, который защищает архитектурные договорённости перед правкой 2D.
+Есть отдельный тестовый проект, который защищает архитектурные договорённости перед правкой 2D и solver.
 ```
 
-## 8. Только потом правка 2D
+## 8. Правка 2D как отображения выбранной формы
+
+### Почему 2D идёт до solver
+
+2D на этом этапе не является новой физикой и не является улучшением расчёта.
+
+Это только архитектурная очистка отображения:
+
+```text
+2D перестаёт выбирать источник формы самостоятельно
+2D перестаёт парсить ReportText
+2D читает готовую выбранную форму из read model
+```
+
+Если в ходе 2D-шага появляется необходимость менять расчёт, этот шаг нужно остановить и перейти к отдельному solver-плану.
 
 ### Условие входа
 
@@ -320,33 +349,15 @@ developer/audit output
 - Не добавлять 3D одновременно.
 - Не менять solver.
 - Не менять критерии gate.
+- Не добавлять новую форму ради визуальной красоты.
 
-## 9. Только потом 3D
+## 9. Только потом усиление физики solver
 
-### Условие входа
+### Почему solver идёт перед 3D
 
-3D можно обсуждать только после стабилизации 2D и выбранной формы.
+Solver — инженерное ядро проекта. 3D не должен появляться раньше, чем понятно, какую форму и какую физику он показывает.
 
-### Правило
-
-3D не должен придумывать физику.
-
-Он должен читать тот же стабилизированный источник:
-
-```text
-SelectedShapeStore / SelectedShapeResult
-```
-
-### Первый допустимый 3D-шаг
-
-Только viewer/skeleton:
-
-- без изменения solver;
-- без новых физических допущений;
-- без отдельной 3D-формы;
-- с явной пометкой, что это визуализация существующей расчётной формы.
-
-## 10. Только потом усиление физики solver
+Поэтому после архитектурной стабилизации и очистки 2D следующий крупный инженерный этап — именно solver, а не 3D.
 
 ### Условие входа
 
@@ -355,7 +366,7 @@ SelectedShapeStore / SelectedShapeResult
 - архитектура отчётов;
 - пользовательские статусы;
 - выбранная форма;
-- 2D;
+- 2D как отображение выбранной формы;
 - тесты;
 - CI.
 
@@ -370,6 +381,33 @@ SelectedShapeStore / SelectedShapeResult
 ### Главное правило
 
 Физику solver нельзя усиливать одновременно с UI/refactor. Иначе невозможно понять, что именно изменило результат.
+
+## 10. Только потом 3D
+
+### Условие входа
+
+3D можно обсуждать только после стабилизации выбранной формы, 2D и очередного solver-этапа.
+
+### Правило
+
+3D не должен придумывать физику.
+
+Он должен читать тот же стабилизированный источник:
+
+```text
+SelectedShapeStore / SelectedShapeResult
+```
+
+или его будущую замену, если после solver-этапа будет принята новая модель выбранной формы.
+
+### Первый допустимый 3D-шаг
+
+Только viewer/skeleton:
+
+- без изменения solver;
+- без новых физических допущений;
+- без отдельной 3D-формы;
+- с явной пометкой, что это визуализация существующей расчётной формы.
 
 ## 11. Рекомендуемый первый маленький кодовый шаг после подтверждения
 
@@ -393,15 +431,16 @@ WindowVersionHelper читает AppInfo.Version / AppInfo.DisplayVersion,
 
 ```text
 1. docs: architecture audit and refactor plan
-2. refactor: use AppInfo in WindowVersionHelper
-3. audit: add XAML version scan script
-4. refactor: introduce UserStatusPolicy
-5. refactor: introduce SelectedShapeStore read model
-6. refactor: split user and technical report builders
-7. test: add BuoyCalc Windows test project
-8. refactor: connect 2D to selected shape model
-9. feature: 3D viewer skeleton, no solver changes
+2. docs: update refactor plan ordering and workflow rules
+3. refactor: use AppInfo in WindowVersionHelper
+4. audit: add XAML version scan script
+5. refactor: introduce UserStatusPolicy
+6. refactor: introduce SelectedShapeStore read model
+7. refactor: split user and technical report builders
+8. test: add BuoyCalc Windows test project
+9. refactor: connect 2D to selected shape model
 10. solver: physics improvements, separately planned
+11. feature: 3D viewer skeleton, no solver changes
 ```
 
 ## 13. Stop condition
