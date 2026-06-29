@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using BuoyCalc.Windows.Services;
 using BuoyCalc.Windows.ViewModels;
 
@@ -17,7 +18,23 @@ public partial class MainWindow : Window
     {
         AvaloniaXamlLoader.Load(this);
         WindowVersionHelper.Apply(this, "BuoyCalc Windows");
+        ApplyMainWindowTextOverrides();
         DataContext = new MainWindowViewModel(new AvaloniaProjectFileDialogService(this));
+    }
+
+    private void ApplyMainWindowTextOverrides()
+    {
+        foreach (var textBlock in this.GetVisualDescendants().OfType<TextBlock>())
+        {
+            if (textBlock.Text == "Отчёт текстом...")
+            {
+                textBlock.Text = "Полный отчёт...";
+            }
+            else if (textBlock.Text == "v0.21.3 cleanup")
+            {
+                textBlock.Text = AppInfo.DisplayVersion;
+            }
+        }
     }
 
     private async void OpenLibraryButton_Click(object? sender, RoutedEventArgs e)
