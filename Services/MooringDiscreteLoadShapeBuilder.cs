@@ -38,6 +38,7 @@ public sealed record MooringDiscreteLoadShapeResult(
 public static class MooringDiscreteLoadShapeBuilder
 {
     private const double DepthToleranceM = 0.01;
+    private const double AngleScaleWarningLimit = 2.0;
     private const int MaxIterations = 60;
 
     public static MooringDiscreteLoadShapeResult Build(
@@ -128,6 +129,12 @@ public static class MooringDiscreteLoadShapeBuilder
         var verticalResidualM = Math.Abs(anchor.ZDepthM - targetDepthM);
         var maxNodeDelta = output.Count > 0 ? output.Max(x => Math.Sqrt(x.DeltaXM * x.DeltaXM + x.DeltaZM * x.DeltaZM)) : 0;
         var offsetDifference = anchor.XOffsetM - originalShape.HorizontalOffsetM;
+        var geometryClosed = scaleResult.Converged && verticalResidualM <= DepthToleranceM;
+        var angleScaleAcceptable = scaleResult.AngleScale <= AngleScaleWarningLimit;
+        var engineeringStatusOk = geometryClosed && angleScaleAcceptable;
+        var note = angleScaleAcceptable
+            ? "v0.35.1: построена альтернативная форма X/Z по натяжениям с дискретными нагрузками. Это сравнительная форма: основной solver пока не заменён."
+            : $"v0.35.1: альтернативная форма геометрически замкнута, но требует большого масштабирования углов scale={scaleResult.AngleScale:0.####}. Это WARNING: форма полезна для сравнения, но не должна трактоваться как физически сошедшийся solver.";
 
         return new MooringDiscreteLoadShapeResult(
             output,
@@ -139,8 +146,8 @@ public static class MooringDiscreteLoadShapeBuilder
             maxNodeDelta,
             scaleResult.AngleScale,
             scaleResult.Iterations,
-            scaleResult.Converged && verticalResidualM <= DepthToleranceM,
-            "v0.35: построена альтернативная форма X/Z по натяжениям с дискретными нагрузками. Это сравнительная форма: она показывает влияние приборов и соединителей на углы и снос, но ещё не заменяет основной solver.");
+            engineeringStatusOk,
+            note);
     }
 
     private static MooringDiscreteLoadShapeResult Empty(string note)
