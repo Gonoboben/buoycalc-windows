@@ -132,13 +132,14 @@ public partial class MainWindow : Window
 
         try
         {
+            var pdfReportText = PdfReportStructureGuide.Apply(viewModel.ReportText);
             PdfReportBuilder.Build(
                 path,
                 viewModel.ProjectName,
                 viewModel.ResultText,
                 viewModel.SequenceDiagramLines,
                 viewModel.ElementRows,
-                viewModel.ReportText,
+                pdfReportText,
                 viewModel.VisualizationDepthM,
                 viewModel.VisualizationLineLengthM,
                 viewModel.VisualizationOffsetM);
