@@ -6,17 +6,17 @@
         MinWidth="760"
         MinHeight="560"
         Background="#F3F6FA"
-        Title="Полный текстовый отчёт v0.21.2">
+        Title="Полный отчёт">
 
   <Border Background="White" CornerRadius="16" Padding="16" Margin="18" BoxShadow="0 2 12 #18000000">
     <Grid RowDefinitions="Auto,*" RowSpacing="12">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
         <StackPanel Spacing="4">
-          <TextBlock Text="Полный текстовый отчёт" FontSize="22" FontWeight="Bold" />
-          <TextBlock Text="Markdown-отчёт без обрезки. Текст можно выделить и скопировать." FontSize="12" Foreground="#697386" />
+          <TextBlock Text="Полный отчёт" FontSize="22" FontWeight="Bold" />
+          <TextBlock Text="Технический Markdown-отчёт без обрезки. Здесь остаются диагностические таблицы solver, автопроверки и внутренние ограничения модели." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
         </StackPanel>
         <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Top">
-          <TextBlock Text="v0.21.2" FontSize="12" Foreground="#263653" FontWeight="Bold" />
+          <TextBlock Text="технический отчёт" FontSize="12" Foreground="#263653" FontWeight="Bold" />
         </Border>
       </Grid>
 
