@@ -69,3 +69,52 @@ AppInfo
 ```text
 refactor: use AppInfo in WindowVersionHelper
 ```
+
+## 2026-06-29 — WindowVersionHelper переведён на AppInfo
+
+Пункт плана:
+
+```text
+1. Единый источник версии
+```
+
+Статус: выполнено.
+
+Что изменено:
+
+```text
+Views/WindowVersionHelper.cs больше не содержит собственного CurrentVersion / CurrentVersionNote.
+WindowVersionHelper читает AppInfo.Version для заголовков окон.
+WindowVersionHelper читает AppInfo.DisplayVersion для замены старых version badges в runtime.
+```
+
+Что сознательно не трогали:
+
+```text
+Services/AppInfo.cs
+solver
+MooringShapeSolver
+Mooring2DCanvas
+PDF builder
+XAML-разметку окон
+расчётную модель
+```
+
+Почему это важно:
+
+```text
+В проекте убран второй источник актуальной версии v0.38.4 внутри WindowVersionHelper.
+Актуальная версия остаётся в Services/AppInfo.cs.
+```
+
+Следующий допустимый шаг:
+
+```text
+audit: add XAML version scan script
+```
+
+Статус CI:
+
+```text
+ожидает проверки после коммита
+```
