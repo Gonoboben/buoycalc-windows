@@ -1,12 +1,10 @@
-# BuoyCalc Windows v0.39.3
+# BuoyCalc Windows v0.40
 
 Windows-ветка проекта BuoyCalc на C# + Avalonia.
 
 ## Статус
 
-v0.39.3 — безопасная промежуточная точка перед v0.40. План проекта не меняется: v0.40 всё ещё означает включение дискретных нагрузок в основной solver. Перед этим добавлен gate, который проверяет, можно ли кандидатную форму итерационного solver рассматривать как будущую основную форму.
-
-Главный принцип остаётся прежним: старый `MooringShapeSolver` не заменяется, 2D/PDF-схемы пока не переключаются на новую форму.
+v0.40 выполняет этап плана: дискретные нагрузки подключены к выбору основной формы solver через безопасный gate. Старый `MooringShapeSolver` не удалён и остаётся fallback.
 
 ## План версий
 
@@ -24,48 +22,28 @@ v0.45   — финальная структура PDF-отчёта
 v0.46   — подготовка release build
 ```
 
-Промежуточные версии `v0.39.x` допустимы как инженерные страховочные точки, но они не меняют смысл основных этапов плана.
-
-## Что уже есть
+## Что было подготовлено до v0.40
 
 ### v0.39
 
-Итерационный диагностический цикл:
+Добавлен диагностический цикл:
 
 ```text
 форма -> силы по форме -> натяжения -> дискретные нагрузки -> новая форма -> сравнение со старой -> критерий сходимости
 ```
 
-Основные типы:
-
-```text
-MooringIterativeSolverIteration
-MooringIterativeSolverResult
-MooringIterativeSolverStore
-```
-
 ### v0.39.1
 
-Добавлены:
+Добавлены критерии и причины остановки solver:
 
 ```text
 MooringIterativeSolverCriteria
 MooringIterativeSolverStopReason
 ```
 
-Критерии сходимости:
-
-```text
-|dXсноса| <= OffsetToleranceM
-max dNode <= NodeDeltaToleranceM
-|невязка Z| <= GeometryResidualToleranceM
-```
-
-Также добавлена защитная остановка от грубой расходимости.
-
 ### v0.39.2
 
-Диагностический статус каждой итерации стал отчётным носителем критериев. В колонке `Статус` таблицы итераций теперь есть:
+В отчёт по итерациям добавлены признаки:
 
 ```text
 reason=<StopReason>
@@ -73,76 +51,71 @@ dX=OK/NO
 maxNode=OK/NO
 Z=OK/NO
 divergence=YES/NO
-текстовая причина остановки или продолжения
 ```
 
 ### v0.39.3
 
-Добавлен сервис:
+Добавлен gate перед подключением кандидатной формы:
 
 ```text
-Services/MooringPrimaryShapeGate.cs
-```
-
-Добавлены типы:
-
-```text
+MooringPrimaryShapeGate
 MooringPrimaryShapeGateDecision
 MooringPrimaryShapeGateResult
 ```
 
-Gate оценивает кандидатную форму `MooringIterativeSolverResult.FinalShape` и возвращает одно из решений:
+## Что добавлено в v0.40
+
+1. Добавлен выбор основной формы через новый selector:
+
+```text
+MooringPrimaryShapeSelector
+MooringPrimaryShapeSelectionResult
+MooringPrimaryShapeSelectionStore
+```
+
+2. После расчёта `MooringIterativeSolver` теперь выполняется выбор основной формы:
+
+```text
+fallback = MooringShapeSolver
+candidate = MooringIterativeSolver.FinalShape
+selection = MooringPrimaryShapeSelector.Select(fallback, candidate)
+MooringShapeStore.Set(selection.Shape)
+```
+
+3. Если gate возвращает:
+
+```text
+CandidateReadyForPrimary
+```
+
+то основной формой в `MooringShapeStore` становится кандидатная форма итерационного solver, которая уже включает дискретные нагрузки.
+
+4. Если gate возвращает:
 
 ```text
 KeepCurrentMainShape
-CandidateReadyForPrimary
 CandidateRejected
 ```
 
-Gate проверяет:
+то основной формой остаётся fallback от старого `MooringShapeSolver`.
+
+5. `MooringIterativeSolverStore.Set(...)` теперь не только сохраняет результат итерационного solver, но и запускает `MooringPrimaryShapeSelector`.
+
+6. `MooringPrimaryShapeSelectionStore` хранит решение selector для будущего вывода в отчёт и UI.
+
+7. В `AppInfo` отображаемая версия обновлена:
 
 ```text
-есть ли финальная кандидатная форма
-достаточно ли в ней узлов
-сошёлся ли итерационный solver
-не было ли защитной остановки по расходимости
-допускает ли StopReason использование формы как основной
+v0.40 - discrete loads primary solver gate
 ```
-
-Gate отдаёт численные признаки:
-
-```text
-OffsetDifferenceM
-MaxNodeDeltaM
-FinalGeometryResidualM
-```
-
-Gate ничего не переключает автоматически. Он только готовит безопасное условие для v0.40.
-
-В `AppInfo` отображаемая версия обновлена:
-
-```text
-v0.39.3 - primary shape gate
-```
-
-## Дополнительный подготовительный сервис
-
-В коде также есть подготовительный сервис:
-
-```text
-Services/MooringIterativeShapeComparison.cs
-```
-
-Он был добавлен как вспомогательная диагностика для будущей проверки кандидатной формы. Основной gate перед v0.40 теперь находится в `MooringPrimaryShapeGate`.
 
 ## Что не изменилось
 
-1. Основная форма X/Z всё ещё берётся из `MooringShapeSolver`.
-2. Новый solver остаётся диагностическим слоем.
-3. Gate не переключает форму автоматически.
-4. 2D-схема не переключена на кандидатную форму.
-5. PDF-схемы не переключены на кандидатную форму.
-6. Дискретные нагрузки ещё не включены в основной solver — это задача v0.40.
+1. Старый `MooringShapeSolver` не удалён.
+2. Если кандидатная форма не прошла gate, приложение автоматически остаётся на старой форме.
+3. 2D/PDF получают форму из `MooringShapeStore`, как и раньше.
+4. Отдельная косметика PDF-отчёта не менялась.
+5. Режимы постановки surface/submerged/short/excess line остаются задачей v0.41.
 
 ## Как проверить
 
@@ -155,13 +128,15 @@ Build -> Rebuild Solution
 ```
 
 2. Выполнить обычный расчёт.
-3. Убедиться, что основная 2D/PDF-форма не изменилась.
-4. Проверить CI status:
+3. Проверить, что расчёт не падает, а 2D/PDF строятся как раньше.
+4. В сценарии, где итерационный solver не сходится, должна использоваться fallback-форма `MooringShapeSolver`.
+5. В сценарии, где gate даёт `CandidateReadyForPrimary`, `MooringShapeStore` должен получить форму с дискретными нагрузками.
+6. Проверить CI status:
 
 ```text
 BuoyCalc Windows Build: success
 ```
 
-## Следующий шаг
+## Следующий безопасный шаг
 
-Следующий шаг по плану — v0.40: включение дискретных нагрузок в основной solver. Делать это нужно через gate: если решение `CandidateReadyForPrimary`, можно подключать кандидатную форму как основную в новой ветке solver; иначе нужно оставлять текущий `MooringShapeSolver` как fallback.
+Перед переходом к v0.41 можно сделать промежуточную v0.40.1: вывести решение `MooringPrimaryShapeSelectionStore` в отчёт, чтобы пользователь видел, какая форма выбрана основной и почему.
