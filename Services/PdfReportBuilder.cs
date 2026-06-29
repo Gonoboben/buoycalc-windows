@@ -265,6 +265,7 @@ public static class PdfReportBuilder
 
             var buoyPoint = points[0];
             var anchorPoint = points[^1];
+            var userShapeStatus = alternative.Shape.Converged ? "форма: ОК" : "форма: требует проверки";
             _canvas.DrawCircle(buoyPoint, 12, buoyPaint);
             _canvas.DrawCircle(buoyPoint, 12, alternative.Shape.Converged ? nodeBorderPaint : warningPaint);
             _canvas.DrawRect(new SKRect(anchorPoint.X - 15, anchorPoint.Y - 8, anchorPoint.X + 15, anchorPoint.Y + 8), anchorPaint);
@@ -275,7 +276,7 @@ public static class PdfReportBuilder
             DrawTextAt(Shorten(CleanLabel(nodes[0].Label, "Буй"), 28), buoyPoint.X + 16, buoyPoint.Y + 4, 9.2f, true, SKColors.Black);
             DrawTextAt(Shorten(CleanLabel(nodes[^1].Label, "Якорь"), 28), anchorPoint.X + 20, anchorPoint.Y + 4, 9.2f, true, SKColors.Black);
             DrawLegendLine(x + 14, y + 18, linePaint, "форма с дискретными элементами", new SKColor(212, 107, 8));
-            DrawTextAt(alternative.Shape.Converged ? "форма: OK" : "форма: WARNING", x + 245, y + 23, 9.2f, false, alternative.Shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
+            DrawTextAt(userShapeStatus, x + 245, y + 23, 9.2f, false, alternative.Shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
             DrawTextAt($"снос X/Z {alternative.Shape.DiscreteHorizontalOffsetM:0.##} м", x + 390, y + 23, 9.2f, false, new SKColor(80, 92, 112));
             DrawTextAt($"дискретных X/Z точек {alternative.DiscreteNodes.DiscreteNodeCount}", x + 14, plotBottomY + 52, 9, false, new SKColor(80, 92, 112));
             DrawTextAt("масштаб X=Z; координаты взяты из расчётного слоя дискретных нагрузок", x + 14, plotBottomY + 72, 8.5f, false, new SKColor(80, 92, 112));
