@@ -7,9 +7,9 @@ public static class PdfReportStructureGuide
     public static string Apply(string reportText)
     {
         var text = reportText ?? string.Empty;
-        if (text.Contains("## Структура PDF-отчёта v0.45.1") || text.Contains("## PDF report structure v0.45"))
+        if (text.Contains("## Структура PDF-отчёта v0.45.2"))
         {
-            return text.Replace("## PDF report structure v0.45", "## Структура PDF-отчёта v0.45.1");
+            return text;
         }
 
         return BuildMarkdown() + text;
@@ -18,16 +18,16 @@ public static class PdfReportStructureGuide
     private static string BuildMarkdown()
     {
         var sb = new StringBuilder();
-        sb.AppendLine("## Структура PDF-отчёта v0.45.1");
-        sb.AppendLine("Этот блок добавляется только при экспорте PDF. Он фиксирует порядок итогового отчёта и не меняет физику solver, координаты X/Z, силы или натяжения.");
+        sb.AppendLine("## Структура PDF-отчёта v0.45.2");
+        sb.AppendLine("Этот блок добавляется только при экспорте PDF. PDF выводит форму с дискретными элементами как расчётную форму отчёта. Внутренняя fallback-форма в PDF не выводится.");
         sb.AppendLine();
         sb.AppendLine("| № | Раздел | Источник данных |");
         sb.AppendLine("|---:|---|---|");
         sb.AppendLine("| 1 | Краткий итог расчёта | CalculationResult и инженерная диагностика |");
-        sb.AppendLine("| 2 | Расчётная 2D-схема | MooringShapeStore и результат solver формы |");
-        sb.AppendLine("| 3 | Сравнение форм | Основная форма и альтернативная форма с дискретными нагрузками, если она доступна |");
+        sb.AppendLine("| 2 | Расчётная 2D-схема с дискретными элементами | MooringAlternativeShapeStore |");
+        sb.AppendLine("| 3 | Текстовая цепочка постановки | ViewModel sequence lines |");
         sb.AppendLine("| 4 | Таблица элементов | CalculationResult.ElementRows |");
-        sb.AppendLine("| 5 | Полный инженерный отчёт | Markdown-отчёт ReportBuilder |");
+        sb.AppendLine("| 5 | Полный инженерный отчёт без блока выбора основной формы | Markdown-отчёт ReportBuilder после PDF-фильтра |");
         sb.AppendLine("| 6 | Диагностика и ограничения | MethodNote расчётных сервисов |");
         sb.AppendLine();
         sb.AppendLine("Правило: PDF-страницы и схемы только отображают выходные данные расчётной модели. PDF не должен придумывать координаты, силы, натяжения или режим постановки.");
