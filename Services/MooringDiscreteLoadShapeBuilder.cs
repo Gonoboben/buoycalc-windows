@@ -57,6 +57,7 @@ public static class MooringDiscreteLoadShapeBuilder
             return Empty("Нет длины линии или проектной глубины для построения альтернативной формы.");
         }
 
+        var shortLine = lineLengthM + DepthToleranceM < targetDepthM;
         var rows = discreteTensions.Rows.OrderBy(x => x.Number).ToList();
         var scaleResult = SolveAngleScale(rows, lineLengthM, targetDepthM);
         var verticalSpanM = VerticalSpan(rows, lineLengthM, targetDepthM, scaleResult.AngleScale);
@@ -86,7 +87,7 @@ public static class MooringDiscreteLoadShapeBuilder
             originalShape.BuoyPoint?.ZDepthM ?? 0,
             0,
             topNodeDepthM - (originalShape.BuoyPoint?.ZDepthM ?? 0),
-            "INFO: верхний граничный узел"));
+            shortLine ? "WARNING: верхний узел ниже поверхности из-за короткой линии" : "INFO: верхний граничный узел"));
 
         foreach (var row in rows)
         {
@@ -122,7 +123,7 @@ public static class MooringDiscreteLoadShapeBuilder
                 originalZ,
                 deltaX,
                 deltaZ,
-                nodeDelta <= 0.01 ? "OK" : "INFO: форма отличается от исходной"));
+                shortLine ? "WARNING: альтернативная форма короткой линии" : nodeDelta <= 0.01 ? "OK" : "INFO: форма отличается от исходной"));
         }
 
         var anchor = output.Last();
@@ -131,10 +132,12 @@ public static class MooringDiscreteLoadShapeBuilder
         var offsetDifference = anchor.XOffsetM - originalShape.HorizontalOffsetM;
         var geometryClosed = scaleResult.Converged && verticalResidualM <= DepthToleranceM;
         var angleScaleAcceptable = scaleResult.AngleScale <= AngleScaleWarningLimit;
-        var engineeringStatusOk = geometryClosed && angleScaleAcceptable;
-        var note = angleScaleAcceptable
-            ? "v0.35.1: построена альтернативная форма X/Z по натяжениям с дискретными нагрузками. Это сравнительная форма: основной solver пока не заменён."
-            : $"v0.35.1: альтернативная форма геометрически замкнута, но требует большого масштабирования углов scale={scaleResult.AngleScale:0.####}. Это WARNING: форма полезна для сравнения, но не должна трактоваться как физически сошедшийся solver.";
+        var engineeringStatusOk = geometryClosed && angleScaleAcceptable && !shortLine;
+        var note = shortLine
+            ? $"v0.38.2: альтернативная форма построена для короткой линии L={lineLengthM:0.####} м < Depth={targetDepthM:0.####} м. Это WARNING: форма соответствует погружённому бую, а не нормальной поверхностной постановке. Волновая нагрузка не отключается."
+            : angleScaleAcceptable
+                ? "v0.38.2: построена альтернативная форма X/Z по натяжениям с дискретными нагрузками. Это сравнительная форма: основной solver пока не заменён."
+                : $"v0.38.2: альтернативная форма геометрически замкнута, но требует большого масштабирования углов scale={scaleResult.AngleScale:0.####}. Это WARNING: форма полезна для сравнения, но не должна трактоваться как физически сошедшийся solver.";
 
         return new MooringDiscreteLoadShapeResult(
             output,
@@ -173,7 +176,7 @@ public static class MooringDiscreteLoadShapeBuilder
     {
         if (lineLengthM <= targetDepthM)
         {
-            return new IterationResult(1.0, 0, true);
+            return new IterationResult(1.0, 0, lineLengthM >= targetDepthM);
         }
 
         var low = 0.0;
