@@ -57,6 +57,8 @@ public static class MooringAutocheckSuite
         Add(rows, "loads", "Net buoyancy is finite", "NetBuoyancy is finite", $"NetBuoyancy={result.NetBuoyancyKg:0.####} kg", IsFinite(result.NetBuoyancyKg), "Net buoyancy must be finite.");
         Add(rows, "primary-selection", "Primary X offset is finite", "X is finite", $"fallbackX={fallbackShape.HorizontalOffsetM:0.####} m, candidateX={candidateShape.HorizontalOffsetM:0.####} m", IsFinite(fallbackShape.HorizontalOffsetM) && IsFinite(candidateShape.HorizontalOffsetM), "X coordinates must be finite for 2D/PDF.");
 
+        AppendElementDatabaseChecks(rows, result);
+
         var passCount = rows.Count(x => x.Severity == MooringAutocheckSeverity.Pass);
         var infoCount = rows.Count(x => x.Severity == MooringAutocheckSeverity.Info);
         var warningCount = rows.Count(x => x.Severity == MooringAutocheckSeverity.Warning);
@@ -76,13 +78,13 @@ public static class MooringAutocheckSuite
             failCount,
             hasFailures,
             summary,
-            "v0.42: built-in scenario autocheck suite. It does not change physics; it checks consistency of geometry, fallback shape, candidate shape, deployment mode and numeric state.");
+            "v0.43: scenario autochecks now include element database quality checks. They do not change physics; they flag missing names, presets, invalid counts, impossible line lengths, Cd/area inconsistencies, WLL/MBL issues and non-finite reserves.");
     }
 
     public static string BuildReportTable(MooringAutocheckResult result)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("## Scenario autochecks v0.42");
+        sb.AppendLine("## Scenario and element database autochecks v0.43");
         sb.AppendLine(result.MethodNote);
         sb.AppendLine();
         sb.AppendLine($"Result: {result.Summary}; pass={result.PassCount}, info={result.InfoCount}, warning={result.WarningCount}, fail={result.FailCount}.");
@@ -95,6 +97,35 @@ public static class MooringAutocheckSuite
         }
         sb.AppendLine();
         return sb.ToString();
+    }
+
+    private static void AppendElementDatabaseChecks(List<MooringAutocheckRow> rows, CalculationResult result)
+    {
+        var elements = result.ElementRows;
+        var missingNames = elements.Count(x => string.IsNullOrWhiteSpace(x.Title));
+        var missingKinds = elements.Count(x => string.IsNullOrWhiteSpace(x.Kind));
+        var missingPresets = elements.Count(x => string.IsNullOrWhiteSpace(x.PresetName));
+        var invalidCounts = elements.Count(x => x.Count <= 0);
+        var negativeLengths = elements.Count(x => x.LengthM < 0);
+        var distributedRows = elements.Count(x => x.LengthM > 0);
+        var dragAreaWithoutCd = elements.Count(x => x.ProjectedAreaM2 > 0 && x.DragCoefficient <= 0);
+        var cdWithoutArea = elements.Count(x => x.DragCoefficient > 0 && x.ProjectedAreaM2 <= 0 && x.CurrentForceN > 0);
+        var wllAboveMbl = elements.Count(x => x.BreakingLoadKn > 0 && x.WorkingLoadKn > x.BreakingLoadKn);
+        var nonFiniteReserve = elements.Count(x => !IsFinite(x.Reserve));
+        var negativeBreakingLoad = elements.Count(x => x.BreakingLoadKn < 0 || x.WorkingLoadKn < 0);
+
+        Add(rows, "element-database", "Element rows exist", "ElementRows.Count > 0", $"count={elements.Count}", elements.Count > 0, "The report must have at least buoy, line and anchor rows.");
+        Add(rows, "element-database", "Element names are filled", "missing names = 0", $"missing={missingNames}", missingNames == 0, "Every database row should have a visible title.", MooringAutocheckSeverity.Warning);
+        Add(rows, "element-database", "Element kinds are filled", "missing kinds = 0", $"missing={missingKinds}", missingKinds == 0, "Every database row should have a kind/type.");
+        Add(rows, "element-database", "Preset names are filled", "missing presets = 0", $"missing={missingPresets}", missingPresets == 0, "Missing preset means the row is harder to trace back to the element database.", MooringAutocheckSeverity.Info);
+        Add(rows, "element-database", "Element counts are positive", "invalid counts = 0", $"invalid={invalidCounts}", invalidCounts == 0, "Each element row should have count > 0.");
+        Add(rows, "element-database", "No negative lengths", "negative lengths = 0", $"negative={negativeLengths}", negativeLengths == 0, "Length cannot be negative.");
+        Add(rows, "element-database", "Distributed line rows exist", "rows with Length > 0 >= 1", $"distributed={distributedRows}", distributedRows >= 1, "A mooring should normally contain at least one distributed line row.", MooringAutocheckSeverity.Warning);
+        Add(rows, "element-database", "Drag rows have Cd", "area > 0 => Cd > 0", $"bad={dragAreaWithoutCd}", dragAreaWithoutCd == 0, "Projected area without Cd makes current force suspicious.", MooringAutocheckSeverity.Warning);
+        Add(rows, "element-database", "Cd rows have area when force exists", "Cd > 0 and force > 0 => area > 0", $"bad={cdWithoutArea}", cdWithoutArea == 0, "Cd without projected area cannot explain current force.", MooringAutocheckSeverity.Warning);
+        Add(rows, "element-database", "WLL does not exceed MBL", "WLL <= MBL", $"bad={wllAboveMbl}", wllAboveMbl == 0, "Working load should not exceed breaking load.");
+        Add(rows, "element-database", "Loads are non-negative", "MBL/WLL >= 0", $"bad={negativeBreakingLoad}", negativeBreakingLoad == 0, "Strength values must not be negative.");
+        Add(rows, "element-database", "Reserve is finite", "Reserve finite", $"bad={nonFiniteReserve}", nonFiniteReserve == 0, "Reserve must be finite for report and checks.");
     }
 
     private static void Add(List<MooringAutocheckRow> rows, string scenario, string checkName, string expected, string actual, bool passed, string note, MooringAutocheckSeverity failedSeverity = MooringAutocheckSeverity.Fail)
