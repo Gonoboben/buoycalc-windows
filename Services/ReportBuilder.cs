@@ -19,9 +19,11 @@ public static class ReportBuilder
         var discreteLoadTensions = MooringDiscreteLoadTensionAnalyzer.Build(result, tensionRows, sequencePositions);
         var discreteLoadShape = MooringDiscreteLoadShapeBuilder.Build(shape, discreteLoadTensions);
         var alternativeDiscreteNodes = MooringAlternativeDiscreteNodeProjector.Build(sequencePositions, discreteLoadShape, shape);
+        var iterativeSolver = MooringIterativeSolver.Build(result, shape, sequencePositions, tensionRows);
         var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
         var vectorBalance = MooringVectorBalance.Build(result);
         MooringShapeStore.Set(shape);
+        MooringIterativeSolverStore.Set(iterativeSolver);
 
         sb.AppendLine("# BuoyCalc Windows — предварительный отчёт");
         sb.AppendLine();
@@ -34,7 +36,7 @@ public static class ReportBuilder
         AppendEnvironment(sb, environment);
         AppendBuoy(sb, buoy, shape);
         AppendAnchor(sb, anchor, result);
-        AppendTotals(sb, result, tensionRows, shape, shapeProjection, shapeForces, shapeTensions, sequencePositions, discreteLoadTensions, discreteLoadShape, alternativeDiscreteNodes, diagnostics);
+        AppendTotals(sb, result, tensionRows, shape, shapeProjection, shapeForces, shapeTensions, sequencePositions, discreteLoadTensions, discreteLoadShape, alternativeDiscreteNodes, iterativeSolver, diagnostics);
         AppendDiagnostics(sb, diagnostics);
         AppendVectorBalanceRows(sb, vectorBalance);
         AppendElementRows(sb, result);
@@ -49,6 +51,7 @@ public static class ReportBuilder
         AppendDiscreteLoadTensionRows(sb, discreteLoadTensions);
         AppendDiscreteLoadShapeRows(sb, discreteLoadShape);
         AppendAlternativeDiscreteNodeRows(sb, alternativeDiscreteNodes);
+        AppendIterativeSolverRows(sb, iterativeSolver);
         AppendChecks(sb, result);
 
         sb.AppendLine("## Ограничения");
@@ -60,8 +63,9 @@ public static class ReportBuilder
         sb.AppendLine(discreteLoadTensions.MethodNote);
         sb.AppendLine(discreteLoadShape.MethodNote);
         sb.AppendLine(alternativeDiscreteNodes.MethodNote);
+        sb.AppendLine(iterativeSolver.MethodNote);
         sb.AppendLine(vectorBalance.MethodNote);
-        sb.AppendLine("v0.36 добавляет дискретные X/Z-узлы альтернативной формы. Это отчётный слой: основной solver и 2D-визуализация пока не заменены.");
+        sb.AppendLine("v0.39 добавляет диагностический итерационный solver-слой. Он замыкает существующие блоки в цикл, но основной solver, 2D и PDF-схемы пока не заменяются.");
 
         return sb.ToString();
     }
@@ -125,7 +129,7 @@ public static class ReportBuilder
         sb.AppendLine();
     }
 
-    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, MooringShapeForceResult shapeForces, MooringShapeTensionResult shapeTensions, MooringSequencePositionResult sequencePositions, MooringDiscreteLoadTensionResult discreteLoadTensions, MooringDiscreteLoadShapeResult discreteLoadShape, MooringAlternativeDiscreteNodeResult alternativeDiscreteNodes, EngineeringDiagnosticsResult diagnostics)
+    private static void AppendTotals(StringBuilder sb, CalculationResult result, IReadOnlyList<SegmentTensionRow> tensionRows, MooringShapeResult shape, MooringShapeProjectionResult shapeProjection, MooringShapeForceResult shapeForces, MooringShapeTensionResult shapeTensions, MooringSequencePositionResult sequencePositions, MooringDiscreteLoadTensionResult discreteLoadTensions, MooringDiscreteLoadShapeResult discreteLoadShape, MooringAlternativeDiscreteNodeResult alternativeDiscreteNodes, MooringIterativeSolverResult iterativeSolver, EngineeringDiagnosticsResult diagnostics)
     {
         sb.AppendLine("## Итоги");
         sb.AppendLine($"- Полная плавучесть буя: {result.BuoyancyKg:0.####} кг");
@@ -146,6 +150,7 @@ public static class ReportBuilder
         sb.AppendLine($"- Старая оценка сноса: {result.EstimatedOffsetM:0.####} м");
         sb.AppendLine($"- Дискретных элементов с координатой s: {sequencePositions.DiscreteElementCount}; вес в воде: {sequencePositions.DiscreteWeightWaterKg:0.####} кг; Fx: {sequencePositions.DiscreteCurrentForceN:0.####} Н");
         sb.AppendLine($"- Дискретных X/Z-узлов альтернативной формы: {alternativeDiscreteNodes.DiscreteNodeCount}; max Δузла={alternativeDiscreteNodes.MaxNodeDeltaM:0.####} м");
+        sb.AppendLine($"- Итерационный solver v0.39: {(iterativeSolver.Converged ? "OK" : "каркас / не сошёлся")}; итераций={iterativeSolver.IterationCount}; ΔXпосл={iterativeSolver.FinalOffsetChangeM:0.####} м; max Δузла={iterativeSolver.FinalMaxNodeDeltaM:0.####} м");
         sb.AppendLine($"- Диагностика: {diagnostics.Summary}");
 
         if (tensionRows.Count > 0)
@@ -250,7 +255,7 @@ public static class ReportBuilder
     private static void AppendModelCoverageRows(StringBuilder sb, CalculationResult result)
     {
         sb.AppendLine("## Область учёта элементов в текущей модели");
-        sb.AppendLine("Эта таблица показывает, где элемент уже участвует в расчётах. В v0.36 дискретные элементы добавлены как X/Z-точки альтернативной формы, но основной solver и основная 2D-схема ещё не заменены.");
+        sb.AppendLine("Эта таблица показывает, где элемент уже участвует в расчётах. В v0.39 добавлен отдельный итерационный solver-слой, но основной solver, 2D и PDF-схемы пока не заменены.");
         sb.AppendLine();
         sb.AppendLine("| № | Элемент | Тип | Ведомость элементов | Векторный баланс | Позиция s | Дискретные натяжения | Альт. форма X/Z | Дискретный X/Z-узел | Основная форма X/Z | Основные натяжения | Примечание |");
         sb.AppendLine("|---:|---|---|---|---|---|---|---|---|---|---|---|");
@@ -287,10 +292,10 @@ public static class ReportBuilder
             };
             var note = row.Kind switch
             {
-                "Линия" => "используется в SegmentRows, ShapeRows, shape-based силах и натяжениях",
+                "Линия" => "используется в SegmentRows, ShapeRows, shape-based силах, натяжениях и v0.39 feedback-цикле",
                 "Буй" => "задаёт верхнее граничное условие и плавучесть",
                 "Якорь" => "задаёт нижнее граничное условие и удержание",
-                _ => "следующий слой: вывести точку на 2D-сравнении и затем включить в итерационный solver"
+                _ => "участвует как дискретная нагрузка по s в альтернативной форме и v0.39 feedback-цикле"
             };
             sb.AppendLine($"| {row.Number} | {Escape(row.Title)} | {Escape(row.Kind)} | да | да | да | {discreteTensionScope} | {alternativeShapeScope} | {discreteNodeScope} | {shapeScope} | {tensionScope} | {Escape(note)} |");
         }
@@ -472,6 +477,32 @@ public static class ReportBuilder
         }
         sb.AppendLine();
         sb.AppendLine(nodes.MethodNote);
+        sb.AppendLine();
+    }
+
+    private static void AppendIterativeSolverRows(StringBuilder sb, MooringIterativeSolverResult solver)
+    {
+        sb.AppendLine("## Итерационный solver v0.39 — диагностика");
+        sb.AppendLine("Этот раздел показывает отдельный feedback-слой: форма → силы по форме → натяжения → дискретные нагрузки → новая форма → сравнение со старой. Он не заменяет основной MooringShapeSolver.");
+        sb.AppendLine($"Критерий: {solver.ConvergenceCriterion}");
+        sb.AppendLine($"Итог: {(solver.Converged ? "OK" : "каркас / не сошлось")}; итераций={solver.IterationCount}; финальная ΔX={solver.FinalOffsetChangeM:0.####} м; финальный max Δузла={solver.FinalMaxNodeDeltaM:0.####} м.");
+        sb.AppendLine();
+
+        if (solver.Rows.Count == 0)
+        {
+            sb.AppendLine(solver.MethodNote);
+            sb.AppendLine();
+            return;
+        }
+
+        sb.AppendLine("| Итерация | X вход, м | F shape, Н | T shape top, кН | T дискр. top, кН | X новая, м | ΔX, м | max Δузла, м | невязка Z, м | Геометрия | Статус |");
+        sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|");
+        foreach (var row in solver.Rows)
+        {
+            sb.AppendLine($"| {row.IterationNumber} | {row.InputOffsetM:0.####} | {row.ShapeLineForceN:0.####} | {row.TopShapeTensionKn:0.####} | {row.TopDiscreteTensionKn:0.####} | {row.OutputOffsetM:0.####} | {row.OffsetChangeM:0.####} | {row.MaxNodeDeltaM:0.####} | {row.GeometryResidualM:0.####} | {(row.GeometryConverged ? "OK" : "WARNING")} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine(solver.MethodNote);
         sb.AppendLine();
     }
 
