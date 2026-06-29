@@ -46,16 +46,16 @@ public static class MooringAutocheckSuite
     {
         var rows = new List<MooringAutocheckRow>();
 
-        Add(rows, "input-geometry", "Depth is set", "Depth > 0", $"Depth={deploymentMode.DepthM:0.####} m", deploymentMode.DepthM > 0, "Project depth is required.");
-        Add(rows, "input-geometry", "Line length is set", "LineLength > 0", $"LineLength={deploymentMode.LineLengthM:0.####} m", deploymentMode.LineLengthM > 0, "Line length must be positive.");
-        Add(rows, "shape-fallback", "Fallback shape has nodes", "Nodes >= 2", $"Nodes={fallbackShape.Nodes.Count}", fallbackShape.Nodes.Count >= 2, "MooringShapeSolver fallback must remain usable.");
-        Add(rows, "shape-candidate", "Candidate shape has nodes", "Nodes >= 2", $"Nodes={candidateShape.Nodes.Count}", candidateShape.Nodes.Count >= 2, "Candidate shape is optional; fallback remains primary if gate rejects it.", MooringAutocheckSeverity.Info);
-        Add(rows, "iterative-solver", "Stop reason is consistent", "Converged => StopReason=Converged; Diverged => not Converged", $"Converged={Bool(iterativeSolverConverged)}, Diverged={Bool(iterativeSolverDiverged)}, StopReason={stopReason}", (!iterativeSolverConverged || stopReason == MooringIterativeSolverStopReason.Converged) && (!iterativeSolverDiverged || !iterativeSolverConverged), "Solver convergence flags must not conflict.");
-        Add(rows, "deployment-mode", "Deployment mode classified", "Mode != unknown", $"Mode={deploymentMode.ModeCode}", deploymentMode.Mode != MooringDeploymentMode.Unknown, "v0.41 should classify ordinary inputs.", MooringAutocheckSeverity.Warning);
-        Add(rows, "deployment-mode", "Short line geometry", "short => LineLength < Depth", $"Mode={deploymentMode.ModeCode}, shortage={deploymentMode.ShortageM:0.####} m", deploymentMode.Mode != MooringDeploymentMode.ShortLine || deploymentMode.LineLengthM < deploymentMode.DepthM, "short mode must mean line is shorter than depth.");
-        Add(rows, "deployment-mode", "Excess line geometry", "excess line => L/Depth >= 1.2", $"Mode={deploymentMode.ModeCode}, L/Depth={deploymentMode.LineToDepthRatio:0.####}", deploymentMode.Mode != MooringDeploymentMode.ExcessLine || deploymentMode.LineToDepthRatio >= 1.2, "excess line mode must mean meaningful line excess.");
-        Add(rows, "loads", "Net buoyancy is finite", "NetBuoyancy is finite", $"NetBuoyancy={result.NetBuoyancyKg:0.####} kg", IsFinite(result.NetBuoyancyKg), "Net buoyancy must be finite.");
-        Add(rows, "primary-selection", "Primary X offset is finite", "X is finite", $"fallbackX={fallbackShape.HorizontalOffsetM:0.####} m, candidateX={candidateShape.HorizontalOffsetM:0.####} m", IsFinite(fallbackShape.HorizontalOffsetM) && IsFinite(candidateShape.HorizontalOffsetM), "X coordinates must be finite for 2D/PDF.");
+        Add(rows, "входная геометрия", "Глубина задана", "Глубина > 0", $"Глубина={deploymentMode.DepthM:0.####} м", deploymentMode.DepthM > 0, "Нужно задать проектную глубину.");
+        Add(rows, "входная геометрия", "Длина линии задана", "Длина линии > 0", $"Длина={deploymentMode.LineLengthM:0.####} м", deploymentMode.LineLengthM > 0, "Длина линии должна быть положительной.");
+        Add(rows, "резервная форма", "Резервная форма имеет узлы", "Узлов >= 2", $"Узлов={fallbackShape.Nodes.Count}", fallbackShape.Nodes.Count >= 2, "Внутренняя резервная форма должна оставаться доступной для диагностики.");
+        Add(rows, "форма с дискретными элементами", "Форма имеет узлы", "Узлов >= 2", $"Узлов={candidateShape.Nodes.Count}", candidateShape.Nodes.Count >= 2, "Форма с дискретными элементами должна иметь минимум два узла.", MooringAutocheckSeverity.Info);
+        Add(rows, "итерационный solver", "Причина остановки согласована", "Сошёлся => StopReason=Converged; разошёлся => не сошёлся", $"Сошёлся={BoolRu(iterativeSolverConverged)}, разошёлся={BoolRu(iterativeSolverDiverged)}, StopReason={stopReason}", (!iterativeSolverConverged || stopReason == MooringIterativeSolverStopReason.Converged) && (!iterativeSolverDiverged || !iterativeSolverConverged), "Флаги сходимости solver не должны противоречить друг другу.");
+        Add(rows, "режим постановки", "Режим определён", "Режим != unknown", $"Режим={deploymentMode.ModeCode}", deploymentMode.Mode != MooringDeploymentMode.Unknown, "Обычные исходные данные должны классифицироваться по режиму постановки.", MooringAutocheckSeverity.Warning);
+        Add(rows, "режим постановки", "Короткая линия согласована", "short => длина < глубина", $"Режим={deploymentMode.ModeCode}, недостаток={deploymentMode.ShortageM:0.####} м", deploymentMode.Mode != MooringDeploymentMode.ShortLine || deploymentMode.LineLengthM < deploymentMode.DepthM, "Режим short должен означать, что линия короче глубины.");
+        Add(rows, "режим постановки", "Избыточная линия согласована", "excess line => L/Depth >= 1.2", $"Режим={deploymentMode.ModeCode}, L/Depth={deploymentMode.LineToDepthRatio:0.####}", deploymentMode.Mode != MooringDeploymentMode.ExcessLine || deploymentMode.LineToDepthRatio >= 1.2, "Режим excess line должен означать заметный избыток длины.");
+        Add(rows, "нагрузки", "Чистая плавучесть конечна", "Чистая плавучесть конечна", $"Чистая плавучесть={result.NetBuoyancyKg:0.####} кг", IsFinite(result.NetBuoyancyKg), "Чистая плавучесть должна быть конечной.");
+        Add(rows, "выбранная форма", "Снос X конечен", "X конечен", $"резервная X={fallbackShape.HorizontalOffsetM:0.####} м, дискретная X={candidateShape.HorizontalOffsetM:0.####} м", IsFinite(fallbackShape.HorizontalOffsetM) && IsFinite(candidateShape.HorizontalOffsetM), "Координаты X должны быть конечными для визуализации и отчёта.");
 
         AppendElementDatabaseChecks(rows, result);
 
@@ -65,10 +65,10 @@ public static class MooringAutocheckSuite
         var failCount = rows.Count(x => x.Severity == MooringAutocheckSeverity.Fail);
         var hasFailures = failCount > 0;
         var summary = hasFailures
-            ? $"FAIL: {failCount} critical autochecks failed"
+            ? $"ОШИБКА: критичных проверок не пройдено: {failCount}"
             : warningCount > 0
-                ? $"WARNING: no critical failures, warnings={warningCount}"
-                : "OK: core autochecks passed";
+                ? $"ПРЕДУПРЕЖДЕНИЕ: критичных ошибок нет, предупреждений: {warningCount}"
+                : "ОК: базовые автопроверки пройдены";
 
         return new MooringAutocheckResult(
             rows,
@@ -78,22 +78,22 @@ public static class MooringAutocheckSuite
             failCount,
             hasFailures,
             summary,
-            "v0.43: scenario autochecks now include element database quality checks. They do not change physics; they flag missing names, presets, invalid counts, impossible line lengths, Cd/area inconsistencies, WLL/MBL issues and non-finite reserves.");
+            "v0.46.3: автопроверки включают контроль качества базы элементов и согласованности расчётных слоёв. Они не меняют физику; они показывают пропущенные названия, пресеты, неверные количества, длины, Cd/площадь, WLL/MBL и неконечные запасы.");
     }
 
     public static string BuildReportTable(MooringAutocheckResult result)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("## Scenario and element database autochecks v0.43");
+        sb.AppendLine("## Автопроверки сценариев и базы элементов v0.46.3");
         sb.AppendLine(result.MethodNote);
         sb.AppendLine();
-        sb.AppendLine($"Result: {result.Summary}; pass={result.PassCount}, info={result.InfoCount}, warning={result.WarningCount}, fail={result.FailCount}.");
+        sb.AppendLine($"Итог: {result.Summary}; пройдено={result.PassCount}, информация={result.InfoCount}, предупреждения={result.WarningCount}, ошибки={result.FailCount}.");
         sb.AppendLine();
-        sb.AppendLine("| # | Scenario | Check | Expected | Actual | Status | Note |");
+        sb.AppendLine("| № | Сценарий | Проверка | Ожидается | Фактически | Статус | Примечание |");
         sb.AppendLine("|---:|---|---|---|---|---|---|");
         foreach (var row in result.Rows)
         {
-            sb.AppendLine($"| {row.Number} | {Escape(row.Scenario)} | {Escape(row.CheckName)} | {Escape(row.Expected)} | {Escape(row.Actual)} | {row.Severity} | {Escape(row.Status)} |");
+            sb.AppendLine($"| {row.Number} | {Escape(row.Scenario)} | {Escape(row.CheckName)} | {Escape(row.Expected)} | {Escape(row.Actual)} | {SeverityRu(row.Severity)} | {Escape(row.Status)} |");
         }
         sb.AppendLine();
         return sb.ToString();
@@ -114,23 +114,23 @@ public static class MooringAutocheckSuite
         var nonFiniteReserve = elements.Count(x => !IsFinite(x.Reserve));
         var negativeBreakingLoad = elements.Count(x => x.BreakingLoadKn < 0 || x.WorkingLoadKn < 0);
 
-        Add(rows, "element-database", "Element rows exist", "ElementRows.Count > 0", $"count={elements.Count}", elements.Count > 0, "The report must have at least buoy, line and anchor rows.");
-        Add(rows, "element-database", "Element names are filled", "missing names = 0", $"missing={missingNames}", missingNames == 0, "Every database row should have a visible title.", MooringAutocheckSeverity.Warning);
-        Add(rows, "element-database", "Element kinds are filled", "missing kinds = 0", $"missing={missingKinds}", missingKinds == 0, "Every database row should have a kind/type.");
-        Add(rows, "element-database", "Preset names are filled", "missing presets = 0", $"missing={missingPresets}", missingPresets == 0, "Missing preset means the row is harder to trace back to the element database.", MooringAutocheckSeverity.Info);
-        Add(rows, "element-database", "Element counts are positive", "invalid counts = 0", $"invalid={invalidCounts}", invalidCounts == 0, "Each element row should have count > 0.");
-        Add(rows, "element-database", "No negative lengths", "negative lengths = 0", $"negative={negativeLengths}", negativeLengths == 0, "Length cannot be negative.");
-        Add(rows, "element-database", "Distributed line rows exist", "rows with Length > 0 >= 1", $"distributed={distributedRows}", distributedRows >= 1, "A mooring should normally contain at least one distributed line row.", MooringAutocheckSeverity.Warning);
-        Add(rows, "element-database", "Drag rows have Cd", "area > 0 => Cd > 0", $"bad={dragAreaWithoutCd}", dragAreaWithoutCd == 0, "Projected area without Cd makes current force suspicious.", MooringAutocheckSeverity.Warning);
-        Add(rows, "element-database", "Cd rows have area when force exists", "Cd > 0 and force > 0 => area > 0", $"bad={cdWithoutArea}", cdWithoutArea == 0, "Cd without projected area cannot explain current force.", MooringAutocheckSeverity.Warning);
-        Add(rows, "element-database", "WLL does not exceed MBL", "WLL <= MBL", $"bad={wllAboveMbl}", wllAboveMbl == 0, "Working load should not exceed breaking load.");
-        Add(rows, "element-database", "Loads are non-negative", "MBL/WLL >= 0", $"bad={negativeBreakingLoad}", negativeBreakingLoad == 0, "Strength values must not be negative.");
-        Add(rows, "element-database", "Reserve is finite", "Reserve finite", $"bad={nonFiniteReserve}", nonFiniteReserve == 0, "Reserve must be finite for report and checks.");
+        Add(rows, "база элементов", "Строки элементов есть", "Количество строк > 0", $"строк={elements.Count}", elements.Count > 0, "В отчёте должны быть минимум буй, линия и якорь.");
+        Add(rows, "база элементов", "Названия элементов заполнены", "пустых названий = 0", $"пустых={missingNames}", missingNames == 0, "У каждой строки должно быть видимое название.", MooringAutocheckSeverity.Warning);
+        Add(rows, "база элементов", "Типы элементов заполнены", "пустых типов = 0", $"пустых={missingKinds}", missingKinds == 0, "У каждой строки должен быть тип элемента.");
+        Add(rows, "база элементов", "Пресеты заполнены", "пустых пресетов = 0", $"пустых={missingPresets}", missingPresets == 0, "Пустой пресет ухудшает трассировку строки к базе элементов.", MooringAutocheckSeverity.Info);
+        Add(rows, "база элементов", "Количество положительное", "неверных количеств = 0", $"неверных={invalidCounts}", invalidCounts == 0, "Количество элемента должно быть больше нуля.");
+        Add(rows, "база элементов", "Нет отрицательных длин", "отрицательных длин = 0", $"отрицательных={negativeLengths}", negativeLengths == 0, "Длина не может быть отрицательной.");
+        Add(rows, "база элементов", "Есть распределённые участки", "строк с длиной > 0 >= 1", $"распределённых={distributedRows}", distributedRows >= 1, "В постановке обычно должен быть хотя бы один распределённый участок линии.", MooringAutocheckSeverity.Warning);
+        Add(rows, "база элементов", "Площадь имеет Cd", "A > 0 => Cd > 0", $"ошибок={dragAreaWithoutCd}", dragAreaWithoutCd == 0, "Площадь без Cd делает силу течения сомнительной.", MooringAutocheckSeverity.Warning);
+        Add(rows, "база элементов", "Cd имеет площадь при наличии силы", "Cd > 0 и сила > 0 => A > 0", $"ошибок={cdWithoutArea}", cdWithoutArea == 0, "Cd без площади не объясняет силу течения.", MooringAutocheckSeverity.Warning);
+        Add(rows, "база элементов", "WLL не больше MBL", "WLL <= MBL", $"ошибок={wllAboveMbl}", wllAboveMbl == 0, "Рабочая нагрузка не должна превышать разрывную.");
+        Add(rows, "база элементов", "Прочности неотрицательные", "MBL/WLL >= 0", $"ошибок={negativeBreakingLoad}", negativeBreakingLoad == 0, "Прочностные значения не должны быть отрицательными.");
+        Add(rows, "база элементов", "Запас конечен", "Запас конечен", $"ошибок={nonFiniteReserve}", nonFiniteReserve == 0, "Запас должен быть конечным для отчёта и проверок.");
     }
 
     private static void Add(List<MooringAutocheckRow> rows, string scenario, string checkName, string expected, string actual, bool passed, string note, MooringAutocheckSeverity failedSeverity = MooringAutocheckSeverity.Fail)
     {
-        rows.Add(new MooringAutocheckRow(rows.Count + 1, scenario, checkName, expected, actual, passed ? MooringAutocheckSeverity.Pass : failedSeverity, passed ? "OK" : note));
+        rows.Add(new MooringAutocheckRow(rows.Count + 1, scenario, checkName, expected, actual, passed ? MooringAutocheckSeverity.Pass : failedSeverity, passed ? "ОК" : note));
     }
 
     private static bool IsFinite(double value)
@@ -138,9 +138,21 @@ public static class MooringAutocheckSuite
         return !double.IsNaN(value) && !double.IsInfinity(value);
     }
 
-    private static string Bool(bool value)
+    private static string BoolRu(bool value)
     {
-        return value ? "YES" : "NO";
+        return value ? "да" : "нет";
+    }
+
+    private static string SeverityRu(MooringAutocheckSeverity value)
+    {
+        return value switch
+        {
+            MooringAutocheckSeverity.Pass => "ОК",
+            MooringAutocheckSeverity.Info => "Информация",
+            MooringAutocheckSeverity.Warning => "Предупреждение",
+            MooringAutocheckSeverity.Fail => "Ошибка",
+            _ => value.ToString()
+        };
     }
 
     private static string Escape(string value)
