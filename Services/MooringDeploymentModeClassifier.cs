@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using BuoyCalc.Windows.Models;
 
 namespace BuoyCalc.Windows.Services;
@@ -43,6 +44,44 @@ public static class MooringDeploymentModeClassifier
         MooringShapeResult primaryShape)
     {
         var depthM = Math.Max(0, environment.DepthM > 0 ? environment.DepthM : primaryShape.DepthM);
+        return BuildCore(result, primaryShape, depthM);
+    }
+
+    public static MooringDeploymentModeResult Build(
+        CalculationResult result,
+        MooringShapeResult primaryShape)
+    {
+        var depthM = Math.Max(0, primaryShape.DepthM);
+        return BuildCore(result, primaryShape, depthM);
+    }
+
+    public static string BuildReportTable(MooringDeploymentModeResult mode)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("## Режим постановки v0.41");
+        sb.AppendLine("Классификация режима не меняет solver. Она только помечает расчёт как surface/submerged/short/excess line/overloaded для отчёта и будущих правил.");
+        sb.AppendLine();
+        sb.AppendLine("| Параметр | Значение |");
+        sb.AppendLine("|---|---|");
+        sb.AppendLine($"| Режим | {mode.ModeCode} |");
+        sb.AppendLine($"| Название | {mode.Title} |");
+        sb.AppendLine($"| Глубина, м | {mode.DepthM:0.####} |");
+        sb.AppendLine($"| Длина линии, м | {mode.LineLengthM:0.####} |");
+        sb.AppendLine($"| L/Depth | {mode.LineToDepthRatio:0.####} |");
+        sb.AppendLine($"| Избыток линии, м | {mode.ExcessLineM:0.####} |");
+        sb.AppendLine($"| Недостаток линии, м | {mode.ShortageM:0.####} |");
+        sb.AppendLine($"| Глубина буя, м | {mode.BuoyDepthM:0.####} |");
+        sb.AppendLine($"| Чистая плавучесть, кг | {mode.NetBuoyancyKg:0.####} |");
+        sb.AppendLine($"| Статус | {mode.Status.Replace("|", "/")} |");
+        sb.AppendLine();
+        return sb.ToString();
+    }
+
+    private static MooringDeploymentModeResult BuildCore(
+        CalculationResult result,
+        MooringShapeResult primaryShape,
+        double depthM)
+    {
         var lineLengthM = Math.Max(0, result.LineLengthM > 0 ? result.LineLengthM : primaryShape.LineLengthM);
         var ratio = depthM > DepthToleranceM ? lineLengthM / depthM : 0;
         var shortageM = Math.Max(0, depthM - lineLengthM);
