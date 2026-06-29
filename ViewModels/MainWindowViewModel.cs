@@ -663,7 +663,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             ElementRows.Add(ElementCalculationDisplayRow.From(row));
         }
 
-        ResultText = $"Вердикт: {result.Verdict}\nГлавный риск: {result.MainRisk}\nГрунт: {environment.Seabed.DisplayName}\nТечение расчётное: {environment.EffectiveCurrentSpeedMS:0.###} м/с\nПлавучесть: {result.NetBuoyancyKg:0.##} кг\nНатяжение: {result.TensionKn:0.##} кН\nСлабое звено: {result.WeakLinkName}\nЗапас слабого звена: {result.TensionReserve:0.##}\nЗапас якоря: {result.AnchorReserve:0.##}";
+        ResultText = UserResultTextBuilder.Build(environment, result);
         ReportText = ReportBuilder.Build(ProjectName, environment, buoy, anchor, result);
         UpdateSequenceSummary(result);
         UpdateCurrentProfileSummary();
