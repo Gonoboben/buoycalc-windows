@@ -1,10 +1,10 @@
-# BuoyCalc Windows v0.40.2
+# BuoyCalc Windows v0.41
 
 Windows-ветка проекта BuoyCalc на C# + Avalonia.
 
 ## Статус
 
-v0.40.2 — безопасное уточнение после v0.40.1. Дискретные нагрузки уже подключены к выбору основной формы через gate, а теперь в полном отчёте появляется отдельная Markdown-таблица выбора основной формы.
+v0.41 выполняет этап плана: добавлена классификация режимов постановки `surface/submerged/short/excess line`. Классификация сделана безопасно: она не меняет solver, силы, натяжения или форму, а только добавляет явный режим в отчёт и подготавливает будущие правила расчёта.
 
 Старый `MooringShapeSolver` не удалён и остаётся fallback.
 
@@ -36,70 +36,85 @@ MooringPrimaryShapeSelectionResult
 MooringPrimaryShapeSelectionStore
 ```
 
-2. Логика выбора:
+2. Если gate даёт `CandidateReadyForPrimary`, в `MooringShapeStore` попадает форма с дискретными нагрузками.
+
+3. Если gate даёт `KeepCurrentMainShape` или `CandidateRejected`, в `MooringShapeStore` остаётся fallback-форма старого solver.
+
+## Что добавлено в v0.41
+
+1. Добавлен сервис:
 
 ```text
-fallback = MooringShapeSolver
-candidate = MooringIterativeSolver.FinalShape
-selection = MooringPrimaryShapeSelector.Select(fallback, candidate)
+Services/MooringDeploymentModeClassifier.cs
 ```
 
-3. Если gate даёт `CandidateReadyForPrimary`, в `MooringShapeStore` попадает форма с дискретными нагрузками.
-
-4. Если gate даёт `KeepCurrentMainShape` или `CandidateRejected`, в `MooringShapeStore` остаётся fallback-форма старого solver.
-
-## Что добавлено в v0.40.1
-
-В полный отчёт добавлен текстовый маркер выбора основной формы через `iterativeSolver.MethodNote`:
+2. Добавлены типы:
 
 ```text
-primaryShapeDecision
-primaryShapeSource
-usesDiscreteLoads
-fallbackX
-candidateX
-dX
-stopReason
+MooringDeploymentMode
+MooringDeploymentModeResult
 ```
 
-## Что добавлено в v0.40.2
-
-1. Текстовый маркер заменён на отдельную Markdown-таблицу:
+3. Поддерживаемые режимы:
 
 ```text
-## Выбор основной формы v0.40.2
+surface
+submerged
+short
+excess line
+overloaded
+unknown
 ```
 
-2. Таблица показывает:
+4. Классификатор проверяет:
 
 ```text
-Решение gate
-Источник основной формы
-Используются дискретные нагрузки
-Fallback X-снос
-Candidate X-снос
-ΔX candidate - fallback
-Candidate max Δузла
-Candidate Z-невязка
-Iterative solver converged
-Divergence guard
-StopReason
+глубину
+длину линии
+отношение L/Depth
+избыток линии
+недостаток линии
+глубину буя
+чистую плавучесть
+состояние буя из формы
 ```
 
-3. Таблица добавлена через `MooringIterativeSolverResult.MethodNote`. Это сделано специально безопасно: `ReportBuilder` уже выводит это поле, поэтому структура генератора отчёта не перестраивалась.
-
-4. В `AppInfo` отображаемая версия обновлена:
+5. В полный отчёт добавлена таблица:
 
 ```text
-v0.40.2 - primary shape selection table
+## Режим постановки v0.41
+```
+
+6. Таблица показывает:
+
+```text
+Режим
+Название
+Глубина
+Длина линии
+L/Depth
+Избыток линии
+Недостаток линии
+Глубина буя
+Чистая плавучесть
+Статус
+```
+
+7. Таблица добавлена через `MooringIterativeSolverResult.MethodNote`, как и таблица выбора основной формы. Это безопасный путь: `ReportBuilder` уже выводит это поле, поэтому структура генератора отчёта не перестраивалась.
+
+8. В `AppInfo` отображаемая версия обновлена:
+
+```text
+v0.41 - deployment modes
 ```
 
 ## Что не изменилось
 
-1. Старый `MooringShapeSolver` не удалён.
-2. Если кандидатная форма не прошла gate, приложение остаётся на старой форме.
-3. 2D/PDF продолжают брать основную форму из `MooringShapeStore`.
-4. Режимы постановки surface/submerged/short/excess line остаются задачей v0.41.
+1. Классификатор режима не меняет физику расчёта.
+2. Старый `MooringShapeSolver` не удалён.
+3. Если кандидатная форма не прошла gate, приложение остаётся на старой форме.
+4. 2D/PDF продолжают брать основную форму из `MooringShapeStore`.
+5. Тестовые сценарии и автопроверки остаются задачей v0.42.
 
 ## Как проверить
 
@@ -115,10 +130,20 @@ Build -> Rebuild Solution
 3. В полном отчёте найти:
 
 ```text
-Выбор основной формы v0.40.2
+Режим постановки v0.41
 ```
 
-4. Проверить строки таблицы: `Решение gate`, `Источник основной формы`, `Используются дискретные нагрузки`, `StopReason`.
+4. Проверить, что режим отображается как один из:
+
+```text
+surface
+submerged
+short
+excess line
+overloaded
+unknown
+```
+
 5. Проверить CI status:
 
 ```text
@@ -127,4 +152,4 @@ BuoyCalc Windows Build: success
 
 ## Следующий безопасный шаг
 
-Если v0.40.2 проходит CI и таблица читается нормально, можно переходить к v0.41: режимы постановки `surface/submerged/short/excess line`.
+Если v0.41 проходит CI, следующий этап по плану — v0.42: тестовые сценарии и автопроверки.
