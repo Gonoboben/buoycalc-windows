@@ -1,0 +1,30 @@
+name: .NET Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build BuoyCalc Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore BuoyCalc.Windows.csproj
+
+      - name: Build Release
+        run: dotnet build BuoyCalc.Windows.csproj --configuration Release --no-restore
