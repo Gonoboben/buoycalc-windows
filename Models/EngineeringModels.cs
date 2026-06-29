@@ -243,8 +243,19 @@ public static class BuoyCalculator
                 : "WARNING: каменистый грунт может ухудшать работу грузового якоря");
         }
 
-        var verdict = checks.Any(IsHardFailure) ? "Не подходит" : checks.Any(x => x.StartsWith("WARNING")) ? "Требуется проверка" : "Подходит";
-        var mainRisk = checks.FirstOrDefault(IsHardFailure) ?? checks.FirstOrDefault(x => x.StartsWith("WARNING")) ?? "Критичных рисков не найдено";
+        var hasRockDeadweightInfo = checks.Any(x => x.StartsWith("INFO: каменистый грунт", StringComparison.OrdinalIgnoreCase));
+        var verdict = checks.Any(IsHardFailure)
+            ? "Не подходит"
+            : checks.Any(x => x.StartsWith("WARNING"))
+                ? "Требуется проверка"
+                : hasRockDeadweightInfo
+                    ? "Подходит с примечанием"
+                    : "Подходит";
+        var mainRisk = checks.FirstOrDefault(IsHardFailure)
+            ?? checks.FirstOrDefault(x => x.StartsWith("WARNING"))
+            ?? (hasRockDeadweightInfo
+                ? "Критичных рисков не найдено; каменистый грунт требует проверки фактического контакта грузового якоря."
+                : "Критичных рисков не найдено");
 
         return new CalculationResult(
             verdict,
