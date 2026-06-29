@@ -1,124 +1,99 @@
-# BuoyCalc Windows v0.45
+# BuoyCalc Windows v0.45.1
 
-Windows branch of BuoyCalc on C# + Avalonia.
+Windows-ветка проекта BuoyCalc на C# + Avalonia.
 
-## Status
+## Статус
 
-v0.45 completes the planned PDF report structure step. The calculation model, solver, 2D coordinates and PDF diagrams were not changed. A dedicated PDF report structure block is now injected into the PDF export text stream before the full engineering report.
+v0.45.1 — уточнение после v0.45. По итогам проверки тестового PDF русифицированы пояснения структуры PDF и подписи элементов последовательности. Расчётная модель, solver, 2D-координаты и PDF-схемы не изменены.
 
-The old `MooringShapeSolver` remains available as fallback.
-
-## Version plan
+## План версий
 
 ```text
-v0.39   - iterative solver skeleton
-v0.39.1 - solver convergence criteria
-v0.39.2 - iteration report
-v0.39.3 - gate before candidate shape can become primary
-v0.40   - discrete loads in the primary solver path
-v0.40.1 - primary shape selection report
-v0.40.2 - primary shape selection table in report
-v0.41   - deployment modes: surface/submerged/short/excess line
-v0.42   - test scenarios and autochecks
-v0.43   - element database improvements
-v0.44   - sequence editor UX
-v0.45   - final PDF report structure
-v0.46   - release build preparation
+v0.39   — каркас итерационного solver
+v0.39.1 — критерии сходимости solver
+v0.39.2 — отчёт по итерациям
+v0.39.3 — gate перед подключением кандидатной формы как основной
+v0.40   — включение дискретных нагрузок в основной solver
+v0.40.1 — отчёт о выборе основной формы
+v0.40.2 — таблица выбора основной формы в отчёте
+v0.41   — режимы постановки: surface/submerged/short/excess line
+v0.42   — тестовые сценарии и автопроверки
+v0.43   — улучшение базы элементов
+v0.44   — UX редактора последовательности
+v0.45   — финальная структура PDF-отчёта
+v0.45.1 — русские пояснения PDF и цепочки
+v0.46   — подготовка release build
 ```
 
-## What was added in v0.45
+## Что изменено
 
-1. New service:
+1. Обновлён `Services/PdfReportStructureGuide.cs`.
+2. Заголовок PDF-блока теперь:
 
 ```text
-Services/PdfReportStructureGuide.cs
+## Структура PDF-отчёта v0.45.1
 ```
 
-2. The service adds the section:
+3. Разделы структуры PDF теперь на русском:
 
 ```text
-## PDF report structure v0.45
+Краткий итог расчёта
+Расчётная 2D-схема
+Сравнение форм
+Таблица элементов
+Полный инженерный отчёт
+Диагностика и ограничения
 ```
 
-3. The section defines the PDF order:
+4. Обновлён `ViewModels/AssemblyItemViewModel.cs`.
+5. Summary элементов последовательности теперь на русском:
 
 ```text
-1. Result summary
-2. Solver 2D scheme
-3. Shape comparison
-4. Element table
-5. Full engineering report
-6. Diagnostics and limitations
+активен | распределённая линия | ... | L=... м
+активен | точечный соединитель | ... | кол-во=1
+активен | дискретная нагрузка | ... | вес=... кг | A=... м2 | Cd=...
+отключён | ...
 ```
 
-4. The structure guide states the source of truth for each part:
+6. `EditorHint` также русифицирован.
+7. Версия приложения:
 
 ```text
-CalculationResult and EngineeringDiagnostics
-MooringShapeStore / MooringShapeSolver output
-main shape plus alternative discrete-load shape
-CalculationResult.ElementRows
-ReportBuilder markdown
-MethodNote fields from calculation services
+v0.45.1 - Russian PDF explanations
 ```
 
-5. `Views/MainWindow.axaml.cs` now applies the structure only during PDF export:
+## Что не изменилось
+
+1. Физика расчёта не изменилась.
+2. Solver не изменился.
+3. X/Z-координаты не изменились.
+4. PDF-схемы используют выходные данные расчётной модели.
+5. PDF не придумывает координаты, силы, натяжения или режим постановки.
+
+## Как проверить
+
+1. Выполнить расчёт.
+2. Экспортировать PDF.
+3. Найти в PDF:
 
 ```text
-var pdfReportText = PdfReportStructureGuide.Apply(viewModel.ReportText);
-PdfReportBuilder.Build(..., pdfReportText, ...);
+Структура PDF-отчёта v0.45.1
 ```
 
-6. The regular text report in the UI remains unchanged. The structure block is PDF-export specific.
-
-7. `AppInfo` display version is now:
+4. Проверить, что в цепочке больше нет строк:
 
 ```text
-v0.45 - PDF report structure
+active | distributed line
+point connector
+discrete payload
 ```
 
-## What did not change
-
-1. Physics did not change.
-2. Solver did not change.
-3. X/Z coordinates did not change.
-4. PDF diagrams still use model outputs from `MooringShapeStore` and related stores.
-5. No coordinates are invented in UI or PDF.
-6. Release build preparation remains v0.46.
-
-## How to check
-
-1. Pull the project locally:
-
-```text
-Git -> Pull
-Build -> Clean Solution
-Build -> Rebuild Solution
-```
-
-2. Run a calculation.
-3. Export PDF.
-4. In the full text report part of the PDF, find:
-
-```text
-PDF report structure v0.45
-```
-
-5. Confirm the PDF still contains:
-
-```text
-Result summary
-Solver 2D scheme
-Element table
-Full engineering report
-```
-
-6. Check CI status:
+5. Проверить CI:
 
 ```text
 BuoyCalc Windows Build: success
 ```
 
-## Next safe step
+## Следующий шаг
 
-If v0.45 passes CI, the next planned step is v0.46: release build preparation.
+После зелёного CI можно переходить к v0.46 — подготовка release build.
