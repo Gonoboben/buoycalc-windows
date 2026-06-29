@@ -167,6 +167,9 @@ public static class MooringIterativeSolver
         var last = rows.LastOrDefault();
         var finalStopReason = last?.StopReason ?? MooringIterativeSolverStopReason.NotStarted;
         var converged = last?.Converged ?? false;
+        var diverged = finalStopReason == MooringIterativeSolverStopReason.DivergenceGuard;
+        var selectionReportNote = BuildPrimarySelectionReportNote(initialShape, currentShape, converged, diverged, finalStopReason);
+
         return new MooringIterativeSolverResult(
             rows,
             currentShape,
@@ -175,12 +178,12 @@ public static class MooringIterativeSolver
             last?.OffsetChangeM ?? 0,
             last?.MaxNodeDeltaM ?? 0,
             last?.GeometryResidualM ?? 0,
-            finalStopReason == MooringIterativeSolverStopReason.DivergenceGuard,
+            diverged,
             criteria,
             finalStopReason,
             last?.StopReasonText ?? DescribeStopReason(finalStopReason),
             BuildConvergenceCriterion(criteria),
-            "v0.40: итерационный solver остаётся источником кандидатной формы с дискретными нагрузками. Решение о том, станет ли она основной формой, принимает MooringPrimaryShapeSelector через MooringPrimaryShapeGate.");
+            "v0.40.1: итерационный solver остаётся источником кандидатной формы с дискретными нагрузками, а полный отчёт теперь содержит решение выбора основной формы через MethodNote. " + selectionReportNote);
     }
 
     private static MooringIterativeSolverCriteria BuildCriteria(int requestedMaxIterations, MooringShapeResult initialShape)
@@ -211,7 +214,7 @@ public static class MooringIterativeSolver
             MooringIterativeSolverStopReason.InvalidInput,
             DescribeStopReason(MooringIterativeSolverStopReason.InvalidInput),
             BuildConvergenceCriterion(criteria),
-            note);
+            note + " v0.40.1 report: primaryShapeDecision=KeepCurrentMainShape; primaryShapeSource=MooringShapeSolver fallback; usesDiscreteLoads=NO.");
     }
 
     private static IReadOnlyList<SegmentTensionRow> BuildFeedbackTensions(MooringShapeTensionResult shapeTensions)
@@ -330,7 +333,31 @@ public static class MooringIterativeSolver
 
     private static string BuildConvergenceCriterion(MooringIterativeSolverCriteria criteria)
     {
-        return $"v0.40: сходимость = |ΔXсноса| ≤ {criteria.OffsetToleranceM:0.####} м, max Δузла ≤ {criteria.NodeDeltaToleranceM:0.####} м, |невязка Z| ≤ {criteria.GeometryResidualToleranceM:0.####} м. Лимит итераций: {criteria.MaxIterations}. Защитная остановка: |ΔX| > {criteria.DivergenceOffsetChangeM:0.####} м или max Δузла > {criteria.DivergenceNodeDeltaM:0.####} м.";
+        return $"v0.40.1: сходимость = |ΔXсноса| ≤ {criteria.OffsetToleranceM:0.####} м, max Δузла ≤ {criteria.NodeDeltaToleranceM:0.####} м, |невязка Z| ≤ {criteria.GeometryResidualToleranceM:0.####} м. Лимит итераций: {criteria.MaxIterations}. Защитная остановка: |ΔX| > {criteria.DivergenceOffsetChangeM:0.####} м или max Δузла > {criteria.DivergenceNodeDeltaM:0.####} м.";
+    }
+
+    private static string BuildPrimarySelectionReportNote(
+        MooringShapeResult fallbackShape,
+        MooringShapeResult candidateShape,
+        bool converged,
+        bool diverged,
+        MooringIterativeSolverStopReason stopReason)
+    {
+        var candidateAvailable = candidateShape.Nodes.Count >= 2;
+        var candidateReady = candidateAvailable &&
+            converged &&
+            !diverged &&
+            stopReason == MooringIterativeSolverStopReason.Converged;
+        var decision = candidateReady
+            ? "CandidateReadyForPrimary"
+            : candidateAvailable
+                ? "CandidateRejected"
+                : "KeepCurrentMainShape";
+        var source = candidateReady ? "MooringIterativeSolver.FinalShape" : "MooringShapeSolver fallback";
+        var usesDiscreteLoads = candidateReady ? "YES" : "NO";
+        var offsetDifferenceM = candidateShape.HorizontalOffsetM - fallbackShape.HorizontalOffsetM;
+
+        return $"v0.40.1 report: primaryShapeDecision={decision}; primaryShapeSource={source}; usesDiscreteLoads={usesDiscreteLoads}; fallbackX={fallbackShape.HorizontalOffsetM:0.####} м; candidateX={candidateShape.HorizontalOffsetM:0.####} м; ΔX={offsetDifferenceM:0.####} м; stopReason={stopReason}.";
     }
 
     private static MooringShapeResult ToShapeResult(
@@ -375,11 +402,11 @@ public static class MooringIterativeSolver
             horizontalOffsetM,
             verticalResidualM,
             converged,
-            $"v0.40: временная форма итерации {iteration}; получена из альтернативной формы с дискретными нагрузками. Может стать основной только через MooringPrimaryShapeGate.",
+            $"v0.40.1: временная форма итерации {iteration}; получена из альтернативной формы с дискретными нагрузками. Может стать основной только через MooringPrimaryShapeGate.",
             iteration,
             verticalResidualM,
             nextShape.AngleScale,
-            $"v0.40 feedback: |ΔXсноса|={Math.Abs(offsetChangeM):0.####} м, max Δузла={nextShape.MaxNodeDeltaM:0.####} м");
+            $"v0.40.1 feedback: |ΔXсноса|={Math.Abs(offsetChangeM):0.####} м, max Δузла={nextShape.MaxNodeDeltaM:0.####} м");
     }
 }
 
