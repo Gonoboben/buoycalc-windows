@@ -11,7 +11,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
 {
     private bool _isEnabled = true;
     private string _kind = "Line";
-    private string _title = "Line segment";
+    private string _title = "Участок линии";
     private string _ropePresetStorageId = "built-in:polyester_20";
     private string _connectorPresetStorageId = "built-in:shackle_55";
     private string _payloadPresetStorageId = "built-in:adcp_40";
@@ -83,16 +83,16 @@ public sealed class AssemblyItemViewModel : ViewModelBase
 
     public string KindDisplayName => ParseKind(Kind) switch
     {
-        AssemblyItemKind.Connector => "Connector",
-        AssemblyItemKind.Payload => "Payload",
-        _ => "Line"
+        AssemblyItemKind.Connector => "Соединитель",
+        AssemblyItemKind.Payload => "Прибор",
+        _ => "Линия"
     };
 
     public string EditorHint => ParseKind(Kind) switch
     {
-        AssemblyItemKind.Connector => "Point connector: count is fixed to 1; position comes from sequence order.",
-        AssemblyItemKind.Payload => "Discrete payload: weight, volume, area and Cd come from the payload preset.",
-        _ => "Distributed line: length contributes to total line length and X/Z shape."
+        AssemblyItemKind.Connector => "Точечный соединитель: количество фиксировано 1, положение задаётся порядком в цепочке.",
+        AssemblyItemKind.Payload => "Дискретная нагрузка: вес, объём, площадь и Cd берутся из пресета прибора.",
+        _ => "Распределённый участок: длина входит в общую длину линии и форму X/Z."
     };
 
     public string Title
@@ -198,12 +198,12 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     {
         get
         {
-            var state = IsEnabled ? "active" : "disabled";
+            var state = IsEnabled ? "активен" : "отключён";
             return ParseKind(Kind) switch
             {
-                AssemblyItemKind.Connector => $"{state} | point connector | {GetConnectorDisplayName(_connectorPresetStorageId)} | count=1",
-                AssemblyItemKind.Payload => $"{state} | discrete payload | {GetPayloadDisplayName(_payloadPresetStorageId)} | weight={PayloadWeightAirKg} kg | A={PayloadProjectedAreaM2} m2 | Cd={PayloadDragCoefficient}",
-                _ => $"{state} | distributed line | {GetRopeDisplayName(_ropePresetStorageId)} | L={LengthM} m"
+                AssemblyItemKind.Connector => $"{state} | точечный соединитель | {GetConnectorDisplayName(_connectorPresetStorageId)} | кол-во=1",
+                AssemblyItemKind.Payload => $"{state} | дискретная нагрузка | {GetPayloadDisplayName(_payloadPresetStorageId)} | вес={PayloadWeightAirKg} кг | A={PayloadProjectedAreaM2} м2 | Cd={PayloadDragCoefficient}",
+                _ => $"{state} | распределённая линия | {GetRopeDisplayName(_ropePresetStorageId)} | L={LengthM} м"
             };
         }
     }
@@ -226,7 +226,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         {
             IsEnabled = IsEnabled,
             Kind = Kind,
-            Title = $"{Title} copy",
+            Title = $"{Title} копия",
             RopePresetStorageId = RopePresetStorageId,
             ConnectorPresetStorageId = ConnectorPresetStorageId,
             PayloadPresetStorageId = PayloadPresetStorageId,
@@ -265,7 +265,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         PayloadVolumeM3 = FormatDouble(payload.VolumeM3);
         PayloadProjectedAreaM2 = FormatDouble(payload.ProjectedAreaM2);
         PayloadDragCoefficient = FormatDouble(payload.DragCoefficient);
-        if (string.IsNullOrWhiteSpace(Title) || Title is "New payload" or "Payload")
+        if (string.IsNullOrWhiteSpace(Title) || Title is "Новый прибор" or "Прибор" or "New payload" or "Payload")
         {
             Title = payload.Name;
         }
