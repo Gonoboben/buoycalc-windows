@@ -45,6 +45,7 @@ public static class PdfReportBuilder
         writer.BeginPage();
         writer.Title("BuoyCalc Windows - предварительный отчёт");
         writer.Text($"Проект: {projectName}");
+        writer.Text($"Версия расчётной модели: {AppInfo.DisplayVersion}");
         writer.Space(12);
 
         writer.Section("Результат");
@@ -276,7 +277,7 @@ public static class PdfReportBuilder
 
         public void ElementTable(IReadOnlyList<ElementCalculationDisplayRow> rows)
         {
-            var headers = new[] { "№", "Тип", "Элемент", "Вес", "Сила", "Запас", "Статус" };
+            var headers = new[] { "№", "Тип", "Элемент", "Вес в воде", "Fx, Н", "Запас", "Статус" };
             var widths = new[] { 24f, 58f, 142f, 58f, 58f, 48f, 134f };
             DrawTableRow(headers, widths, true);
 
@@ -370,7 +371,7 @@ public static class PdfReportBuilder
         private void DrawFooter()
         {
             using var paint = CreatePaint(8, false);
-            _canvas!.DrawText($"BuoyCalc Windows · стр. {_pageNumber}", Margin, PageHeight - 18, paint);
+            _canvas!.DrawText($"BuoyCalc Windows {AppInfo.Version} · стр. {_pageNumber}", Margin, PageHeight - 18, paint);
         }
 
         private IEnumerable<string> Wrap(string text, float size, float maxWidth)
