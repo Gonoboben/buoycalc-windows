@@ -70,7 +70,14 @@ public static class MooringShapeSolver
         var anchorDepthM = anchorPoint?.ZDepthM ?? 0;
         var verticalResidualM = Math.Abs(targetAnchorDepthM - anchorDepthM);
         var buoyState = DetermineBuoyState(result, targetAnchorDepthM, lineLengthM, buoyPoint);
-        var converged = iteration.ResidualM <= DepthToleranceM && iteration.Converged;
+        var lineShorterThanDepth = targetAnchorDepthM > 0 && lineLengthM + DepthToleranceM < targetAnchorDepthM;
+        var converged = iteration.ResidualM <= DepthToleranceM && iteration.Converged && !lineShorterThanDepth;
+        var methodNote = lineShorterThanDepth
+            ? "v0.38.2: линия короче глубины. Форма построена как геометрия погружённого буя, но не считается сходимостью нормальной поверхностной постановки. Волновая нагрузка при этом не отключается."
+            : "v0.38.2: итерационная геометрическая сходимость формы включена. Углы сегментов берутся из накопленных сил, затем масштаб углов подбирается бисекцией так, чтобы якорный узел попал на проектную глубину. Это ещё не полный нелинейный solver равновесия сил и формы.";
+        var criterion = lineShorterThanDepth
+            ? $"Для поверхностной постановки требуется L ≥ Depth; сейчас L={lineLengthM:0.####} м < Depth={targetAnchorDepthM:0.####} м"
+            : $"|Zякоря - Depth| ≤ {DepthToleranceM:0.####} м";
 
         return new MooringShapeResult(
             nodes,
@@ -82,11 +89,11 @@ public static class MooringShapeSolver
             horizontalOffsetM,
             verticalResidualM,
             converged,
-            $"v0.29: итерационная геометрическая сходимость формы включена. Углы сегментов берутся из накопленных сил, затем масштаб углов подбирается бисекцией так, чтобы якорный узел попал на проектную глубину. Это ещё не полный нелинейный solver равновесия сил и формы.",
+            methodNote,
             iteration.Iterations,
             iteration.ResidualM,
             iteration.AngleScale,
-            $"|Zякоря - Depth| ≤ {DepthToleranceM:0.####} м");
+            criterion);
     }
 
     private static MooringShapeResult EmptyResult(double depthM, double lineLengthM, string note)
@@ -116,7 +123,8 @@ public static class MooringShapeSolver
     {
         if (lineLengthM <= targetAnchorDepthM)
         {
-            return new IterationResult(1.0, 0, true, 0);
+            var residual = Math.Abs(targetAnchorDepthM - lineLengthM);
+            return new IterationResult(1.0, 0, lineLengthM >= targetAnchorDepthM, residual);
         }
 
         var targetVerticalSpanM = targetAnchorDepthM;
@@ -168,6 +176,7 @@ public static class MooringShapeSolver
         var topNodeDepthM = Math.Max(0, targetAnchorDepthM - verticalSpanM);
         var firstSegment = orderedSegments.First();
         var lastSegment = orderedSegments.Last();
+        var lineShorterThanDepth = targetAnchorDepthM > 0 && lineLengthM + DepthToleranceM < targetAnchorDepthM;
 
         tensionRows.TryGetValue(firstSegment.Number, out var firstTension);
         nodes.Add(new MooringShapePoint(
@@ -180,7 +189,7 @@ public static class MooringShapeSolver
             0,
             ScaleAngle(firstTension?.AngleFromVerticalDeg ?? 0, angleScale, lineLengthM, targetAnchorDepthM),
             firstTension?.TensionKn ?? 0,
-            "INFO: буй, граничный узел"));
+            lineShorterThanDepth ? "WARNING: буй ниже поверхности из-за короткой линии" : "INFO: буй, граничный узел"));
 
         var alongLineM = 0.0;
         var xOffsetM = 0.0;
@@ -208,7 +217,7 @@ public static class MooringShapeSolver
                 segmentLengthM,
                 angleDeg,
                 tension?.TensionKn ?? 0,
-                isBottomNode ? "INFO: якорь на дне, граничный узел" : "OK"));
+                isBottomNode ? "INFO: якорь на дне, граничный узел" : lineShorterThanDepth ? "WARNING: участок короткой линии / погружённая постановка" : "OK"));
         }
 
         return nodes;
@@ -252,17 +261,17 @@ public static class MooringShapeSolver
             return BuoyShapeState.Unknown;
         }
 
+        if (lineLengthM + DepthToleranceM < depthM)
+        {
+            return BuoyShapeState.Submerged;
+        }
+
         if (buoyPoint.ZDepthM <= Math.Max(0.05, depthM * 0.01))
         {
             return BuoyShapeState.Surface;
         }
 
-        if (lineLengthM < depthM)
-        {
-            return BuoyShapeState.Submerged;
-        }
-
-        return BuoyShapeState.Surface;
+        return BuoyShapeState.Submerged;
     }
 
     private sealed record IterationResult(double AngleScale, int Iterations, bool Converged, double ResidualM);
