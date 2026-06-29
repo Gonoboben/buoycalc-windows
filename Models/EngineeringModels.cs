@@ -142,6 +142,8 @@ public record CalculationResult(
 
 public static class BuoyCalculator
 {
+    private const double HighAnchorReserveForRockDeadweightNote = 10.0;
+
     public static CalculationResult Calculate(
         EnvironmentInput environment,
         BuoyInput buoy,
@@ -221,6 +223,7 @@ public static class BuoyCalculator
             lineLength >= environment.DepthM ? "OK: длина линии не меньше глубины" : "FAILED: линия короче глубины",
             structuralRows.Count > 0 ? "OK: найдено слабое звено цепочки" : "WARNING: нет элементов с MBL для проверки слабого звена",
             tensionReserve >= 1 ? "OK: запас по слабому звену" : "WARNING: малый запас по слабому звену",
+            anchorWeightWater > 0 ? "OK: якорь имеет положительный вес в воде" : "ERROR: якорь имеет нулевой или отрицательный вес в воде; удержание невозможно",
             anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря",
             environment.Seabed.Id == "unknown" ? "WARNING: грунт не задан точно" : $"OK: грунт учтён: {environment.Seabed.Name}",
             environment.UseCurrentProfile ? $"INFO: используется профиль течения; линия разбита на {segmentRows.Count} расчётных сегментов" : $"INFO: используется одно значение скорости течения = {currentSpeedMS:0.####} м/с; линия разбита на {segmentRows.Count} расчётных сегментов",
@@ -235,11 +238,13 @@ public static class BuoyCalculator
 
         if (environment.Seabed.Id == "rock" && IsDeadweightAnchor(anchor.Type))
         {
-            checks.Add("WARNING: каменистый грунт может ухудшать работу грузового якоря");
+            checks.Add(anchorReserve >= HighAnchorReserveForRockDeadweightNote
+                ? $"INFO: каменистый грунт снижает предсказуемость работы грузового якоря, но запас якоря большой ({anchorReserve:0.####})"
+                : "WARNING: каменистый грунт может ухудшать работу грузового якоря");
         }
 
-        var verdict = checks.Any(x => x.StartsWith("FAILED")) ? "Не подходит" : checks.Any(x => x.StartsWith("WARNING")) ? "Требуется проверка" : "Подходит";
-        var mainRisk = checks.FirstOrDefault(x => x.StartsWith("FAILED")) ?? checks.FirstOrDefault(x => x.StartsWith("WARNING")) ?? "Критичных рисков не найдено";
+        var verdict = checks.Any(IsHardFailure) ? "Не подходит" : checks.Any(x => x.StartsWith("WARNING")) ? "Требуется проверка" : "Подходит";
+        var mainRisk = checks.FirstOrDefault(IsHardFailure) ?? checks.FirstOrDefault(x => x.StartsWith("WARNING")) ?? "Критичных рисков не найдено";
 
         return new CalculationResult(
             verdict,
@@ -387,7 +392,7 @@ public static class BuoyCalculator
             0,
             0,
             anchorReserve,
-            anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря"));
+            anchorWeightWaterKg <= 0 ? "ERROR: якорь имеет отрицательный вес в воде" : anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря"));
 
         return rows;
     }
@@ -526,6 +531,13 @@ public static class BuoyCalculator
     {
         var value = (type ?? string.Empty).ToLowerInvariant();
         return value.Contains("deadweight") || value.Contains("груз") || value.Contains("concrete") || value.Contains("бетон");
+    }
+
+    private static bool IsHardFailure(string value)
+    {
+        value ??= string.Empty;
+        return value.StartsWith("FAILED", StringComparison.OrdinalIgnoreCase) ||
+               value.StartsWith("ERROR", StringComparison.OrdinalIgnoreCase);
     }
 
     private static double WeightInWaterKg(double weightAirKg, double volumeM3, double waterDensityKgM3)
