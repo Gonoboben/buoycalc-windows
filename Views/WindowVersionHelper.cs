@@ -6,8 +6,8 @@ namespace BuoyCalc.Windows.Views;
 
 internal static class WindowVersionHelper
 {
-    private const string CurrentVersion = "v0.37";
-    private const string CurrentVersionNote = "2D comparison";
+    private const string CurrentVersion = "v0.37.1";
+    private const string CurrentVersionNote = "build CI";
 
     private static readonly string[] LegacyVersionTexts =
     {
@@ -16,7 +16,8 @@ internal static class WindowVersionHelper
         "v0.21.3",
         "v0.21.3 cleanup",
         "v0.24.4",
-        "v0.36 - alt XZ nodes"
+        "v0.36 - alt XZ nodes",
+        "v0.37 - 2D comparison"
     };
 
     public static void Apply(Window window, string titlePrefix)
