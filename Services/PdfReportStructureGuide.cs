@@ -7,9 +7,9 @@ public static class PdfReportStructureGuide
     public static string Apply(string reportText)
     {
         var text = reportText ?? string.Empty;
-        if (text.Contains("## PDF report structure v0.45"))
+        if (text.Contains("## Структура PDF-отчёта v0.45.1") || text.Contains("## PDF report structure v0.45"))
         {
-            return text;
+            return text.Replace("## PDF report structure v0.45", "## Структура PDF-отчёта v0.45.1");
         }
 
         return BuildMarkdown() + text;
@@ -18,19 +18,19 @@ public static class PdfReportStructureGuide
     private static string BuildMarkdown()
     {
         var sb = new StringBuilder();
-        sb.AppendLine("## PDF report structure v0.45");
-        sb.AppendLine("This block is added only to the PDF export text stream. It defines the final report order without changing solver physics or X/Z coordinates.");
+        sb.AppendLine("## Структура PDF-отчёта v0.45.1");
+        sb.AppendLine("Этот блок добавляется только при экспорте PDF. Он фиксирует порядок итогового отчёта и не меняет физику solver, координаты X/Z, силы или натяжения.");
         sb.AppendLine();
-        sb.AppendLine("| Part | Purpose | Source of truth |");
+        sb.AppendLine("| № | Раздел | Источник данных |");
         sb.AppendLine("|---:|---|---|");
-        sb.AppendLine("| 1 | Result summary | CalculationResult and EngineeringDiagnostics |");
-        sb.AppendLine("| 2 | Solver 2D scheme | MooringShapeStore / MooringShapeSolver output |");
-        sb.AppendLine("| 3 | Shape comparison | Main shape plus alternative discrete-load shape when available |");
-        sb.AppendLine("| 4 | Element table | CalculationResult.ElementRows |");
-        sb.AppendLine("| 5 | Full engineering report | ReportBuilder markdown |");
-        sb.AppendLine("| 6 | Diagnostics and limitations | MethodNote fields from calculation services |");
+        sb.AppendLine("| 1 | Краткий итог расчёта | CalculationResult и инженерная диагностика |");
+        sb.AppendLine("| 2 | Расчётная 2D-схема | MooringShapeStore и результат solver формы |");
+        sb.AppendLine("| 3 | Сравнение форм | Основная форма и альтернативная форма с дискретными нагрузками, если она доступна |");
+        sb.AppendLine("| 4 | Таблица элементов | CalculationResult.ElementRows |");
+        sb.AppendLine("| 5 | Полный инженерный отчёт | Markdown-отчёт ReportBuilder |");
+        sb.AppendLine("| 6 | Диагностика и ограничения | MethodNote расчётных сервисов |");
         sb.AppendLine();
-        sb.AppendLine("Rule: PDF pages and diagrams must display model outputs only. They must not invent coordinates, forces, tensions or deployment states.");
+        sb.AppendLine("Правило: PDF-страницы и схемы только отображают выходные данные расчётной модели. PDF не должен придумывать координаты, силы, натяжения или режим постановки.");
         sb.AppendLine();
         return sb.ToString();
     }
