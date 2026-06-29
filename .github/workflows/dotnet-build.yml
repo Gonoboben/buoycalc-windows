@@ -9,6 +9,10 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   build:
     name: Build BuoyCalc Windows
@@ -23,8 +27,47 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore dependencies
-        run: dotnet restore BuoyCalc.Windows.csproj
+      - name: Restore and build with commit status
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $statusUrl = "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}"
+          $targetUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
 
-      - name: Build Release
-        run: dotnet build BuoyCalc.Windows.csproj --configuration Release --no-restore
+          function Set-BuoyCalcStatus([string]$state, [string]$description) {
+            $body = @{
+              state = $state
+              context = "BuoyCalc Windows Build"
+              description = $description
+              target_url = $targetUrl
+            } | ConvertTo-Json
+
+            Invoke-RestMethod -Uri $statusUrl -Method Post -Headers $headers -ContentType "application/json" -Body $body | Out-Null
+          }
+
+          Set-BuoyCalcStatus "pending" "Build started"
+
+          try {
+            dotnet restore BuoyCalc.Windows.csproj
+            if ($LASTEXITCODE -ne 0) {
+              throw "dotnet restore failed with exit code $LASTEXITCODE"
+            }
+
+            dotnet build BuoyCalc.Windows.csproj --configuration Release --no-restore
+            if ($LASTEXITCODE -ne 0) {
+              throw "dotnet build failed with exit code $LASTEXITCODE"
+            }
+
+            Set-BuoyCalcStatus "success" "Build succeeded"
+          }
+          catch {
+            Set-BuoyCalcStatus "failure" "Build failed"
+            throw
+          }
