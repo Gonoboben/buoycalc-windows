@@ -45,28 +45,30 @@ public static class PdfReportBuilder
                 ?? TryReadReportMetric(reportText, "- Горизонтальный снос по узлам X/Z:")
                 ?? visualizationOffsetM;
         var clarifiedResultText = NormalizeResultText(resultText, shapeOffsetM);
-        var pdfReportText = RemovePrimaryShapeSections(reportText);
 
         writer.BeginPage();
-        writer.Title("BuoyCalc Windows - предварительный отчёт");
+        writer.Title("BuoyCalc Windows - пользовательский отчёт");
         writer.Text($"Проект: {projectName}");
         writer.Text($"Версия расчётной модели: {AppInfo.DisplayVersion}");
         writer.Space(12);
-        writer.Section("Результат");
+        writer.Section("Краткий итог");
         writer.Multiline(clarifiedResultText, 11);
+        writer.Space(12);
+        writer.Section("Назначение отчёта");
+        writer.Text("Этот PDF предназначен для пользователя: итог, схема постановки, цепочка и таблица элементов. Полный технический отчёт с диагностическими таблицами открывается отдельно в окне Полный отчёт.", 10);
         writer.EndPage();
 
         writer.BeginPage();
         writer.Title("Схема постановки");
         if (hasAlternativeShape)
         {
-            writer.Text("Расчётная 2D-схема PDF построена по форме с дискретными элементами. Эта форма ближе к натурной цепочке: учитывает приборы, соединители и локальные нагрузки. Внутренняя fallback-форма в PDF не выводится.", 10);
+            writer.Text("Расчётная 2D-схема PDF построена по форме с дискретными элементами. Эта форма ближе к натурной цепочке: учитывает приборы, соединители и локальные нагрузки. Техническая fallback-форма в пользовательский PDF не выводится.", 10);
             writer.Space(10);
             writer.AlternativeShapeDiagram(alternativeShape!);
         }
         else
         {
-            writer.Text("Форма с дискретными элементами пока недоступна. Основная/fallback форма в PDF не выводится; она остаётся внутренней страховкой расчёта.", 10);
+            writer.Text("Форма с дискретными элементами пока недоступна. Пользовательский PDF не выводит техническую fallback-форму.", 10);
             writer.Text($"Глубина: {visualizationDepthM:0.##} м; длина линии: {visualizationLineLengthM:0.##} м; расчётный снос: {shapeOffsetM:0.##} м.", 10);
         }
 
@@ -82,8 +84,8 @@ public static class PdfReportBuilder
         writer.Title("Таблица элементов");
         writer.ElementTable(elementRows.ToList());
         writer.Space(10);
-        writer.Section("Полный текстовый отчёт");
-        writer.Multiline(pdfReportText, 7.2f);
+        writer.Section("Примечание");
+        writer.Text("Подробные solver-таблицы, промежуточные формы, диагностические ведомости и служебные проверки не включены в пользовательский PDF. Они остаются в полном техническом отчёте приложения.", 10);
         writer.EndPage();
         document.Close();
     }
@@ -109,38 +111,6 @@ public static class PdfReportBuilder
         }
 
         return string.Join("\n", lines);
-    }
-
-    private static string RemovePrimaryShapeSections(string reportText)
-    {
-        var lines = (reportText ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        var result = new List<string>();
-        var skip = false;
-
-        foreach (var line in lines)
-        {
-            if (line.StartsWith("## Выбор основной формы", StringComparison.OrdinalIgnoreCase))
-            {
-                skip = true;
-                continue;
-            }
-
-            if (skip && line.StartsWith("## ", StringComparison.OrdinalIgnoreCase))
-            {
-                skip = false;
-            }
-
-            if (!skip &&
-                !line.Contains("primaryShape", StringComparison.OrdinalIgnoreCase) &&
-                !line.Contains("основная форма", StringComparison.OrdinalIgnoreCase) &&
-                !line.Contains("fallback-форма", StringComparison.OrdinalIgnoreCase) &&
-                !line.Contains("MooringShapeSolver fallback", StringComparison.OrdinalIgnoreCase))
-            {
-                result.Add(line);
-            }
-        }
-
-        return string.Join("\n", result);
     }
 
     private static double? TryReadReportMetric(string reportText, string label)
