@@ -40,7 +40,9 @@ public static class MooringAlternativeDiscreteNodeProjector
     {
         if (positions.Rows.Count == 0 || alternativeShape.Rows.Count == 0)
         {
-            return Empty("Нет позиционной модели или альтернативной формы для проекции дискретных X/Z-узлов.");
+            var empty = Empty("Нет позиционной модели или альтернативной формы для проекции дискретных X/Z-узлов.");
+            MooringAlternativeShapeStore.Clear();
+            return empty;
         }
 
         var candidateRows = positions.Rows
@@ -56,7 +58,6 @@ public static class MooringAlternativeDiscreteNodeProjector
             var originalPoint = InterpolateOriginal(originalShape, item.PositionAlongLineM);
             var deltaX = alternativePoint.X - originalPoint.X;
             var deltaZ = alternativePoint.Z - originalPoint.Z;
-            var nodeDeltaM = Math.Sqrt(deltaX * deltaX + deltaZ * deltaZ);
             var isInternalDiscreteLoad = item.Kind != "Буй" && item.Kind != "Якорь";
 
             rows.Add(new MooringAlternativeDiscreteNodeRow(
@@ -84,13 +85,16 @@ public static class MooringAlternativeDiscreteNodeProjector
         }
 
         var internalRows = rows.Where(x => x.Kind != "Буй" && x.Kind != "Якорь").ToList();
-        return new MooringAlternativeDiscreteNodeResult(
+        var result = new MooringAlternativeDiscreteNodeResult(
             rows,
             internalRows.Count,
             internalRows.Sum(x => x.WeightWaterKg),
             internalRows.Sum(x => x.CurrentForceN),
             rows.Count > 0 ? rows.Max(x => Math.Sqrt(x.DeltaXM * x.DeltaXM + x.DeltaZM * x.DeltaZM)) : 0,
-            "v0.36: дискретные элементы спроецированы на альтернативную X/Z-форму как отдельные точки. Это отчётный слой; основной solver и 2D-визуализация пока не заменены.");
+            "v0.37: дискретные элементы спроецированы на альтернативную X/Z-форму как отдельные точки и переданы в хранилище для 2D-сравнения. Это отчётно-визуальный слой; основной solver пока не заменён.");
+
+        MooringAlternativeShapeStore.Set(alternativeShape, result);
+        return result;
     }
 
     private static MooringAlternativeDiscreteNodeResult Empty(string note)
