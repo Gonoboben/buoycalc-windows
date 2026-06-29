@@ -170,3 +170,54 @@ refactor: introduce UserStatusPolicy
 ```text
 ожидает проверки после коммита
 ```
+
+## 2026-06-29 — введён UserStatusPolicy
+
+Пункт плана:
+
+```text
+3. UserStatusPolicy
+```
+
+Статус: начат и подключён к первому display-слою.
+
+Что изменено:
+
+```text
+Добавлен Services/UserStatusPolicy.cs.
+Политика переводит технические префиксы OK / INFO / WARNING / FAILED / ERROR в пользовательские формулировки.
+Services/VerdictDisplayAdvisor.cs подключён к UserStatusPolicy для отображаемого вердикта и главного риска.
+```
+
+Что сознательно не трогали:
+
+```text
+BuoyCalculator
+CalculationResult
+технические Checks
+ReportBuilder
+PDF builder
+MooringShapeSolver
+Mooring2DCanvas
+XAML-разметку окон
+расчётную модель
+```
+
+Почему это важно:
+
+```text
+Технические статусы остаются внутри расчётного ядра и диагностики.
+Пользовательские формулировки начинают собираться на границе отображения.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: wire UserStatusPolicy into short UI summary
+```
+
+Статус CI:
+
+```text
+ожидает проверки после коммита
+```
