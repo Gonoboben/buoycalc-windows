@@ -221,3 +221,52 @@ refactor: wire UserStatusPolicy into short UI summary
 ```text
 ожидает проверки после коммита
 ```
+
+## 2026-06-29 — UserStatusPolicy подключён к таблице элементов
+
+Пункт плана:
+
+```text
+3. UserStatusPolicy
+```
+
+Статус: продолжено для пользовательского UI/PDF-вывода.
+
+Что изменено:
+
+```text
+Models/ElementCalculationDisplayRow.cs теперь переводит row.Status через UserStatusPolicy.ToUserStatus(...).
+Технические статусы элементов из расчётного ядра не изменяются.
+Пользовательская таблица элементов получает человекочитаемый статус.
+```
+
+Что сознательно не трогали:
+
+```text
+BuoyCalculator
+CalculationResult
+технические Checks
+ReportBuilder
+MooringShapeSolver
+Mooring2DCanvas
+XAML-разметку окон
+логику расчёта
+```
+
+Почему это важно:
+
+```text
+Колонка Status в пользовательской таблице и PDF больше не должна показывать сырые OK / INFO / WARNING без перевода.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: wire UserStatusPolicy into MainWindow short ResultText
+```
+
+Статус CI:
+
+```text
+ожидает проверки после коммита
+```
