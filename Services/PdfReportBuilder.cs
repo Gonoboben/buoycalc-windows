@@ -37,13 +37,15 @@ public static class PdfReportBuilder
 
         var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
         var sequence = sequenceLines.ToList();
-        var mainShape = MooringShapeStore.Current;
         var alternativeShape = MooringAlternativeShapeStore.Current;
-        var shapeOffsetM = mainShape?.HorizontalOffsetM
-            ?? TryReadReportMetric(reportText, "- Снос формы X/Z:")
-            ?? TryReadReportMetric(reportText, "- Горизонтальный снос по узлам X/Z:")
-            ?? visualizationOffsetM;
+        var hasAlternativeShape = alternativeShape is not null && alternativeShape.Shape.Rows.Count >= 2;
+        var shapeOffsetM = hasAlternativeShape
+            ? alternativeShape!.Shape.DiscreteHorizontalOffsetM
+            : TryReadReportMetric(reportText, "- Снос формы X/Z:")
+                ?? TryReadReportMetric(reportText, "- Горизонтальный снос по узлам X/Z:")
+                ?? visualizationOffsetM;
         var clarifiedResultText = NormalizeResultText(resultText, shapeOffsetM);
+        var pdfReportText = RemovePrimaryShapeSections(reportText);
 
         writer.BeginPage();
         writer.Title("BuoyCalc Windows - предварительный отчёт");
@@ -56,18 +58,18 @@ public static class PdfReportBuilder
 
         writer.BeginPage();
         writer.Title("Схема постановки");
-        if (mainShape is not null && mainShape.Nodes.Count >= 2)
+        if (hasAlternativeShape)
         {
-            writer.Text("Расчётная 2D-схема из MooringShapeSolver: поверхность воды, фактический верхний узел линии, форма X/Z, якорь и дно. PDF только отображает координаты solver.", 10);
+            writer.Text("Расчётная 2D-схема PDF построена по форме с дискретными элементами. Эта форма ближе к натурной цепочке: учитывает приборы, соединители и локальные нагрузки. Внутренняя fallback-форма в PDF не выводится.", 10);
             writer.Space(10);
-            writer.MainShapeDiagram(mainShape, sequence);
+            writer.AlternativeShapeDiagram(alternativeShape!);
         }
         else
         {
-            writer.Text("Упрощённая 2D-схема: используется только если расчётная форма X/Z ещё недоступна.", 10);
-            writer.Space(10);
-            writer.FallbackMooringDiagram(sequence, visualizationDepthM, visualizationLineLengthM, shapeOffsetM);
+            writer.Text("Форма с дискретными элементами пока недоступна. Основная/fallback форма в PDF не выводится; она остаётся внутренней страховкой расчёта.", 10);
+            writer.Text($"Глубина: {visualizationDepthM:0.##} м; длина линии: {visualizationLineLengthM:0.##} м; расчётный снос: {shapeOffsetM:0.##} м.", 10);
         }
+
         writer.Space(12);
         writer.Section("Текстовая цепочка");
         foreach (var line in sequence)
@@ -76,22 +78,12 @@ public static class PdfReportBuilder
         }
         writer.EndPage();
 
-        if (mainShape is not null && mainShape.Nodes.Count >= 2 && alternativeShape is not null && alternativeShape.Shape.Rows.Count >= 2)
-        {
-            writer.BeginPage();
-            writer.Title("Сравнение форм X/Z");
-            writer.Text("Основная форма берётся из MooringShapeSolver. Альтернативная форма и дискретные точки берутся из расчётного слоя с дискретными нагрузками. PDF только отображает готовые X/Z-координаты.", 10);
-            writer.Space(10);
-            writer.ShapeComparisonDiagram(mainShape, alternativeShape);
-            writer.EndPage();
-        }
-
         writer.BeginPage();
         writer.Title("Таблица элементов");
         writer.ElementTable(elementRows.ToList());
         writer.Space(10);
         writer.Section("Полный текстовый отчёт");
-        writer.Multiline(reportText, 7.2f);
+        writer.Multiline(pdfReportText, 7.2f);
         writer.EndPage();
         document.Close();
     }
@@ -117,6 +109,38 @@ public static class PdfReportBuilder
         }
 
         return string.Join("\n", lines);
+    }
+
+    private static string RemovePrimaryShapeSections(string reportText)
+    {
+        var lines = (reportText ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var result = new List<string>();
+        var skip = false;
+
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("## Выбор основной формы", StringComparison.OrdinalIgnoreCase))
+            {
+                skip = true;
+                continue;
+            }
+
+            if (skip && line.StartsWith("## ", StringComparison.OrdinalIgnoreCase))
+            {
+                skip = false;
+            }
+
+            if (!skip &&
+                !line.Contains("primaryShape", StringComparison.OrdinalIgnoreCase) &&
+                !line.Contains("основная форма", StringComparison.OrdinalIgnoreCase) &&
+                !line.Contains("fallback-форма", StringComparison.OrdinalIgnoreCase) &&
+                !line.Contains("MooringShapeSolver fallback", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Add(line);
+            }
+        }
+
+        return string.Join("\n", result);
     }
 
     private static double? TryReadReportMetric(string reportText, string label)
@@ -203,15 +227,15 @@ public static class PdfReportBuilder
             }
         }
 
-        public void MainShapeDiagram(MooringShapeResult shape, IReadOnlyList<string> sequenceLines)
+        public void AlternativeShapeDiagram(MooringAlternativeShapeDisplayData alternative)
         {
-            const float diagramHeight = 400;
+            const float diagramHeight = 430;
             EnsureSpace(diagramHeight + 20);
 
             var x = Margin;
             var y = _y;
             var width = PageWidth - 2 * Margin;
-            var plotHeight = 300f;
+            var plotHeight = 315f;
             var surfaceY = y + 58;
             var plotBottomY = surfaceY + plotHeight;
             var plotRect = new SKRect(x, y, x + width, y + diagramHeight);
@@ -221,12 +245,12 @@ public static class PdfReportBuilder
             using var waterPaint = Fill("#DCEBFF");
             using var bottomPaint = Fill("#E7DED3");
             using var borderPaint = Stroke("#D7DEE9", 1);
-            using var linePaint = Stroke("#315B9A", 2.7f);
+            using var linePaint = Stroke("#D46B08", 2.7f);
             using var thinPaint = Stroke("#A7C7EE", 1);
             using var buoyPaint = Fill("#F2A33A");
             using var anchorPaint = Fill("#5C4634");
-            using var nodePaint = Fill("#FFFFFF");
-            using var nodeBorderPaint = Stroke("#315B9A", 1.2f);
+            using var nodePaint = Fill("#FFF4E5");
+            using var nodeBorderPaint = Stroke("#D46B08", 1.2f);
             using var warningPaint = Stroke("#D46B08", 1.3f);
 
             _canvas!.DrawRect(plotRect, plotPaint);
@@ -236,11 +260,11 @@ public static class PdfReportBuilder
             _canvas.DrawRect(new SKRect(x, plotBottomY, x + width, plotBottomY + 28), bottomPaint);
             _canvas.DrawRect(new SKRect(x, plotBottomY, x + width, plotBottomY + 28), borderPaint);
 
-            var nodes = shape.Nodes.Select(v => new PlotNode(v.XOffsetM, v.ZDepthM, v.Label)).ToList();
+            var nodes = alternative.Shape.Rows.Select(v => new PlotNode(v.XOffsetM, v.ZDepthM, v.SourceElement)).ToList();
             var minX = nodes.Min(v => v.X);
             var maxX = nodes.Max(v => v.X);
             var maxZ = Math.Max(0.0001, nodes.Max(v => v.Z));
-            var drawingDepth = Math.Max(1, Math.Max(shape.DepthM, maxZ));
+            var drawingDepth = Math.Max(1, Math.Max(alternative.Shape.AnchorDepthM, maxZ));
             var horizontalSpan = Math.Max(0.0001, maxX - minX);
             var scale = Math.Min((width - 110) / horizontalSpan, plotHeight / drawingDepth);
             var spanX = horizontalSpan * scale;
@@ -255,206 +279,36 @@ public static class PdfReportBuilder
             _canvas.DrawLine(new SKPoint(x + 8, bottomLineY), new SKPoint(x + width - 8, bottomLineY), thinPaint);
             DrawPolyline(_canvas, points, linePaint);
 
-            var step = Math.Max(1, points.Count / 20);
+            var step = Math.Max(1, points.Count / 22);
             for (var i = 1; i < points.Count - 1; i += step)
             {
                 _canvas.DrawCircle(points[i], 3.8f, nodePaint);
                 _canvas.DrawCircle(points[i], 3.8f, nodeBorderPaint);
             }
 
-            var labels = sequenceLines.Where(v => !string.IsNullOrWhiteSpace(v) && v != "↓").ToList();
-            var buoyLabel = CleanLabel(labels.FirstOrDefault(), "Буй");
-            var anchorLabel = CleanLabel(labels.LastOrDefault(), "Якорь");
-            var buoyPoint = points[0];
-            var anchorPoint = points[^1];
-            _canvas.DrawCircle(buoyPoint, 12, buoyPaint);
-            _canvas.DrawCircle(buoyPoint, 12, shape.BuoyState == BuoyShapeState.Surface ? nodeBorderPaint : warningPaint);
-            _canvas.DrawRect(new SKRect(anchorPoint.X - 15, anchorPoint.Y - 8, anchorPoint.X + 15, anchorPoint.Y + 8), anchorPaint);
-
-            DrawTextAt("поверхность воды", x + 14, surfaceY - 24, 10, true, SKColors.Black);
-            DrawTextAt($"глубина {drawingDepth:0.##} м", x + 14, surfaceY + 18, 9, false, new SKColor(80, 92, 112));
-            DrawTextAt("дно / грунт", x + 14, bottomLineY + 18, 10, true, new SKColor(92, 70, 52));
-            DrawTextAt(Shorten(buoyLabel, 28), buoyPoint.X + 16, buoyPoint.Y + 4, 9.2f, true, SKColors.Black);
-            DrawTextAt(Shorten(anchorLabel, 28), anchorPoint.X + 20, anchorPoint.Y + 4, 9.2f, true, SKColors.Black);
-            DrawTextAt($"состояние буя: {DisplayBuoyState(shape.BuoyState)}", x + 14, y + 18, 9.2f, false, shape.BuoyState == BuoyShapeState.Surface ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
-            DrawTextAt(shape.Converged ? "форма: converged" : "форма: WARNING / not converged", x + 210, y + 18, 9.2f, false, shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
-            DrawTextAt($"снос X/Z {shape.HorizontalOffsetM:0.##} м", x + 390, y + 18, 9.2f, false, new SKColor(80, 92, 112));
-            DrawTextAt("масштаб X=Z; координаты взяты из MooringShapeSolver", x + 14, plotBottomY + 52, 8.8f, false, new SKColor(80, 92, 112));
-
-            _y += diagramHeight + 10;
-        }
-
-        public void FallbackMooringDiagram(IReadOnlyList<string> sequenceLines, double depthM, double lineLengthM, double offsetM)
-        {
-            const float diagramHeight = 360;
-            EnsureSpace(diagramHeight + 20);
-
-            var x = Margin;
-            var y = _y;
-            var width = PageWidth - 2 * Margin;
-            var surfaceY = y + 58;
-            var bottomY = y + 280;
-            var waterRect = new SKRect(x, surfaceY, x + width, bottomY);
-            var bottomRect = new SKRect(x, bottomY, x + width, bottomY + 28);
-
-            using var plotPaint = Fill("#F7F9FC");
-            using var waterPaint = Fill("#DCEBFF");
-            using var bottomPaint = Fill("#E7DED3");
-            using var borderPaint = Stroke("#D7DEE9", 1);
-            using var linePaint = Stroke("#315B9A", 3);
-            using var thinPaint = Stroke("#A7C7EE", 1);
-            using var buoyPaint = Fill("#F2A33A");
-            using var anchorPaint = Fill("#5C4634");
-            using var nodePaint = Fill("#FFFFFF");
-            using var nodeBorderPaint = Stroke("#315B9A", 1.3f);
-
-            _canvas!.DrawRect(new SKRect(x, y, x + width, y + diagramHeight), plotPaint);
-            _canvas.DrawRect(new SKRect(x, y, x + width, y + diagramHeight), borderPaint);
-            _canvas.DrawRect(waterRect, waterPaint);
-            _canvas.DrawRect(waterRect, borderPaint);
-            _canvas.DrawRect(bottomRect, bottomPaint);
-            _canvas.DrawRect(bottomRect, borderPaint);
-
-            DrawTextAt("поверхность воды", x + 14, surfaceY - 24, 10, true, SKColors.Black);
-            DrawTextAt(depthM > 0 ? $"глубина {depthM:0.##} м" : "глубина не задана", x + 14, surfaceY + 18, 9, false, new SKColor(80, 92, 112));
-            DrawTextAt(lineLengthM > 0 ? $"линия {lineLengthM:0.##} м" : "линия не задана", x + width - 120, surfaceY + 18, 9, false, new SKColor(80, 92, 112));
-            DrawTextAt("дно / грунт", x + 14, bottomY + 18, 10, true, new SKColor(92, 70, 52));
-
-            var safeDepth = Math.Max(1, depthM);
-            var safeOffset = Math.Max(0, offsetM);
-            var maxHorizontalMeters = Math.Max(safeDepth, Math.Max(safeOffset, 1));
-            var maxHorizontalPixels = width - 180;
-            var offsetPixels = safeOffset > 0 ? Math.Min(maxHorizontalPixels, (float)(safeOffset / maxHorizontalMeters * maxHorizontalPixels)) : 0;
-            var centerX = x + width / 2;
-            var buoyX = Math.Clamp(centerX - offsetPixels / 2, x + 80, x + width - 80);
-            var anchorX = Math.Clamp(centerX + offsetPixels / 2, x + 80, x + width - 80);
-            var buoyPoint = new SKPoint(buoyX, surfaceY);
-            var lineStartPoint = new SKPoint(buoyX, surfaceY + 13);
-            var anchorPoint = new SKPoint(anchorX, bottomY - 8);
-
-            _canvas.DrawLine(lineStartPoint, anchorPoint, linePaint);
-            _canvas.DrawLine(new SKPoint(anchorPoint.X, bottomY), anchorPoint, thinPaint);
-
-            var labels = sequenceLines.Where(v => !string.IsNullOrWhiteSpace(v) && v != "↓").ToList();
-            var buoyLabel = CleanLabel(labels.FirstOrDefault(), "Буй");
-            var anchorLabel = CleanLabel(labels.LastOrDefault(), "Якорь");
-            var nodes = labels.Skip(1).SkipLast(1).ToList();
-
-            _canvas.DrawCircle(buoyPoint, 13, buoyPaint);
-            _canvas.DrawCircle(buoyPoint, 13, nodeBorderPaint);
-            DrawTextAt(Shorten(buoyLabel, 26), buoyPoint.X + 18, buoyPoint.Y + 4, 9.5f, true, SKColors.Black);
-
-            for (var i = 0; i < nodes.Count; i++)
-            {
-                var t = (i + 1f) / (nodes.Count + 1f);
-                var px = lineStartPoint.X + (anchorPoint.X - lineStartPoint.X) * t;
-                var py = lineStartPoint.Y + (anchorPoint.Y - lineStartPoint.Y) * t;
-                _canvas.DrawCircle(px, py, 5.8f, nodePaint);
-                _canvas.DrawCircle(px, py, 5.8f, nodeBorderPaint);
-
-                if (i < 5)
-                {
-                    DrawTextAt(Shorten(CleanLabel(nodes[i], "Элемент"), 32), px + 10, py + 3, 7.6f, false, new SKColor(80, 92, 112));
-                }
-            }
-
-            var anchorRect = new SKRect(anchorPoint.X - 18, anchorPoint.Y - 10, anchorPoint.X + 18, anchorPoint.Y + 10);
-            _canvas.DrawRect(anchorRect, anchorPaint);
-            DrawTextAt(Shorten(anchorLabel, 28), anchorPoint.X + 22, anchorPoint.Y + 4, 9.5f, true, SKColors.Black);
-            DrawTextAt($"снос X/Z {safeOffset:0.##} м", Math.Min(buoyPoint.X, anchorPoint.X) + 8, bottomY + 44, 9, false, new SKColor(80, 92, 112));
-
-            _y += diagramHeight + 10;
-        }
-
-        public void ShapeComparisonDiagram(MooringShapeResult mainShape, MooringAlternativeShapeDisplayData alternative)
-        {
-            const float diagramHeight = 520;
-            EnsureSpace(diagramHeight + 10);
-
-            var x = Margin;
-            var y = _y;
-            var width = PageWidth - 2 * Margin;
-            var plotHeight = 410f;
-            var surfaceY = y + 52;
-            var plotBottomY = surfaceY + plotHeight;
-            var plotRect = new SKRect(x, y, x + width, y + diagramHeight);
-            var waterRect = new SKRect(x, surfaceY, x + width, plotBottomY);
-
-            using var plotPaint = Fill("#F7F9FC");
-            using var waterPaint = Fill("#DCEBFF");
-            using var bottomPaint = Fill("#E7DED3");
-            using var borderPaint = Stroke("#D7DEE9", 1);
-            using var mainPaint = Stroke("#315B9A", 2.5f);
-            using var alternativePaint = Stroke("#D46B08", 2.0f);
-            using var thinPaint = Stroke("#A7C7EE", 1);
-            using var buoyPaint = Fill("#F2A33A");
-            using var anchorPaint = Fill("#5C4634");
-            using var nodePaint = Fill("#FFF4E5");
-            using var nodeBorderPaint = Stroke("#D46B08", 1.2f);
-            using var mainNodePaint = Fill("#FFFFFF");
-            using var mainNodeBorderPaint = Stroke("#315B9A", 1.2f);
-
-            _canvas!.DrawRect(plotRect, plotPaint);
-            _canvas.DrawRect(plotRect, borderPaint);
-            _canvas.DrawRect(waterRect, waterPaint);
-            _canvas.DrawRect(waterRect, borderPaint);
-            _canvas.DrawRect(new SKRect(x, plotBottomY, x + width, plotBottomY + 28), bottomPaint);
-            _canvas.DrawRect(new SKRect(x, plotBottomY, x + width, plotBottomY + 28), borderPaint);
-
-            var mainNodes = mainShape.Nodes.Select(v => new PlotNode(v.XOffsetM, v.ZDepthM, v.Label)).ToList();
-            var altNodes = alternative.Shape.Rows.Select(v => new PlotNode(v.XOffsetM, v.ZDepthM, v.SourceElement)).ToList();
-            var allNodes = mainNodes.Concat(altNodes).ToList();
-            var minX = allNodes.Min(v => v.X);
-            var maxX = allNodes.Max(v => v.X);
-            var maxZ = Math.Max(0.0001, allNodes.Max(v => v.Z));
-            var drawingDepth = Math.Max(1, Math.Max(mainShape.DepthM, maxZ));
-            var horizontalSpan = Math.Max(0.0001, maxX - minX);
-            var scale = Math.Min((width - 110) / horizontalSpan, plotHeight / drawingDepth);
-            var spanX = horizontalSpan * scale;
-            var startX = x + width / 2f - (float)(spanX / 2.0);
-            var bottomLineY = surfaceY + (float)(drawingDepth * scale);
-
-            SKPoint Map(double mx, double mz) => new(
-                (float)(startX + (mx - minX) * scale),
-                (float)(surfaceY + Math.Clamp(mz, 0, drawingDepth) * scale));
-
-            var mainPoints = mainNodes.Select(v => Map(v.X, v.Z)).ToList();
-            var altPoints = altNodes.Select(v => Map(v.X, v.Z)).ToList();
-
-            _canvas.DrawLine(new SKPoint(x + 8, bottomLineY), new SKPoint(x + width - 8, bottomLineY), thinPaint);
-            DrawPolyline(_canvas, mainPoints, mainPaint);
-            DrawPolyline(_canvas, altPoints, alternativePaint);
-
-            var step = Math.Max(1, mainPoints.Count / 20);
-            for (var i = 1; i < mainPoints.Count - 1; i += step)
-            {
-                _canvas.DrawCircle(mainPoints[i], 3.5f, mainNodePaint);
-                _canvas.DrawCircle(mainPoints[i], 3.5f, mainNodeBorderPaint);
-            }
-
-            foreach (var discrete in alternative.DiscreteNodes.Rows.Where(v => v.Kind != "Буй" && v.Kind != "Якорь").Take(12))
+            foreach (var discrete in alternative.DiscreteNodes.Rows.Where(v => v.Kind != "Буй" && v.Kind != "Якорь").Take(14))
             {
                 var point = Map(discrete.AlternativeXOffsetM, discrete.AlternativeZDepthM);
                 _canvas.DrawCircle(point, 5.5f, nodePaint);
                 _canvas.DrawCircle(point, 5.5f, nodeBorderPaint);
             }
 
-            var buoyPoint = mainPoints[0];
-            var anchorPoint = mainPoints[^1];
+            var buoyPoint = points[0];
+            var anchorPoint = points[^1];
             _canvas.DrawCircle(buoyPoint, 12, buoyPaint);
-            _canvas.DrawCircle(buoyPoint, 12, mainNodeBorderPaint);
+            _canvas.DrawCircle(buoyPoint, 12, alternative.Shape.Converged ? nodeBorderPaint : warningPaint);
             _canvas.DrawRect(new SKRect(anchorPoint.X - 15, anchorPoint.Y - 8, anchorPoint.X + 15, anchorPoint.Y + 8), anchorPaint);
 
             DrawTextAt("поверхность воды", x + 14, surfaceY - 24, 10, true, SKColors.Black);
             DrawTextAt($"глубина {drawingDepth:0.##} м", x + 14, surfaceY + 18, 9, false, new SKColor(80, 92, 112));
             DrawTextAt("дно / грунт", x + 14, bottomLineY + 18, 10, true, new SKColor(92, 70, 52));
-            DrawLegendLine(x + 14, y + 18, mainPaint, "основная форма X/Z", SKColors.Black);
-            DrawLegendLine(x + 170, y + 18, alternativePaint, "альтернативная форма", new SKColor(212, 107, 8));
-            DrawTextAt(alternative.Shape.Converged ? "альтернативная форма: OK" : "альтернативная форма: WARNING", x + 340, y + 23, 9, false, alternative.Shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
-            DrawTextAt($"основной снос {mainShape.HorizontalOffsetM:0.##} м", x + 14, plotBottomY + 52, 9, false, new SKColor(80, 92, 112));
-            DrawTextAt($"альт. снос {alternative.Shape.DiscreteHorizontalOffsetM:0.##} м", x + 170, plotBottomY + 52, 9, false, new SKColor(212, 107, 8));
-            DrawTextAt($"дискретных X/Z точек {alternative.DiscreteNodes.DiscreteNodeCount}", x + 340, plotBottomY + 52, 9, false, new SKColor(80, 92, 112));
-            DrawTextAt("масштаб X=Z; координаты взяты из расчётных объектов, не из текста отчёта", x + 14, plotBottomY + 72, 8.5f, false, new SKColor(80, 92, 112));
+            DrawTextAt(Shorten(CleanLabel(nodes[0].Label, "Буй"), 28), buoyPoint.X + 16, buoyPoint.Y + 4, 9.2f, true, SKColors.Black);
+            DrawTextAt(Shorten(CleanLabel(nodes[^1].Label, "Якорь"), 28), anchorPoint.X + 20, anchorPoint.Y + 4, 9.2f, true, SKColors.Black);
+            DrawLegendLine(x + 14, y + 18, linePaint, "форма с дискретными элементами", new SKColor(212, 107, 8));
+            DrawTextAt(alternative.Shape.Converged ? "форма: OK" : "форма: WARNING", x + 245, y + 23, 9.2f, false, alternative.Shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
+            DrawTextAt($"снос X/Z {alternative.Shape.DiscreteHorizontalOffsetM:0.##} м", x + 390, y + 23, 9.2f, false, new SKColor(80, 92, 112));
+            DrawTextAt($"дискретных X/Z точек {alternative.DiscreteNodes.DiscreteNodeCount}", x + 14, plotBottomY + 52, 9, false, new SKColor(80, 92, 112));
+            DrawTextAt("масштаб X=Z; координаты взяты из расчётного слоя дискретных нагрузок", x + 14, plotBottomY + 72, 8.5f, false, new SKColor(80, 92, 112));
 
             _y += diagramHeight + 10;
         }
@@ -631,17 +485,6 @@ public static class PdfReportBuilder
                 .Replace("○", string.Empty)
                 .Trim();
             return string.IsNullOrWhiteSpace(value) ? fallback : value;
-        }
-
-        private static string DisplayBuoyState(BuoyShapeState state)
-        {
-            return state switch
-            {
-                BuoyShapeState.Surface => "на поверхности",
-                BuoyShapeState.Submerged => "под водой",
-                BuoyShapeState.Overloaded => "перегружен",
-                _ => "не определено"
-            };
         }
 
         private static string Shorten(string value, int maxLength)
