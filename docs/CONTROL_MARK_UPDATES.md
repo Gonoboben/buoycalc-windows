@@ -320,3 +320,53 @@ refactor: connect MainWindow ResultText to UserResultTextBuilder
 ```text
 ожидает проверки после коммита
 ```
+
+## 2026-06-29 — MainWindow ResultText подключён к UserResultTextBuilder
+
+Пункт плана:
+
+```text
+3. UserStatusPolicy
+```
+
+Статус: выполнено для краткого пользовательского итога главного окна.
+
+Что изменено:
+
+```text
+ViewModels/MainWindowViewModel.cs больше не собирает ResultText вручную после расчёта.
+ResultText теперь берётся из UserResultTextBuilder.Build(environment, result).
+Diff по MainWindowViewModel: 1 строка добавлена, 1 строка удалена.
+```
+
+Что сознательно не трогали:
+
+```text
+BuoyCalculator
+CalculationResult
+технические Checks
+ReportBuilder
+PDF builder
+MooringShapeSolver
+Mooring2DCanvas
+XAML-разметку окон
+логику расчёта
+```
+
+Почему это важно:
+
+```text
+Краткий пользовательский итог главного окна теперь использует общий display-слой.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: wire UserStatusPolicy into visualization status summary
+```
+
+Статус CI:
+
+```text
+ожидает проверки после коммита
+```
