@@ -1,4 +1,5 @@
 using System.Globalization;
+using BuoyCalc.Windows.Services;
 
 namespace BuoyCalc.Windows.Models;
 
@@ -36,7 +37,7 @@ public sealed class ElementCalculationDisplayRow
             BreakingLoadKn = Format(row.BreakingLoadKn),
             WorkingLoadKn = Format(row.WorkingLoadKn),
             Reserve = Format(row.Reserve),
-            Status = row.Status
+            Status = UserStatusPolicy.ToUserStatus(row.Status)
         };
     }
 
