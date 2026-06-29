@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace BuoyCalc.Windows.Services;
 
@@ -26,6 +24,13 @@ public sealed record MooringPrimaryShapeGateResult(
     string DecisionText,
     string MethodNote,
     IReadOnlyList<string> Reasons);
+
+public sealed record MooringPrimaryShapeSelectionResult(
+    MooringShapeResult Shape,
+    MooringPrimaryShapeGateResult Gate,
+    bool UsesDiscreteLoads,
+    string Source,
+    string MethodNote);
 
 public static class MooringPrimaryShapeGate
 {
@@ -81,11 +86,11 @@ public static class MooringPrimaryShapeGate
 
         if (candidateCanBecomePrimary)
         {
-            reasons.Add("Кандидатная форма прошла gate v0.39.3 и может быть использована в v0.40 как основная только при явном подключении новой ветки solver.");
+            reasons.Add("Кандидатная форма прошла gate и может быть использована как основная в ветке v0.40.");
         }
         else
         {
-            reasons.Add("Основная форма должна остаться от MooringShapeSolver; v0.39.3 ничего не переключает автоматически.");
+            reasons.Add("Основная форма должна остаться от MooringShapeSolver; gate запрещает автоматическое переключение.");
         }
 
         return new MooringPrimaryShapeGateResult(
@@ -101,7 +106,7 @@ public static class MooringPrimaryShapeGate
             maxNodeDeltaM,
             finalGeometryResidualM,
             DescribeDecision(decision),
-            "v0.39.3: добавлен gate перед v0.40. Он оценивает, можно ли кандидатную форму итерационного solver вообще рассматривать как основную, но сам не меняет основной MooringShapeSolver и не переключает 2D/PDF.",
+            "v0.40: gate оценивает, можно ли форму с дискретными нагрузками использовать как основную. Если gate не пройден, основной формой остаётся MooringShapeSolver.",
             reasons);
     }
 
@@ -109,9 +114,56 @@ public static class MooringPrimaryShapeGate
     {
         return decision switch
         {
-            MooringPrimaryShapeGateDecision.CandidateReadyForPrimary => "Кандидатная форма готова для безопасного подключения в основной solver на этапе v0.40.",
+            MooringPrimaryShapeGateDecision.CandidateReadyForPrimary => "Кандидатная форма готова для подключения как основная форма v0.40.",
             MooringPrimaryShapeGateDecision.CandidateRejected => "Кандидатная форма есть, но gate запрещает использовать её как основную.",
             _ => "Оставить текущую основную форму MooringShapeSolver."
         };
+    }
+}
+
+public static class MooringPrimaryShapeSelector
+{
+    public static MooringPrimaryShapeSelectionResult Select(
+        MooringShapeResult fallbackShape,
+        MooringIterativeSolverResult iterativeSolver)
+    {
+        var gate = MooringPrimaryShapeGate.Evaluate(fallbackShape, iterativeSolver);
+        if (gate.CandidateCanBecomePrimary && iterativeSolver.FinalShape is not null)
+        {
+            var promotedShape = iterativeSolver.FinalShape with
+            {
+                MethodNote = "v0.40: эта форма выбрана как основная через MooringPrimaryShapeSelector, потому что она включает дискретные нагрузки и прошла MooringPrimaryShapeGate. " + iterativeSolver.FinalShape.MethodNote,
+                ConvergenceCriterion = "v0.40 primary shape: gate=CandidateReadyForPrimary; " + iterativeSolver.ConvergenceCriterion
+            };
+
+            return new MooringPrimaryShapeSelectionResult(
+                promotedShape,
+                gate,
+                true,
+                "MooringIterativeSolver.FinalShape",
+                "v0.40: основная форма выбрана из итерационного solver с дискретными нагрузками. Старый MooringShapeSolver остаётся fallback.");
+        }
+
+        return new MooringPrimaryShapeSelectionResult(
+            fallbackShape,
+            gate,
+            false,
+            "MooringShapeSolver fallback",
+            "v0.40: кандидатная форма с дискретными нагрузками не стала основной, поэтому используется fallback-форма MooringShapeSolver.");
+    }
+}
+
+public static class MooringPrimaryShapeSelectionStore
+{
+    public static MooringPrimaryShapeSelectionResult? Current { get; private set; }
+
+    public static void Set(MooringPrimaryShapeSelectionResult selection)
+    {
+        Current = selection;
+    }
+
+    public static void Clear()
+    {
+        Current = null;
     }
 }
