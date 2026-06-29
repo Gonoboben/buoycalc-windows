@@ -5,6 +5,25 @@ using BuoyCalc.Windows.Models;
 
 namespace BuoyCalc.Windows.Services;
 
+public enum MooringIterativeSolverStopReason
+{
+    NotStarted,
+    Continue,
+    Converged,
+    MaxIterationsReached,
+    GeometryNotClosed,
+    DivergenceGuard,
+    InvalidInput
+}
+
+public sealed record MooringIterativeSolverCriteria(
+    int MaxIterations,
+    double OffsetToleranceM,
+    double NodeDeltaToleranceM,
+    double GeometryResidualToleranceM,
+    double DivergenceOffsetChangeM,
+    double DivergenceNodeDeltaM);
+
 public sealed record MooringIterativeSolverIteration(
     int IterationNumber,
     double InputOffsetM,
@@ -16,7 +35,13 @@ public sealed record MooringIterativeSolverIteration(
     double MaxNodeDeltaM,
     double GeometryResidualM,
     bool GeometryConverged,
+    bool OffsetWithinTolerance,
+    bool NodeDeltaWithinTolerance,
+    bool GeometryResidualWithinTolerance,
+    bool DivergenceDetected,
     bool Converged,
+    MooringIterativeSolverStopReason StopReason,
+    string StopReasonText,
     string Status);
 
 public sealed record MooringIterativeSolverResult(
@@ -26,6 +51,11 @@ public sealed record MooringIterativeSolverResult(
     int IterationCount,
     double FinalOffsetChangeM,
     double FinalMaxNodeDeltaM,
+    double FinalGeometryResidualM,
+    bool Diverged,
+    MooringIterativeSolverCriteria Criteria,
+    MooringIterativeSolverStopReason StopReason,
+    string StopReasonText,
     string ConvergenceCriterion,
     string MethodNote);
 
@@ -34,6 +64,7 @@ public static class MooringIterativeSolver
     private const int DefaultMaxIterations = 4;
     private const double OffsetToleranceM = 0.05;
     private const double NodeDeltaToleranceM = 0.10;
+    private const double GeometryResidualToleranceM = 0.05;
 
     public static MooringIterativeSolverResult Build(
         CalculationResult result,
@@ -42,22 +73,23 @@ public static class MooringIterativeSolver
         IReadOnlyList<SegmentTensionRow> initialTensions,
         int maxIterations = DefaultMaxIterations)
     {
+        var criteria = BuildCriteria(maxIterations, initialShape);
+
         if (initialShape.Nodes.Count < 2 || result.SegmentRows.Count == 0)
         {
-            return Empty("Нет исходной X/Z-формы или сегментов линии для запуска каркаса итерационного solver.");
+            return Empty(criteria, "Нет исходной X/Z-формы или сегментов линии для запуска каркаса итерационного solver.");
         }
 
         if (sequencePositions.Rows.Count == 0 || initialTensions.Count == 0)
         {
-            return Empty("Нет позиционной модели или базовых натяжений для замыкания итерационного цикла.");
+            return Empty(criteria, "Нет позиционной модели или базовых натяжений для замыкания итерационного цикла.");
         }
 
         var rows = new List<MooringIterativeSolverIteration>();
         var currentShape = initialShape;
         var feedbackTensions = initialTensions;
-        var iterations = Math.Clamp(maxIterations, 1, DefaultMaxIterations);
 
-        for (var iteration = 1; iteration <= iterations; iteration++)
+        for (var iteration = 1; iteration <= criteria.MaxIterations; iteration++)
         {
             var projection = MooringShapeProjection.Build(currentShape);
             var shapeForces = MooringShapeForceAnalyzer.Build(result, projection);
@@ -72,9 +104,24 @@ public static class MooringIterativeSolver
             var outputOffsetM = nextShape.DiscreteHorizontalOffsetM;
             var offsetChangeM = outputOffsetM - currentShape.HorizontalOffsetM;
             var geometryResidualM = nextShape.VerticalResidualM;
-            var iterationConverged = nextShape.Converged &&
-                Math.Abs(offsetChangeM) <= OffsetToleranceM &&
-                nextShape.MaxNodeDeltaM <= NodeDeltaToleranceM;
+
+            var offsetWithinTolerance = Math.Abs(offsetChangeM) <= criteria.OffsetToleranceM;
+            var nodeDeltaWithinTolerance = nextShape.MaxNodeDeltaM <= criteria.NodeDeltaToleranceM;
+            var geometryResidualWithinTolerance = nextShape.Converged &&
+                Math.Abs(geometryResidualM) <= criteria.GeometryResidualToleranceM;
+            var divergenceDetected = IsDivergent(offsetChangeM, nextShape.MaxNodeDeltaM, geometryResidualM, criteria);
+            var iterationConverged = geometryResidualWithinTolerance &&
+                offsetWithinTolerance &&
+                nodeDeltaWithinTolerance &&
+                !divergenceDetected;
+
+            var stopReason = ResolveStopReason(
+                iteration,
+                criteria,
+                nextShape.Converged,
+                iterationConverged,
+                divergenceDetected);
+            var stopReasonText = DescribeStopReason(stopReason);
 
             rows.Add(new MooringIterativeSolverIteration(
                 iteration,
@@ -87,12 +134,21 @@ public static class MooringIterativeSolver
                 nextShape.MaxNodeDeltaM,
                 geometryResidualM,
                 nextShape.Converged,
+                offsetWithinTolerance,
+                nodeDeltaWithinTolerance,
+                geometryResidualWithinTolerance,
+                divergenceDetected,
                 iterationConverged,
-                iterationConverged
-                    ? "OK: критерий v0.39 выполнен"
-                    : nextShape.Converged
-                        ? "INFO: геометрия замкнута, но изменение формы ещё выше допуска"
-                        : "WARNING: геометрия новой формы не сошлась"));
+                stopReason,
+                stopReasonText,
+                BuildIterationStatus(
+                    stopReason,
+                    offsetWithinTolerance,
+                    nodeDeltaWithinTolerance,
+                    geometryResidualWithinTolerance,
+                    offsetChangeM,
+                    nextShape.MaxNodeDeltaM,
+                    geometryResidualM)));
 
             currentShape = ToShapeResult(currentShape, nextShape, iteration, iterationConverged, offsetChangeM);
             if (nextFeedbackTensions.Count > 0)
@@ -100,13 +156,14 @@ public static class MooringIterativeSolver
                 feedbackTensions = nextFeedbackTensions;
             }
 
-            if (iterationConverged)
+            if (iterationConverged || divergenceDetected)
             {
                 break;
             }
         }
 
         var last = rows.LastOrDefault();
+        var finalStopReason = last?.StopReason ?? MooringIterativeSolverStopReason.NotStarted;
         var converged = last?.Converged ?? false;
         return new MooringIterativeSolverResult(
             rows,
@@ -115,11 +172,29 @@ public static class MooringIterativeSolver
             rows.Count,
             last?.OffsetChangeM ?? 0,
             last?.MaxNodeDeltaM ?? 0,
-            $"|ΔXсноса| ≤ {OffsetToleranceM:0.####} м и max Δузла ≤ {NodeDeltaToleranceM:0.####} м после цикла форма → силы → натяжения → дискретные нагрузки → новая форма.",
-            "v0.39: добавлен отдельный каркас итерационного solver. Он не заменяет основной solver и не меняет 2D/PDF-формы; результат используется как диагностический слой для проверки будущего нелинейного замыкания.");
+            last?.GeometryResidualM ?? 0,
+            finalStopReason == MooringIterativeSolverStopReason.DivergenceGuard,
+            criteria,
+            finalStopReason,
+            last?.StopReasonText ?? DescribeStopReason(finalStopReason),
+            BuildConvergenceCriterion(criteria),
+            "v0.39.1: критерии сходимости итерационного solver формализованы отдельно от визуализации. Solver считается сошедшимся только при одновременном выполнении допуска по X-сносу, max Δузла и геометрической невязке Z; при грубой расходимости срабатывает защитная остановка.");
     }
 
-    private static MooringIterativeSolverResult Empty(string note)
+    private static MooringIterativeSolverCriteria BuildCriteria(int requestedMaxIterations, MooringShapeResult initialShape)
+    {
+        var maxIterations = Math.Clamp(requestedMaxIterations, 1, DefaultMaxIterations);
+        var scale = Math.Max(1.0, Math.Max(initialShape.DepthM, initialShape.LineLengthM));
+        return new MooringIterativeSolverCriteria(
+            maxIterations,
+            OffsetToleranceM,
+            NodeDeltaToleranceM,
+            GeometryResidualToleranceM,
+            Math.Max(1.0, scale * 0.25),
+            Math.Max(1.0, scale * 0.25));
+    }
+
+    private static MooringIterativeSolverResult Empty(MooringIterativeSolverCriteria criteria, string note)
     {
         return new MooringIterativeSolverResult(
             Array.Empty<MooringIterativeSolverIteration>(),
@@ -128,7 +203,12 @@ public static class MooringIterativeSolver
             0,
             0,
             0,
-            $"|ΔXсноса| ≤ {OffsetToleranceM:0.####} м и max Δузла ≤ {NodeDeltaToleranceM:0.####} м",
+            0,
+            false,
+            criteria,
+            MooringIterativeSolverStopReason.InvalidInput,
+            DescribeStopReason(MooringIterativeSolverStopReason.InvalidInput),
+            BuildConvergenceCriterion(criteria),
             note);
     }
 
@@ -156,6 +236,108 @@ public static class MooringIterativeSolver
                     ? "OK"
                     : "INFO: натяжение передано в v0.39 feedback-цикл"))
             .ToList();
+    }
+
+    private static bool IsDivergent(
+        double offsetChangeM,
+        double maxNodeDeltaM,
+        double geometryResidualM,
+        MooringIterativeSolverCriteria criteria)
+    {
+        if (!IsFinite(offsetChangeM) || !IsFinite(maxNodeDeltaM) || !IsFinite(geometryResidualM))
+        {
+            return true;
+        }
+
+        return Math.Abs(offsetChangeM) > criteria.DivergenceOffsetChangeM ||
+            maxNodeDeltaM > criteria.DivergenceNodeDeltaM;
+    }
+
+    private static bool IsFinite(double value)
+    {
+        return !double.IsNaN(value) && !double.IsInfinity(value);
+    }
+
+    private static MooringIterativeSolverStopReason ResolveStopReason(
+        int iteration,
+        MooringIterativeSolverCriteria criteria,
+        bool geometryConverged,
+        bool iterationConverged,
+        bool divergenceDetected)
+    {
+        if (iterationConverged)
+        {
+            return MooringIterativeSolverStopReason.Converged;
+        }
+
+        if (divergenceDetected)
+        {
+            return MooringIterativeSolverStopReason.DivergenceGuard;
+        }
+
+        if (!geometryConverged && iteration == criteria.MaxIterations)
+        {
+            return MooringIterativeSolverStopReason.GeometryNotClosed;
+        }
+
+        if (iteration == criteria.MaxIterations)
+        {
+            return MooringIterativeSolverStopReason.MaxIterationsReached;
+        }
+
+        return MooringIterativeSolverStopReason.Continue;
+    }
+
+    private static string DescribeStopReason(MooringIterativeSolverStopReason reason)
+    {
+        return reason switch
+        {
+            MooringIterativeSolverStopReason.NotStarted => "Итерационный solver не запускался.",
+            MooringIterativeSolverStopReason.Continue => "Итерационный solver продолжает расчёт: критерии ещё не выполнены.",
+            MooringIterativeSolverStopReason.Converged => "Расчёт остановлен: критерии сходимости выполнены.",
+            MooringIterativeSolverStopReason.MaxIterationsReached => "Расчёт остановлен: достигнут лимит итераций без выполнения всех критериев.",
+            MooringIterativeSolverStopReason.GeometryNotClosed => "Расчёт остановлен: достигнут лимит итераций, геометрия новой формы не замкнулась.",
+            MooringIterativeSolverStopReason.DivergenceGuard => "Расчёт остановлен защитой от расходимости.",
+            MooringIterativeSolverStopReason.InvalidInput => "Расчёт не запущен: недостаточно входных данных.",
+            _ => "Неизвестная причина остановки итерационного solver."
+        };
+    }
+
+    private static string BuildIterationStatus(
+        MooringIterativeSolverStopReason stopReason,
+        bool offsetWithinTolerance,
+        bool nodeDeltaWithinTolerance,
+        bool geometryResidualWithinTolerance,
+        double offsetChangeM,
+        double maxNodeDeltaM,
+        double geometryResidualM)
+    {
+        if (stopReason == MooringIterativeSolverStopReason.Converged)
+        {
+            return "OK: все критерии v0.39.1 выполнены";
+        }
+
+        if (stopReason == MooringIterativeSolverStopReason.DivergenceGuard)
+        {
+            return $"WARNING: защитная остановка; |ΔX|={Math.Abs(offsetChangeM):0.####} м, max Δузла={maxNodeDeltaM:0.####} м";
+        }
+
+        if (stopReason == MooringIterativeSolverStopReason.GeometryNotClosed)
+        {
+            return $"WARNING: геометрия не замкнулась; невязка Z={geometryResidualM:0.####} м";
+        }
+
+        if (stopReason == MooringIterativeSolverStopReason.MaxIterationsReached)
+        {
+            return "INFO: достигнут лимит итераций, часть критериев не выполнена";
+        }
+
+        return $"INFO: критерии: ΔX={(offsetWithinTolerance ? "OK" : "нет")}, max Δузла={(nodeDeltaWithinTolerance ? "OK" : "нет")}, Z={(geometryResidualWithinTolerance ? "OK" : "нет")}";
+    }
+
+    private static string BuildConvergenceCriterion(MooringIterativeSolverCriteria criteria)
+    {
+        return $"v0.39.1: сходимость = |ΔXсноса| ≤ {criteria.OffsetToleranceM:0.####} м, max Δузла ≤ {criteria.NodeDeltaToleranceM:0.####} м, |невязка Z| ≤ {criteria.GeometryResidualToleranceM:0.####} м. Лимит итераций: {criteria.MaxIterations}. Защитная остановка: |ΔX| > {criteria.DivergenceOffsetChangeM:0.####} м или max Δузла > {criteria.DivergenceNodeDeltaM:0.####} м.";
     }
 
     private static MooringShapeResult ToShapeResult(
@@ -200,11 +382,11 @@ public static class MooringIterativeSolver
             horizontalOffsetM,
             verticalResidualM,
             converged,
-            $"v0.39: временная форма итерации {iteration}; получена из альтернативной формы с дискретными нагрузками и не заменяет основной MooringShapeSolver.",
+            $"v0.39.1: временная форма итерации {iteration}; получена из альтернативной формы с дискретными нагрузками и не заменяет основной MooringShapeSolver.",
             iteration,
             verticalResidualM,
             nextShape.AngleScale,
-            $"v0.39 feedback: |ΔXсноса|={Math.Abs(offsetChangeM):0.####} м, max Δузла={nextShape.MaxNodeDeltaM:0.####} м");
+            $"v0.39.1 feedback: |ΔXсноса|={Math.Abs(offsetChangeM):0.####} м, max Δузла={nextShape.MaxNodeDeltaM:0.####} м");
     }
 }
 
