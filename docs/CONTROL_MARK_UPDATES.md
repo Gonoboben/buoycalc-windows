@@ -270,3 +270,53 @@ refactor: wire UserStatusPolicy into MainWindow short ResultText
 ```text
 ожидает проверки после коммита
 ```
+
+## 2026-06-29 — добавлен UserResultTextBuilder
+
+Пункт плана:
+
+```text
+3. UserStatusPolicy
+```
+
+Статус: подготовлен отдельный builder для краткого пользовательского итога.
+
+Что изменено:
+
+```text
+Добавлен Services/UserResultTextBuilder.cs.
+Builder собирает краткий итог через VerdictDisplayAdvisor и UserStatusPolicy.
+Текстовые подписи краткого итога приведены к пользовательским формулировкам: чистая плавучесть, нагрузка слабого звена, главный риск без технических префиксов.
+```
+
+Что сознательно не трогали:
+
+```text
+MainWindowViewModel.cs
+BuoyCalculator
+CalculationResult
+технические Checks
+ReportBuilder
+MooringShapeSolver
+Mooring2DCanvas
+XAML-разметку окон
+логику расчёта
+```
+
+Почему это важно:
+
+```text
+Краткий итог вынесен в отдельный display-builder. Следующий коммит к MainWindowViewModel должен заменить ручную сборку ResultText на UserResultTextBuilder.Build(...).
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: connect MainWindow ResultText to UserResultTextBuilder
+```
+
+Статус CI:
+
+```text
+ожидает проверки после коммита
+```
