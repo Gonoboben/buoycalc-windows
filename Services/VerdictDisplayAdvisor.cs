@@ -19,7 +19,7 @@ public static class VerdictDisplayAdvisor
         {
             return new VerdictDisplayResult(
                 "Не подходит",
-                "ERROR: якорь имеет нулевой или отрицательный вес в воде; удержание невозможно.",
+                UserStatusPolicy.ToUserRisk("ERROR: якорь имеет нулевой или отрицательный вес в воде; удержание невозможно."),
                 "Отрицательный или нулевой вес якоря в воде имеет приоритет над остальными рисками. Такой якорь не должен считаться удерживающим элементом.");
         }
 
@@ -27,7 +27,7 @@ public static class VerdictDisplayAdvisor
         {
             return new VerdictDisplayResult(
                 "Не подходит",
-                "FAILED: линия короче глубины; поверхностная постановка невозможна, буй будет под водой.",
+                UserStatusPolicy.ToUserRisk("FAILED: линия короче глубины; поверхностная постановка невозможна, буй будет под водой."),
                 "Волновая нагрузка в расчёте не отключается. Предупреждение относится к геометрии постановки: длины линии недостаточно для поверхностного положения буя.");
         }
 
@@ -40,8 +40,8 @@ public static class VerdictDisplayAdvisor
         }
 
         return new VerdictDisplayResult(
-            result.Verdict,
-            result.MainRisk,
+            UserStatusPolicy.ToUserVerdict(result.Verdict),
+            UserStatusPolicy.ToUserRisk(result.MainRisk),
             "Отображаемый вердикт совпадает с исходным вердиктом расчётного ядра.");
     }
 
