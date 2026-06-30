@@ -180,7 +180,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string VisualizationLineLengthText { get => _visualizationLineLengthText; set => SetProperty(ref _visualizationLineLengthText, value); }
     public string VisualizationOffsetText { get => _visualizationOffsetText; set => SetProperty(ref _visualizationOffsetText, value); }
     public string VisualizationSlackRatioText { get => _visualizationSlackRatioText; set => SetProperty(ref _visualizationSlackRatioText, value); }
-    public string VisualizationStatusText { get => _visualizationStatusText; set => SetProperty(ref _visualizationStatusText, value); }
+    public string VisualizationStatusText { get => _visualizationStatusText; set => SetProperty(ref _visualizationStatusText, UserStatusPolicy.ToUserStatus(value)); }
     public double VisualizationDepthM { get => _visualizationDepthM; set => SetProperty(ref _visualizationDepthM, value); }
     public double VisualizationLineLengthM { get => _visualizationLineLengthM; set => SetProperty(ref _visualizationLineLengthM, value); }
     public double VisualizationOffsetM { get => _visualizationOffsetM; set => SetProperty(ref _visualizationOffsetM, value); }
