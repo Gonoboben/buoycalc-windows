@@ -418,3 +418,54 @@ refactor: introduce SelectedShapeStore read model
 ```text
 ожидает проверки после коммита
 ```
+
+## 2026-06-30 — добавлен SelectedShapeStore read model
+
+Пункт плана:
+
+```text
+4. SelectedShapeStore
+```
+
+Статус: добавлен read-model без подключения 2D/PDF.
+
+Что изменено:
+
+```text
+Добавлен Services/SelectedShapeStore.cs.
+Добавлен SelectedShapeReadModel.
+SelectedShapeStore читает MooringPrimaryShapeSelectionStore.Current, если выбор формы уже есть.
+Если gate selection отсутствует, SelectedShapeStore возвращает fallback из MooringShapeStore.Current.
+```
+
+Что сознательно не трогали:
+
+```text
+MooringShapeSolver
+MooringIterativeSolver
+MooringPrimaryShapeGate
+MooringShapeStore
+MooringPrimaryShapeSelectionStore
+Mooring2DCanvas
+PdfReportBuilder
+ReportBuilder
+логику расчёта
+```
+
+Почему это важно:
+
+```text
+Появился единый read-фасад для выбранной формы. Следующие UI/PDF-шаги смогут читать выбранную форму через SelectedShapeStore, а не напрямую из нескольких технических store.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: read selected shape from SelectedShapeStore in 2D canvas
+```
+
+Статус CI:
+
+```text
+ожидает проверки после коммита
+```
