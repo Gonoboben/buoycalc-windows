@@ -370,3 +370,51 @@ refactor: wire UserStatusPolicy into visualization status summary
 ```text
 ожидает проверки после коммита
 ```
+
+## 2026-06-30 — VisualizationStatusText проходит через UserStatusPolicy
+
+Пункт плана:
+
+```text
+3. UserStatusPolicy
+```
+
+Статус: выполнено для краткого статуса визуализации.
+
+Что изменено:
+
+```text
+ViewModels/MainWindowViewModel.cs: setter VisualizationStatusText теперь применяет UserStatusPolicy.ToUserStatus(...).
+Diff по MainWindowViewModel: 1 строка добавлена, 1 строка удалена.
+```
+
+Что сознательно не трогали:
+
+```text
+BuoyCalculator
+CalculationResult
+ReportBuilder
+PDF builder
+MooringShapeSolver
+Mooring2DCanvas
+XAML-разметку окон
+логику расчёта
+```
+
+Почему это важно:
+
+```text
+Краткий статус визуализации в главном окне теперь проходит через общий пользовательский display-слой.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: introduce SelectedShapeStore read model
+```
+
+Статус CI:
+
+```text
+ожидает проверки после коммита
+```
