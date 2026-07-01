@@ -37,17 +37,8 @@ public static class PdfReportBuilder
 
         var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
         var sequence = sequenceLines.ToList();
-        var alternativeShape = MooringAlternativeShapeStore.Current;
-        var selectedShape = SelectedShapeStore.Current;
-        var hasAlternativeShape = alternativeShape is not null && alternativeShape.Shape.Rows.Count >= 2;
-        var selectedShapeOffsetM = selectedShape?.Shape.HorizontalOffsetM;
-        var shapeOffsetM = hasAlternativeShape
-            ? alternativeShape!.Shape.DiscreteHorizontalOffsetM
-            : selectedShapeOffsetM
-                ?? TryReadReportMetric(reportText, "- Снос формы X/Z:")
-                ?? TryReadReportMetric(reportText, "- Горизонтальный снос по узлам X/Z:")
-                ?? visualizationOffsetM;
-        var clarifiedResultText = NormalizeResultText(resultText, shapeOffsetM);
+        var diagramSource = SelectDiagramSource(reportText, visualizationOffsetM);
+        var clarifiedResultText = NormalizeResultText(resultText, diagramSource.ShapeOffsetM);
 
         writer.BeginPage();
         writer.Title("BuoyCalc Windows - пользовательский отчёт");
@@ -63,18 +54,18 @@ public static class PdfReportBuilder
 
         writer.BeginPage();
         writer.Title("Схема постановки");
-        if (hasAlternativeShape)
+        if (diagramSource.HasAlternativeShape)
         {
             writer.Text("Расчётная 2D-схема PDF построена по форме с дискретными элементами. Эта форма ближе к натурной цепочке: учитывает приборы, соединители и локальные нагрузки. Техническая fallback-форма в пользовательский PDF не выводится.", 10);
             writer.Space(10);
-            writer.AlternativeShapeDiagram(alternativeShape!);
+            writer.AlternativeShapeDiagram(diagramSource.AlternativeShape!);
         }
         else
         {
-            writer.Text(selectedShape is null
-                ? "Форма с дискретными элементами пока недоступна. Пользовательский PDF не выводит техническую fallback-форму."
-                : "Форма с дискретными элементами пока недоступна. PDF использует выбранную форму для краткой оценки сноса, но техническую fallback-схему не выводит.", 10);
-            writer.Text($"Глубина: {visualizationDepthM:0.##} м; длина линии: {visualizationLineLengthM:0.##} м; расчётный снос: {shapeOffsetM:0.##} м.", 10);
+            writer.Text(diagramSource.HasSelectedShape
+                ? "Форма с дискретными элементами пока недоступна. PDF использует выбранную форму для краткой оценки сноса, но техническую fallback-схему не выводит."
+                : "Форма с дискретными элементами пока недоступна. Пользовательский PDF не выводит техническую fallback-форму.", 10);
+            writer.Text($"Глубина: {visualizationDepthM:0.##} м; длина линии: {visualizationLineLengthM:0.##} м; расчётный снос: {diagramSource.ShapeOffsetM:0.##} м.", 10);
         }
 
         writer.Space(12);
@@ -93,6 +84,21 @@ public static class PdfReportBuilder
         writer.Text("Подробные solver-таблицы, промежуточные формы, диагностические ведомости и служебные проверки не включены в пользовательский PDF. Они остаются в полном техническом отчёте приложения.", 10);
         writer.EndPage();
         document.Close();
+    }
+
+    private static PdfDiagramSource SelectDiagramSource(string reportText, double visualizationOffsetM)
+    {
+        var alternativeShape = MooringAlternativeShapeStore.Current;
+        var selectedShape = SelectedShapeStore.Current;
+        var hasAlternativeShape = alternativeShape is not null && alternativeShape.Shape.Rows.Count >= 2;
+        var shapeOffsetM = hasAlternativeShape
+            ? alternativeShape!.Shape.DiscreteHorizontalOffsetM
+            : selectedShape?.Shape.HorizontalOffsetM
+                ?? TryReadReportMetric(reportText, "- Снос формы X/Z:")
+                ?? TryReadReportMetric(reportText, "- Горизонтальный снос по узлам X/Z:")
+                ?? visualizationOffsetM;
+
+        return new PdfDiagramSource(alternativeShape, selectedShape, hasAlternativeShape, selectedShape is not null, shapeOffsetM);
     }
 
     private static string NormalizeResultText(string resultText, double shapeOffsetM)
@@ -139,6 +145,13 @@ public static class PdfReportBuilder
 
         return null;
     }
+
+    private sealed record PdfDiagramSource(
+        MooringAlternativeShapeDisplayData? AlternativeShape,
+        SelectedShapeReadModel? SelectedShape,
+        bool HasAlternativeShape,
+        bool HasSelectedShape,
+        double ShapeOffsetM);
 
     private sealed class PdfCanvasWriter
     {
