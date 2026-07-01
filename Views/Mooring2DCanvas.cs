@@ -64,11 +64,12 @@ public sealed class Mooring2DCanvas : Control
         DrawLabel(context, depth > 0 ? $"глубина {depth:0.##} м" : "глубина не задана", new Point(padding + 12, surfaceY + 12), 11, false, MutedTextBrush);
         DrawLabel(context, lineLength > 0 ? $"линия {lineLength:0.##} м" : "линия не задана", new Point(width - padding - 145, surfaceY + 12), 11, false, MutedTextBrush);
 
-        var shape = SelectedShapeStore.Current?.Shape;
+        var selectedShape = SelectedShapeStore.Current;
+        var shape = selectedShape?.Shape;
         var alternative = MooringAlternativeShapeStore.Current;
-        if (shape is { Nodes.Count: >= 2 })
+        if (selectedShape is not null && shape is { Nodes.Count: >= 2 })
         {
-            DrawEngineeringComparison(context, shape, alternative, vm, width, surfaceY, bottomY, usableHeight, padding);
+            DrawEngineeringComparison(context, selectedShape, alternative, vm, width, surfaceY, bottomY, usableHeight, padding);
             return;
         }
 
@@ -85,7 +86,7 @@ public sealed class Mooring2DCanvas : Control
 
     private static void DrawEngineeringComparison(
         DrawingContext context,
-        MooringShapeResult shape,
+        SelectedShapeReadModel selectedShape,
         MooringAlternativeShapeDisplayData? alternative,
         MainWindowViewModel? vm,
         double width,
@@ -94,6 +95,7 @@ public sealed class Mooring2DCanvas : Control
         double usableHeight,
         double padding)
     {
+        var shape = selectedShape.Shape;
         var mainNodes = shape.Nodes.Select(x => new CalculatedNode(x.Number, x.XOffsetM, x.ZDepthM, x.Label)).ToList();
         var altNodes = alternative?.Shape.Rows.Select(x => new CalculatedNode(x.Number, x.XOffsetM, x.ZDepthM, x.SourceElement)).ToList() ?? new List<CalculatedNode>();
         var allNodes = mainNodes.Concat(altNodes).ToList();
@@ -142,7 +144,7 @@ public sealed class Mooring2DCanvas : Control
         DrawBuoy(context, mainBuoyPoint, vm?.BuoyName ?? "Буй");
         DrawAnchor(context, mainAnchorPoint, vm?.AnchorName ?? "Якорь");
 
-        DrawLabel(context, "основная форма: MooringShapeSolver", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
+        DrawLabel(context, DisplaySelectedShapeLabel(selectedShape), new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
         DrawLegendLine(context, new Point(padding + 12, surfaceY + 52), LinePen, "основная X/Z", TextBrush);
         if (alternative is not null && altPoints.Count >= 2)
         {
@@ -411,6 +413,21 @@ public sealed class Mooring2DCanvas : Control
         var typeface = new Typeface("Arial", FontStyle.Normal, bold ? FontWeight.Bold : FontWeight.Normal);
         var formattedText = new FormattedText(text ?? string.Empty, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, size, brush);
         context.DrawText(formattedText, origin);
+    }
+
+    private static string DisplaySelectedShapeLabel(SelectedShapeReadModel selectedShape)
+    {
+        if (selectedShape.UsesDiscreteLoads)
+        {
+            return "основная форма: выбрана с дискретными нагрузками";
+        }
+
+        if (selectedShape.HasGateSelection)
+        {
+            return "основная форма: выбран fallback";
+        }
+
+        return "основная форма: текущая выбранная форма";
     }
 
     private static string DisplayBuoyState(BuoyShapeState state)
