@@ -6,6 +6,16 @@ public static class UserReportBuilder
 {
     public static string Build(EnvironmentInput environment, CalculationResult result)
     {
-        return UserResultTextBuilder.Build(environment, result);
+        var display = VerdictDisplayAdvisor.Build(environment, result);
+
+        return $"Вердикт: {display.Verdict}\n" +
+               $"Главный риск: {display.MainRisk}\n" +
+               $"Грунт: {environment.Seabed.DisplayName}\n" +
+               $"Течение расчётное: {environment.EffectiveCurrentSpeedMS:0.###} м/с\n" +
+               $"Чистая плавучесть: {result.NetBuoyancyKg:0.##} кг\n" +
+               $"Нагрузка слабого звена: {result.TensionKn:0.##} кН\n" +
+               $"Слабое звено: {result.WeakLinkName}\n" +
+               $"Запас слабого звена: {result.TensionReserve:0.##}\n" +
+               $"Запас якоря: {result.AnchorReserve:0.##}";
     }
 }
