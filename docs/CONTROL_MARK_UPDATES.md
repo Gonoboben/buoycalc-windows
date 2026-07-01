@@ -571,3 +571,53 @@ refactor: read selected shape from SelectedShapeStore in PDF diagram
 ```text
 ожидает проверки PR
 ```
+
+## 2026-07-01 — PDF fallback читает SelectedShapeStore
+
+Пункт плана:
+
+```text
+4. SelectedShapeStore
+```
+
+Статус: выполнено в PR-ветке `pdf-selected-shape`.
+
+Что изменено:
+
+```text
+Services/PdfReportBuilder.cs теперь читает SelectedShapeStore.Current.
+Если форма с дискретными элементами недоступна, снос для краткой PDF-сводки берётся из selectedShape.Shape.HorizontalOffsetM перед чтением метрик из reportText.
+Техническая fallback-схема по-прежнему не рисуется в пользовательском PDF.
+```
+
+Что сознательно не трогали:
+
+```text
+MooringShapeSolver
+MooringIterativeSolver
+MooringPrimaryShapeGate
+MooringShapeStore
+MooringPrimaryShapeSelectionStore
+MooringAlternativeShapeStore
+ReportBuilder
+геометрию PDF-диаграммы с дискретными нагрузками
+логику расчёта
+```
+
+Почему это важно:
+
+```text
+PDF начинает использовать единый read-model выбранной формы как источник пользовательской fallback-сводки, вместо того чтобы сначала пытаться извлекать снос из текста отчёта.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: split user PDF diagram source selection from drawing
+```
+
+Статус CI:
+
+```text
+ожидает проверки PR
+```
