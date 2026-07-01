@@ -9,19 +9,20 @@ public static class ReportBuilder
 {
     public static string Build(string projectName, EnvironmentInput environment, BuoyInput buoy, AnchorInput anchor, CalculationResult result)
     {
-        var sb = new StringBuilder();
-        var tensionRows = SegmentTensionAnalyzer.Build(result);
-        var shape = MooringShapeSolver.Build(environment, result);
-        var shapeProjection = MooringShapeProjection.Build(shape);
-        var shapeForces = MooringShapeForceAnalyzer.Build(result, shapeProjection);
-        var shapeTensions = MooringShapeTensionAnalyzer.Build(result, tensionRows, shapeForces);
-        var sequencePositions = MooringSequencePositioner.Build(result);
-        var discreteLoadTensions = MooringDiscreteLoadTensionAnalyzer.Build(result, tensionRows, sequencePositions);
-        var discreteLoadShape = MooringDiscreteLoadShapeBuilder.Build(shape, discreteLoadTensions);
-        var alternativeDiscreteNodes = MooringAlternativeDiscreteNodeProjector.Build(sequencePositions, discreteLoadShape, shape);
-        var iterativeSolver = MooringIterativeSolver.Build(result, shape, sequencePositions, tensionRows);
-        var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
-        var vectorBalance = MooringVectorBalance.Build(result);
+         var sb = new StringBuilder();
+        var data = TechnicalReportDataBuilder.Build(environment, result);
+        var tensionRows = data.TensionRows;
+        var shape = data.Shape;
+        var shapeProjection = data.ShapeProjection;
+        var shapeForces = data.ShapeForces;
+        var shapeTensions = data.ShapeTensions;
+        var sequencePositions = data.SequencePositions;
+        var discreteLoadTensions = data.DiscreteLoadTensions;
+        var discreteLoadShape = data.DiscreteLoadShape;
+        var alternativeDiscreteNodes = data.AlternativeDiscreteNodes;
+        var iterativeSolver = data.IterativeSolver;
+        var diagnostics = data.Diagnostics;
+        var vectorBalance = data.VectorBalance;
         MooringShapeStore.Set(shape);
         MooringIterativeSolverStore.Set(iterativeSolver);
 
