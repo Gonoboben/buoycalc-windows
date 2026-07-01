@@ -621,3 +621,54 @@ refactor: split user PDF diagram source selection from drawing
 ```text
 ожидает проверки PR
 ```
+
+## 2026-07-01 — PDF source selection отделён от отрисовки
+
+Пункт плана:
+
+```text
+4. SelectedShapeStore
+```
+
+Статус: выполнено в PR-ветке `pdf-source-split`.
+
+Что изменено:
+
+```text
+Services/PdfReportBuilder.cs получил PdfDiagramSource.
+Выбор источника PDF-схемы вынесен в SelectDiagramSource(...).
+Build(...) теперь использует diagramSource вместо прямого смешивания store-чтения, выбора сноса и текста страницы.
+Поведение выбора источника сохранено: сначала форма с дискретными элементами, затем SelectedShapeStore, затем метрики reportText, затем visualizationOffsetM.
+```
+
+Что сознательно не трогали:
+
+```text
+MooringShapeSolver
+MooringIterativeSolver
+MooringPrimaryShapeGate
+MooringShapeStore
+MooringPrimaryShapeSelectionStore
+MooringAlternativeShapeStore
+ReportBuilder
+геометрию PDF-диаграммы с дискретными нагрузками
+логику расчёта
+```
+
+Почему это важно:
+
+```text
+В PdfReportBuilder появился отдельный read-model источника схемы. Это отделяет выбор данных для пользовательского PDF от непосредственной отрисовки страниц.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: introduce user report and technical report boundary
+```
+
+Статус CI:
+
+```text
+ожидает проверки PR
+```
