@@ -663,8 +663,9 @@ public sealed class MainWindowViewModel : ViewModelBase
             ElementRows.Add(ElementCalculationDisplayRow.From(row));
         }
 
-        ResultText = UserResultTextBuilder.Build(environment, result);
-        ReportText = ReportBuilder.Build(ProjectName, environment, buoy, anchor, result);
+        var reports = ReportBuildBoundary.Build(ProjectName, environment, buoy, anchor, result);
+        ResultText = reports.UserResultText;
+        ReportText = reports.TechnicalReportText;
         UpdateSequenceSummary(result);
         UpdateCurrentProfileSummary();
     }
