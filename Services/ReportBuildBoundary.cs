@@ -17,6 +17,6 @@ public static class ReportBuildBoundary
     {
         return new ReportBuildResult(
             UserResultTextBuilder.Build(environment, result),
-            ReportBuilder.Build(projectName, environment, buoy, anchor, result));
+            TechnicalReportBuilder.Build(projectName, environment, buoy, anchor, result));
     }
 }
