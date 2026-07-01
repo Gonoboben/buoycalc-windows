@@ -672,3 +672,54 @@ refactor: introduce user report and technical report boundary
 ```text
 ожидает проверки PR
 ```
+
+## 2026-07-01 — добавлен ReportBuildBoundary
+
+Пункт плана:
+
+```text
+5. UserReportBuilder и TechnicalReportBuilder
+```
+
+Статус: добавлена первая модель границы отчётов без изменения текста.
+
+Что изменено:
+
+```text
+Добавлен Services/ReportBuildBoundary.cs.
+Добавлен ReportBuildResult.
+ReportBuildBoundary.Build(...) возвращает UserResultText и TechnicalReportText разными полями.
+Пока используются существующие UserResultTextBuilder и ReportBuilder, поэтому пользовательский итог и полный технический отчёт не меняются.
+```
+
+Что сознательно не трогали:
+
+```text
+MainWindowViewModel
+PdfReportBuilder
+ReportBuilder
+UserResultTextBuilder
+BuoyCalculator
+MooringShapeSolver
+логику расчёта
+текст пользовательского итога
+текст полного технического отчёта
+```
+
+Почему это важно:
+
+```text
+Появилась явная модель результата отчёта. Следующий шаг сможет подключить MainWindow к ReportBuildBoundary без изменения содержимого отчётов.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: connect MainWindow report assignment to ReportBuildBoundary
+```
+
+Статус CI:
+
+```text
+ожидает проверки PR
+```
