@@ -38,10 +38,13 @@ public static class PdfReportBuilder
         var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
         var sequence = sequenceLines.ToList();
         var alternativeShape = MooringAlternativeShapeStore.Current;
+        var selectedShape = SelectedShapeStore.Current;
         var hasAlternativeShape = alternativeShape is not null && alternativeShape.Shape.Rows.Count >= 2;
+        var selectedShapeOffsetM = selectedShape?.Shape.HorizontalOffsetM;
         var shapeOffsetM = hasAlternativeShape
             ? alternativeShape!.Shape.DiscreteHorizontalOffsetM
-            : TryReadReportMetric(reportText, "- Снос формы X/Z:")
+            : selectedShapeOffsetM
+                ?? TryReadReportMetric(reportText, "- Снос формы X/Z:")
                 ?? TryReadReportMetric(reportText, "- Горизонтальный снос по узлам X/Z:")
                 ?? visualizationOffsetM;
         var clarifiedResultText = NormalizeResultText(resultText, shapeOffsetM);
@@ -68,7 +71,9 @@ public static class PdfReportBuilder
         }
         else
         {
-            writer.Text("Форма с дискретными элементами пока недоступна. Пользовательский PDF не выводит техническую fallback-форму.", 10);
+            writer.Text(selectedShape is null
+                ? "Форма с дискретными элементами пока недоступна. Пользовательский PDF не выводит техническую fallback-форму."
+                : "Форма с дискретными элементами пока недоступна. PDF использует выбранную форму для краткой оценки сноса, но техническую fallback-схему не выводит.", 10);
             writer.Text($"Глубина: {visualizationDepthM:0.##} м; длина линии: {visualizationLineLengthM:0.##} м; расчётный снос: {shapeOffsetM:0.##} м.", 10);
         }
 
