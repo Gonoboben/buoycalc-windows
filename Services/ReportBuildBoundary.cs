@@ -16,7 +16,7 @@ public static class ReportBuildBoundary
         CalculationResult result)
     {
         return new ReportBuildResult(
-            UserResultTextBuilder.Build(environment, result),
+            UserReportBuilder.Build(environment, result),
             TechnicalReportBuilder.Build(projectName, environment, buoy, anchor, result));
     }
 }
