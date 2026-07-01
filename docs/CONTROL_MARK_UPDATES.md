@@ -469,3 +469,54 @@ refactor: read selected shape from SelectedShapeStore in 2D canvas
 ```text
 ожидает проверки после коммита
 ```
+
+## 2026-07-01 — 2D canvas читает форму через SelectedShapeStore
+
+Пункт плана:
+
+```text
+4. SelectedShapeStore
+```
+
+Статус: выполнено для источника основной формы в 2D.
+
+Что изменено:
+
+```text
+Views/Mooring2DCanvas.cs больше не читает MooringShapeStore.Current напрямую для основной формы.
+Основная форма теперь берётся через SelectedShapeStore.Current?.Shape.
+Diff по Mooring2DCanvas: 1 строка добавлена, 1 строка удалена.
+```
+
+Что сознательно не трогали:
+
+```text
+MooringShapeSolver
+MooringIterativeSolver
+MooringPrimaryShapeGate
+MooringShapeStore
+MooringPrimaryShapeSelectionStore
+MooringAlternativeShapeStore
+PdfReportBuilder
+ReportBuilder
+геометрию и масштаб 2D
+логику расчёта
+```
+
+Почему это важно:
+
+```text
+2D начинает читать выбранную форму через единый read-model. Это уменьшает прямую зависимость визуализации от технических store.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: read selected shape metadata in 2D label
+```
+
+Статус CI:
+
+```text
+ожидает проверки после коммита
+```
