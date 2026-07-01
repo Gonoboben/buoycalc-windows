@@ -64,7 +64,7 @@ public sealed class Mooring2DCanvas : Control
         DrawLabel(context, depth > 0 ? $"глубина {depth:0.##} м" : "глубина не задана", new Point(padding + 12, surfaceY + 12), 11, false, MutedTextBrush);
         DrawLabel(context, lineLength > 0 ? $"линия {lineLength:0.##} м" : "линия не задана", new Point(width - padding - 145, surfaceY + 12), 11, false, MutedTextBrush);
 
-        var shape = MooringShapeStore.Current;
+        var shape = SelectedShapeStore.Current?.Shape;
         var alternative = MooringAlternativeShapeStore.Current;
         if (shape is { Nodes.Count: >= 2 })
         {
