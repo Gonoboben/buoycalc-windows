@@ -520,3 +520,54 @@ refactor: read selected shape metadata in 2D label
 ```text
 ожидает проверки после коммита
 ```
+
+## 2026-07-01 — 2D label читает metadata выбранной формы
+
+Пункт плана:
+
+```text
+4. SelectedShapeStore
+```
+
+Статус: выполнено в PR-ветке `selected-shape-2d-label-2026-07-01`.
+
+Что изменено:
+
+```text
+Views/Mooring2DCanvas.cs передаёт SelectedShapeReadModel в DrawEngineeringComparison.
+Подпись основной формы строится через metadata выбранной формы.
+Добавлен DisplaySelectedShapeLabel(...).
+Геометрия, масштаб и набор узлов 2D не изменялись.
+```
+
+Что сознательно не трогали:
+
+```text
+MooringShapeSolver
+MooringIterativeSolver
+MooringPrimaryShapeGate
+MooringShapeStore
+MooringPrimaryShapeSelectionStore
+MooringAlternativeShapeStore
+PdfReportBuilder
+ReportBuilder
+логику расчёта
+```
+
+Почему это важно:
+
+```text
+2D больше не показывает постоянную подпись MooringShapeSolver, если форма фактически выбрана через общий SelectedShapeStore read-model.
+```
+
+Следующий допустимый шаг:
+
+```text
+refactor: read selected shape from SelectedShapeStore in PDF diagram
+```
+
+Статус CI:
+
+```text
+ожидает проверки PR
+```
