@@ -23,8 +23,7 @@ public static class ReportBuilder
         var iterativeSolver = data.IterativeSolver;
         var diagnostics = data.Diagnostics;
         var vectorBalance = data.VectorBalance;
-        MooringShapeStore.Set(shape);
-        MooringIterativeSolverStore.Set(iterativeSolver);
+        TechnicalReportStorePublisher.Publish(data);
 
         sb.AppendLine("# BuoyCalc Windows — предварительный отчёт");
         sb.AppendLine();
