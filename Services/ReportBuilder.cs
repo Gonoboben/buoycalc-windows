@@ -9,7 +9,7 @@ public static class ReportBuilder
 {
     public static string Build(string projectName, EnvironmentInput environment, BuoyInput buoy, AnchorInput anchor, CalculationResult result)
     {
-         var sb = new StringBuilder();
+        var sb = new StringBuilder();
         var data = TechnicalReportDataBuilder.Build(environment, result);
         var tensionRows = data.TensionRows;
         var shape = data.Shape;
