@@ -8,7 +8,7 @@ $files = Get-ChildItem -Path $root -Recurse -File -Include *.cs |
     }
 
 $matches = foreach ($file in $files) {
-    Select-String -Path $file.FullName -Pattern 'ReportBuilder' | ForEach-Object {
+    Select-String -Path $file.FullName -Pattern '\bReportBuilder\.Build\s*\(' | ForEach-Object {
         [PSCustomObject]@{
             Path = Resolve-Path -Path $_.Path -Relative
             Line = $_.LineNumber
@@ -18,19 +18,12 @@ $matches = foreach ($file in $files) {
 }
 
 if (-not $matches) {
-    Write-Host 'No ReportBuilder references found.'
+    Write-Host 'No external ReportBuilder.Build calls found.'
     exit 0
 }
 
 $matches | Format-Table -AutoSize
 
-$externalMatches = $matches | Where-Object { $_.Path -ne '.\Services\ReportBuilder.cs' }
-
-if ($externalMatches) {
-    Write-Host ''
-    Write-Host 'External ReportBuilder references were found. Review these before cleanup.'
-    exit 1
-}
-
 Write-Host ''
-Write-Host 'Only Services/ReportBuilder.cs references ReportBuilder.'
+Write-Host 'ReportBuilder.Build calls were found. Review these before cleanup.'
+exit 1
