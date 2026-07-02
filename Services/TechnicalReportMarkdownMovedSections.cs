@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using BuoyCalc.Windows.Models;
 
@@ -26,6 +28,12 @@ internal static class TechnicalReportMarkdownMovedSections
                 return true;
             case "AppendModelCoverageRows":
                 AppendModelCoverageRows((StringBuilder)args[0], (CalculationResult)args[1]);
+                return true;
+            case "AppendSegmentRows":
+                AppendSegmentRows((StringBuilder)args[0], (CalculationResult)args[1]);
+                return true;
+            case "AppendTensionRows":
+                AppendTensionRows((StringBuilder)args[0], (IReadOnlyList<SegmentTensionRow>)args[1]);
                 return true;
             default:
                 return false;
@@ -132,6 +140,50 @@ internal static class TechnicalReportMarkdownMovedSections
             sb.AppendLine($"| {row.Number} | {Escape(row.Title)} | {Escape(row.Kind)} | да | да | да | {discreteTensionScope} | {alternativeShapeScope} | {discreteNodeScope} | {shapeScope} | {tensionScope} | {Escape(note)} |");
         }
         sb.AppendLine();
+    }
+
+    private static void AppendSegmentRows(StringBuilder sb, CalculationResult result)
+    {
+        if (result.SegmentRows.Count == 0) return;
+        sb.AppendLine("## Расчётные сегменты линии");
+        sb.AppendLine($"Линия разбита на {result.SegmentRows.Count} сегментов. В таблице показаны первые 40 и последние 40 сегментов, чтобы были видны верхние и нижние участки линии.");
+        sb.AppendLine();
+        sb.AppendLine("| № | Элемент | Пресет | s0, м | s1, м | L, м | z, м | U | V | W | |Uгор| | ρ | A, м² | Cd | Сила, Н |");
+        sb.AppendLine("|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+        foreach (var row in SampleRows(result.SegmentRows, 40, 40))
+        {
+            sb.AppendLine($"| {row.Number} | {Escape(row.SourceElement)} | {Escape(row.RopePresetName)} | {row.StartLengthM:0.####} | {row.EndLengthM:0.####} | {row.SegmentLengthM:0.####} | {row.EstimatedDepthM:0.####} | {row.EastCurrentMS:0.####} | {row.NorthCurrentMS:0.####} | {row.VerticalCurrentMS:0.####} | {row.LocalSpeedMS:0.####} | {row.WaterDensityKgM3:0.####} | {row.ProjectedAreaM2:0.####} | {row.DragCoefficient:0.####} | {row.CurrentForceN:0.####} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine($"Суммарная сила течения по сегментам линии: {result.SegmentRows.Sum(x => x.CurrentForceN):0.####} Н");
+        sb.AppendLine();
+    }
+
+    private static void AppendTensionRows(StringBuilder sb, IReadOnlyList<SegmentTensionRow> rows)
+    {
+        if (rows.Count == 0) return;
+        var maxTension = rows.OrderByDescending(x => x.TensionKn).First();
+        sb.AppendLine("## Натяжения по сегментам линии");
+        sb.AppendLine($"Расчёт ведётся снизу вверх: от якоря к бую. Показаны первые 40 и последние 40 сегментов.");
+        sb.AppendLine($"Максимальное оценочное натяжение линии: {maxTension.TensionKn:0.####} кН на сегменте №{maxTension.Number}.");
+        sb.AppendLine();
+        sb.AppendLine("| № | Элемент | z, м | L, м | Вес в воде, кг | Fтек, Н | ΣFгор, Н | ΣFверт, Н | T, кН | Угол от вертикали, ° | Статус |");
+        sb.AppendLine("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+        foreach (var row in SampleRows(rows, 40, 40))
+        {
+            sb.AppendLine($"| {row.Number} | {Escape(row.SourceElement)} | {row.EstimatedDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.WeightWaterKg:0.####} | {row.SegmentCurrentForceN:0.####} | {row.CumulativeHorizontalForceN:0.####} | {row.CumulativeVerticalForceN:0.####} | {row.TensionKn:0.####} | {row.AngleFromVerticalDeg:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+    }
+
+    private static IEnumerable<T> SampleRows<T>(IReadOnlyList<T> rows, int firstCount, int lastCount)
+    {
+        if (rows.Count <= firstCount + lastCount)
+        {
+            return rows;
+        }
+
+        return rows.Take(firstCount).Concat(rows.Skip(rows.Count - lastCount));
     }
 
     private static string Escape(string value)
