@@ -41,6 +41,12 @@ internal static class TechnicalReportMarkdownMovedSections
             case "AppendShapeProjectionRows":
                 AppendShapeProjectionRows((StringBuilder)args[0], (MooringShapeProjectionResult)args[1]);
                 return true;
+            case "AppendShapeForceRows":
+                AppendShapeForceRows((StringBuilder)args[0], (MooringShapeForceResult)args[1]);
+                return true;
+            case "AppendShapeTensionRows":
+                AppendShapeTensionRows((StringBuilder)args[0], (MooringShapeTensionResult)args[1]);
+                return true;
             default:
                 return false;
         }
@@ -217,6 +223,45 @@ internal static class TechnicalReportMarkdownMovedSections
         }
         sb.AppendLine();
         sb.AppendLine(projection.MethodNote);
+        sb.AppendLine();
+    }
+
+    private static void AppendShapeForceRows(StringBuilder sb, MooringShapeForceResult forces)
+    {
+        if (forces.Rows.Count == 0) return;
+        sb.AppendLine("## Shape-based силы линии по ориентации сегментов");
+        sb.AppendLine("Эта таблица сравнивает старую силу сегмента с оценкой по нормальной составляющей скорости к фактической X/Z-ориентации сегмента.");
+        sb.AppendLine($"Старая ΣFлинии={forces.OriginalLineForceN:0.####} Н; shape-based ΣFлинии={forces.ShapeLineForceN:0.####} Н; Δ={forces.DifferenceN:0.####} Н ({forces.RelativeDifference:0.####}).");
+        sb.AppendLine($"Максимальное отличие строки={forces.MaxRowDifferenceN:0.####} Н; статус={(forces.WithinTolerance ? "OK" : "INFO: заметное отличие от старой оценки")}");
+        sb.AppendLine();
+        sb.AppendLine("| № | Сегмент | Элемент | L, м | U, м/с | Uнорм, м/с | Угол, ° | F старая, Н | F shape, Н | ΔF, Н | Ratio | Статус |");
+        sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+        foreach (var row in SampleRows(forces.Rows, 45, 45))
+        {
+            sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.SegmentLengthM:0.####} | {row.LocalSpeedMS:0.####} | {row.NormalSpeedMS:0.####} | {row.AngleFromVerticalDeg:0.####} | {row.OriginalForceN:0.####} | {row.ShapeForceN:0.####} | {row.DifferenceN:0.####} | {row.Ratio:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine(forces.MethodNote);
+        sb.AppendLine();
+    }
+
+    private static void AppendShapeTensionRows(StringBuilder sb, MooringShapeTensionResult tensions)
+    {
+        if (tensions.Rows.Count == 0) return;
+        sb.AppendLine("## Shape-based натяжения линии");
+        sb.AppendLine("Эта таблица пересчитывает накопленные натяжения снизу вверх, используя shape-based силы сегментов вместо старых сил SegmentCalculationRow.");
+        sb.AppendLine($"Top T старая={tensions.TopOriginalTensionKn:0.####} кН; Top T shape={tensions.TopShapeTensionKn:0.####} кН; относительное отличие={tensions.RelativeTopTensionDifference:0.####}.");
+        sb.AppendLine($"Max T старая={tensions.MaxOriginalTensionKn:0.####} кН; Max T shape={tensions.MaxShapeTensionKn:0.####} кН; Max ΔT={tensions.MaxTensionDifferenceKn:0.####} кН; Max Δугла={tensions.MaxAngleDifferenceDeg:0.####}°.");
+        sb.AppendLine($"Статус={(tensions.WithinTolerance ? "OK" : "INFO: shape-based натяжение заметно отличается от старого")}");
+        sb.AppendLine();
+        sb.AppendLine("| № | Сегмент | Элемент | z, м | L, м | Вес, кг | F старая, Н | F shape, Н | T старая, кН | T shape, кН | ΔT, кН | Угол старый, ° | Угол shape, ° | Δугла, ° | Статус |");
+        sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+        foreach (var row in SampleRows(tensions.Rows, 45, 45))
+        {
+            sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.SourceElement)} | {row.EstimatedDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.WeightWaterKg:0.####} | {row.OriginalSegmentForceN:0.####} | {row.ShapeSegmentForceN:0.####} | {row.OriginalTensionKn:0.####} | {row.ShapeTensionKn:0.####} | {row.TensionDifferenceKn:0.####} | {row.OriginalAngleFromVerticalDeg:0.####} | {row.ShapeAngleFromVerticalDeg:0.####} | {row.AngleDifferenceDeg:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine(tensions.MethodNote);
         sb.AppendLine();
     }
 
