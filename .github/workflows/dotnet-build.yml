@@ -65,6 +65,11 @@ jobs:
               throw "dotnet build failed with exit code $LASTEXITCODE"
             }
 
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-reportbuilder-usage.ps1
+            if ($LASTEXITCODE -ne 0) {
+              throw "ReportBuilder usage check failed with exit code $LASTEXITCODE"
+            }
+
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
