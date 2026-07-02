@@ -11,6 +11,6 @@ public static class TechnicalReportBuilder
         AnchorInput anchor,
         CalculationResult result)
     {
-        return ReportBuilder.Build(projectName, environment, buoy, anchor, result);
+        return TechnicalReportMarkdownBuilder.Build(projectName, environment, buoy, anchor, result);
     }
 }
