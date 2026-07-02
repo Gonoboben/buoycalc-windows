@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 
 namespace BuoyCalc.Windows.Services;
 
@@ -37,9 +36,6 @@ internal static class TechnicalReportMarkdownSectionBridge
             return;
         }
 
-        var method = typeof(ReportBuilder).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException($"ReportBuilder helper not found: {methodName}");
-
-        method.Invoke(null, args);
+        throw new InvalidOperationException($"Technical report Markdown section renderer not found: {methodName}");
     }
 }
