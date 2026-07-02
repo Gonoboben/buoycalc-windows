@@ -75,6 +75,11 @@ jobs:
               throw "Technical report path smoke check failed with exit code $LASTEXITCODE"
             }
 
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-readmodel-boundary.ps1
+            if ($LASTEXITCODE -ne 0) {
+              throw "Read-model boundary smoke check failed with exit code $LASTEXITCODE"
+            }
+
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
