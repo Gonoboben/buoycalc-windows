@@ -35,6 +35,12 @@ internal static class TechnicalReportMarkdownMovedSections
             case "AppendTensionRows":
                 AppendTensionRows((StringBuilder)args[0], (IReadOnlyList<SegmentTensionRow>)args[1]);
                 return true;
+            case "AppendShapeRows":
+                AppendShapeRows((StringBuilder)args[0], (MooringShapeResult)args[1]);
+                return true;
+            case "AppendShapeProjectionRows":
+                AppendShapeProjectionRows((StringBuilder)args[0], (MooringShapeProjectionResult)args[1]);
+                return true;
             default:
                 return false;
         }
@@ -176,6 +182,44 @@ internal static class TechnicalReportMarkdownMovedSections
         sb.AppendLine();
     }
 
+    private static void AppendShapeRows(StringBuilder sb, MooringShapeResult shape)
+    {
+        if (shape.Nodes.Count == 0) return;
+        sb.AppendLine("## Расчётная форма постановки X/Z");
+        sb.AppendLine("Координаты являются выходом инженерного слоя MooringShapeSolver. Визуализация должна только отображать эти точки.");
+        sb.AppendLine($"Состояние буя: {DisplayBuoyState(shape.BuoyState)}. Сходимость: {(shape.Converged ? "да" : "нет")}.");
+        sb.AppendLine($"Итерации solver: {shape.IterationCount}, невязка: {shape.ConvergenceResidualM:0.####} м, scale={shape.AngleScale:0.####}. Критерий: {shape.ConvergenceCriterion}.");
+        sb.AppendLine($"Показаны первые 45 и последние 45 узлов из {shape.Nodes.Count}.");
+        sb.AppendLine();
+        sb.AppendLine("| Узел | Сегмент | Элемент | s, м | X, м | Z, м | Lсег, м | Угол, ° | T, кН | Статус |");
+        sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---|");
+        foreach (var row in SampleRows(shape.Nodes, 45, 45))
+        {
+            sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.AlongLineM:0.####} | {row.XOffsetM:0.####} | {row.ZDepthM:0.####} | {row.SegmentLengthM:0.####} | {row.SegmentAngleFromVerticalDeg:0.####} | {row.SegmentTensionKn:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+    }
+
+    private static void AppendShapeProjectionRows(StringBuilder sb, MooringShapeProjectionResult projection)
+    {
+        if (projection.Rows.Count == 0) return;
+        sb.AppendLine("## Проекции формы X/Z по сегментам");
+        sb.AppendLine("Этот раздел связывает узлы MooringShapeSolver с геометрией сегментов: dX, dZ, фактическая длина по координатам и угол от вертикали.");
+        sb.AppendLine($"ΣdX={projection.SumDeltaXM:0.####} м; ΣdZ={projection.SumDeltaZM:0.####} м; Lпо координатам={projection.TotalProjectedLengthM:0.####} м; Lсегментов={projection.TotalSegmentLengthM:0.####} м.");
+        sb.AppendLine($"Невязка длины={projection.LengthResidualM:0.####} м; невязка X конечных точек={projection.EndpointResidualXM:0.####} м; невязка Z конечных точек={projection.EndpointResidualZM:0.####} м; статус={(projection.GeometryClosed ? "OK" : "WARNING")}.");
+        sb.AppendLine($"Максимальный угол от вертикали={projection.MaxAngleFromVerticalDeg:0.####}°; средний угол={projection.AverageAngleFromVerticalDeg:0.####}°.");
+        sb.AppendLine();
+        sb.AppendLine("| № | Сегмент | Элемент | L, м | dX, м | dZ, м | L по X/Z, м | Невязка L, м | Угол, ° | T, кН | Статус |");
+        sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---|");
+        foreach (var row in SampleRows(projection.Rows, 45, 45))
+        {
+            sb.AppendLine($"| {row.Number} | {row.SegmentNumber} | {Escape(row.Label)} | {row.SegmentLengthM:0.####} | {row.DeltaXM:0.####} | {row.DeltaZM:0.####} | {row.ProjectedLengthM:0.####} | {row.LengthResidualM:0.####} | {row.AngleFromVerticalDeg:0.####} | {row.TensionKn:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine(projection.MethodNote);
+        sb.AppendLine();
+    }
+
     private static IEnumerable<T> SampleRows<T>(IReadOnlyList<T> rows, int firstCount, int lastCount)
     {
         if (rows.Count <= firstCount + lastCount)
@@ -184,6 +228,17 @@ internal static class TechnicalReportMarkdownMovedSections
         }
 
         return rows.Take(firstCount).Concat(rows.Skip(rows.Count - lastCount));
+    }
+
+    private static string DisplayBuoyState(BuoyShapeState state)
+    {
+        return state switch
+        {
+            BuoyShapeState.Surface => "на поверхности",
+            BuoyShapeState.Submerged => "под водой",
+            BuoyShapeState.Overloaded => "перегружен / отрицательная плавучесть",
+            _ => "не определено"
+        };
     }
 
     private static string Escape(string value)
