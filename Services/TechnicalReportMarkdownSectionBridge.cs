@@ -32,6 +32,11 @@ internal static class TechnicalReportMarkdownSectionBridge
             return;
         }
 
+        if (TechnicalReportMarkdownCheckSections.TryAppend(methodName, args))
+        {
+            return;
+        }
+
         var method = typeof(ReportBuilder).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException($"ReportBuilder helper not found: {methodName}");
 
