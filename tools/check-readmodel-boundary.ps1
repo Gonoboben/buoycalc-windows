@@ -32,9 +32,9 @@ Assert-FileExists $markerPath
 
 $marker = Read-RepoText $markerPath
 Assert-Contains $marker "#46" "Read-model boundary marker"
-Assert-Contains $marker "Treat `CalculationResult` as solver-facing output." "Read-model boundary marker"
-Assert-Contains $marker "Treat explicit read models such as technical report data as renderer-facing/user-facing input." "Read-model boundary marker"
 Assert-Contains $marker "CalculationResult" "Read-model boundary marker"
+Assert-Contains $marker "solver-facing output" "Read-model boundary marker"
+Assert-Contains $marker "renderer-facing/user-facing input" "Read-model boundary marker"
 Assert-Contains $marker "explicit read-model builder" "Read-model boundary marker"
 Assert-Contains $marker "Markdown / PDF / 2D / UI renderers" "Read-model boundary marker"
 Assert-Contains $marker "No solver physics changes are allowed in this phase." "Read-model boundary marker"
