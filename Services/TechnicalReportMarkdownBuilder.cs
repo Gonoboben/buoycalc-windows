@@ -1,5 +1,3 @@
-using System;
-using System.Reflection;
 using System.Text;
 using BuoyCalc.Windows.Models;
 
@@ -9,7 +7,8 @@ namespace BuoyCalc.Windows.Services;
 /// Markdown renderer boundary for the full technical report.
 ///
 /// The top-level Markdown assembly now lives here. Existing section renderers are
-/// reused from ReportBuilder to keep the generated output byte-for-byte stable.
+/// reused from ReportBuilder through TechnicalReportMarkdownSectionBridge to keep
+/// the generated output byte-for-byte stable.
 /// </summary>
 public static class TechnicalReportMarkdownBuilder
 {
@@ -39,26 +38,26 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"Инженерная диагностика: {diagnostics.Summary}");
         sb.AppendLine();
 
-        InvokeReportBuilderAppend("AppendEnvironment", sb, environment);
-        InvokeReportBuilderAppend("AppendBuoy", sb, buoy, shape);
-        InvokeReportBuilderAppend("AppendAnchor", sb, anchor, result);
-        InvokeReportBuilderAppend("AppendTotals", sb, result, tensionRows, shape, shapeProjection, shapeForces, shapeTensions, sequencePositions, discreteLoadTensions, discreteLoadShape, alternativeDiscreteNodes, iterativeSolver, diagnostics);
-        InvokeReportBuilderAppend("AppendDiagnostics", sb, diagnostics);
-        InvokeReportBuilderAppend("AppendVectorBalanceRows", sb, vectorBalance);
-        InvokeReportBuilderAppend("AppendElementRows", sb, result);
-        InvokeReportBuilderAppend("AppendSequencePositionRows", sb, sequencePositions);
-        InvokeReportBuilderAppend("AppendModelCoverageRows", sb, result);
-        InvokeReportBuilderAppend("AppendSegmentRows", sb, result);
-        InvokeReportBuilderAppend("AppendTensionRows", sb, tensionRows);
-        InvokeReportBuilderAppend("AppendShapeRows", sb, shape);
-        InvokeReportBuilderAppend("AppendShapeProjectionRows", sb, shapeProjection);
-        InvokeReportBuilderAppend("AppendShapeForceRows", sb, shapeForces);
-        InvokeReportBuilderAppend("AppendShapeTensionRows", sb, shapeTensions);
-        InvokeReportBuilderAppend("AppendDiscreteLoadTensionRows", sb, discreteLoadTensions);
-        InvokeReportBuilderAppend("AppendDiscreteLoadShapeRows", sb, discreteLoadShape);
-        InvokeReportBuilderAppend("AppendAlternativeDiscreteNodeRows", sb, alternativeDiscreteNodes);
-        InvokeReportBuilderAppend("AppendIterativeSolverRows", sb, iterativeSolver);
-        InvokeReportBuilderAppend("AppendChecks", sb, result);
+        TechnicalReportMarkdownSectionBridge.Append("AppendEnvironment", sb, environment);
+        TechnicalReportMarkdownSectionBridge.Append("AppendBuoy", sb, buoy, shape);
+        TechnicalReportMarkdownSectionBridge.Append("AppendAnchor", sb, anchor, result);
+        TechnicalReportMarkdownSectionBridge.Append("AppendTotals", sb, result, tensionRows, shape, shapeProjection, shapeForces, shapeTensions, sequencePositions, discreteLoadTensions, discreteLoadShape, alternativeDiscreteNodes, iterativeSolver, diagnostics);
+        TechnicalReportMarkdownSectionBridge.Append("AppendDiagnostics", sb, diagnostics);
+        TechnicalReportMarkdownSectionBridge.Append("AppendVectorBalanceRows", sb, vectorBalance);
+        TechnicalReportMarkdownSectionBridge.Append("AppendElementRows", sb, result);
+        TechnicalReportMarkdownSectionBridge.Append("AppendSequencePositionRows", sb, sequencePositions);
+        TechnicalReportMarkdownSectionBridge.Append("AppendModelCoverageRows", sb, result);
+        TechnicalReportMarkdownSectionBridge.Append("AppendSegmentRows", sb, result);
+        TechnicalReportMarkdownSectionBridge.Append("AppendTensionRows", sb, tensionRows);
+        TechnicalReportMarkdownSectionBridge.Append("AppendShapeRows", sb, shape);
+        TechnicalReportMarkdownSectionBridge.Append("AppendShapeProjectionRows", sb, shapeProjection);
+        TechnicalReportMarkdownSectionBridge.Append("AppendShapeForceRows", sb, shapeForces);
+        TechnicalReportMarkdownSectionBridge.Append("AppendShapeTensionRows", sb, shapeTensions);
+        TechnicalReportMarkdownSectionBridge.Append("AppendDiscreteLoadTensionRows", sb, discreteLoadTensions);
+        TechnicalReportMarkdownSectionBridge.Append("AppendDiscreteLoadShapeRows", sb, discreteLoadShape);
+        TechnicalReportMarkdownSectionBridge.Append("AppendAlternativeDiscreteNodeRows", sb, alternativeDiscreteNodes);
+        TechnicalReportMarkdownSectionBridge.Append("AppendIterativeSolverRows", sb, iterativeSolver);
+        TechnicalReportMarkdownSectionBridge.Append("AppendChecks", sb, result);
 
         sb.AppendLine("## Ограничения");
         sb.AppendLine(shape.MethodNote);
@@ -74,12 +73,5 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine("v0.39 добавляет диагностический итерационный solver-слой. Он замыкает существующие блоки в цикл, но основной solver, 2D и PDF-схемы пока не заменяются.");
 
         return sb.ToString();
-    }
-
-    private static void InvokeReportBuilderAppend(string methodName, params object[] args)
-    {
-        var method = typeof(ReportBuilder).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException($"ReportBuilder helper not found: {methodName}");
-        method.Invoke(null, args);
     }
 }
