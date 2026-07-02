@@ -21,6 +21,12 @@ internal static class TechnicalReportMarkdownMovedSections
             case "AppendElementRows":
                 AppendElementRows((StringBuilder)args[0], (CalculationResult)args[1]);
                 return true;
+            case "AppendSequencePositionRows":
+                AppendSequencePositionRows((StringBuilder)args[0], (MooringSequencePositionResult)args[1]);
+                return true;
+            case "AppendModelCoverageRows":
+                AppendModelCoverageRows((StringBuilder)args[0], (CalculationResult)args[1]);
+                return true;
             default:
                 return false;
         }
@@ -57,6 +63,73 @@ internal static class TechnicalReportMarkdownMovedSections
         foreach (var row in result.ElementRows)
         {
             sb.AppendLine($"| {row.Number} | {Escape(row.Kind)} | {Escape(row.Title)} | {Escape(row.PresetName)} | {row.LengthM:0.####} | {row.Count} | {row.WeightWaterKg:0.####} | {row.ProjectedAreaM2:0.####} | {row.DragCoefficient:0.####} | {row.CurrentForceN:0.####} | {row.BreakingLoadKn:0.####} | {row.WorkingLoadKn:0.####} | {row.Reserve:0.####} | {Escape(row.Status)} |");
+        }
+        sb.AppendLine();
+    }
+
+    private static void AppendSequencePositionRows(StringBuilder sb, MooringSequencePositionResult positions)
+    {
+        sb.AppendLine("## Позиционная модель последовательности по s");
+        sb.AppendLine("Координата s отсчитывается вдоль линии от верхнего конца к якорю. Линейные элементы занимают интервал s0–s1; соединители, приборы, буй и якорь имеют точечную позицию s.");
+        sb.AppendLine($"Длина линии по позиционной модели: {positions.TotalLineLengthM:0.####} м; распределённых участков: {positions.DistributedElementCount}; дискретных элементов без буя/якоря: {positions.DiscreteElementCount}.");
+        sb.AppendLine();
+        sb.AppendLine("| № | Тип | Элемент | Пресет | s0, м | s1, м | s, м | L, м | Вес в воде, кг | Fx, Н | Роль в solver | Следующий шаг |");
+        sb.AppendLine("|---:|---|---|---|---:|---:|---:|---:|---:|---:|---|---|");
+        foreach (var row in positions.Rows)
+        {
+            sb.AppendLine($"| {row.Number} | {Escape(row.Kind)} | {Escape(row.Title)} | {Escape(row.PresetName)} | {row.StartAlongLineM:0.####} | {row.EndAlongLineM:0.####} | {row.PositionAlongLineM:0.####} | {row.LengthM:0.####} | {row.WeightWaterKg:0.####} | {row.CurrentForceN:0.####} | {Escape(row.SolverRole)} | {Escape(row.NextStepNote)} |");
+        }
+        sb.AppendLine();
+        sb.AppendLine(positions.MethodNote);
+        sb.AppendLine();
+    }
+
+    private static void AppendModelCoverageRows(StringBuilder sb, CalculationResult result)
+    {
+        sb.AppendLine("## Область учёта элементов в текущей модели");
+        sb.AppendLine("Эта таблица показывает, где элемент уже участвует в расчётах. В v0.39 добавлен отдельный итерационный solver-слой, но основной solver, 2D и PDF-схемы пока не заменены.");
+        sb.AppendLine();
+        sb.AppendLine("| № | Элемент | Тип | Ведомость элементов | Векторный баланс | Позиция s | Дискретные натяжения | Альт. форма X/Z | Дискретный X/Z-узел | Основная форма X/Z | Основные натяжения | Примечание |");
+        sb.AppendLine("|---:|---|---|---|---|---|---|---|---|---|---|---|");
+        foreach (var row in result.ElementRows)
+        {
+            var shapeScope = row.Kind switch
+            {
+                "Буй" => "граничный узел",
+                "Якорь" => "граничный узел",
+                "Линия" => "да, сегменты",
+                _ => "нет, дискретный узел пока не вставлен"
+            };
+            var tensionScope = row.Kind == "Линия" ? "да" : "нет, только общая сила/вес";
+            var discreteTensionScope = row.Kind switch
+            {
+                "Буй" => "нет, граничное условие",
+                "Якорь" => "нет, граничное условие",
+                "Линия" => "как распределённый участок",
+                _ => "да, как локальная нагрузка по s"
+            };
+            var alternativeShapeScope = row.Kind switch
+            {
+                "Буй" => "граничный узел",
+                "Якорь" => "граничный узел",
+                "Линия" => "да, через новые углы",
+                _ => "да, влияет через натяжения и имеет X/Z-точку"
+            };
+            var discreteNodeScope = row.Kind switch
+            {
+                "Буй" => "граничный узел",
+                "Якорь" => "граничный узел",
+                "Линия" => "не точечный элемент",
+                _ => "да, отдельная X/Z-точка"
+            };
+            var note = row.Kind switch
+            {
+                "Линия" => "используется в SegmentRows, ShapeRows, shape-based силах, натяжениях и v0.39 feedback-цикле",
+                "Буй" => "задаёт верхнее граничное условие и плавучесть",
+                "Якорь" => "задаёт нижнее граничное условие и удержание",
+                _ => "участвует как дискретная нагрузка по s в альтернативной форме и v0.39 feedback-цикле"
+            };
+            sb.AppendLine($"| {row.Number} | {Escape(row.Title)} | {Escape(row.Kind)} | да | да | да | {discreteTensionScope} | {alternativeShapeScope} | {discreteNodeScope} | {shapeScope} | {tensionScope} | {Escape(note)} |");
         }
         sb.AppendLine();
     }
