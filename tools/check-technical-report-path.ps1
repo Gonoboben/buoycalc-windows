@@ -66,7 +66,8 @@ $bridgeCalls = @(
 )
 
 foreach ($bridgeCall in $bridgeCalls) {
-    Assert-Contains $markdownBuilder "TechnicalReportMarkdownSectionBridge.Append(\"$bridgeCall\"" "TechnicalReportMarkdownBuilder"
+    $expectedBridgeCall = 'TechnicalReportMarkdownSectionBridge.Append("' + $bridgeCall + '"'
+    Assert-Contains $markdownBuilder $expectedBridgeCall "TechnicalReportMarkdownBuilder"
 }
 
 $bridge = Read-RepoText "Services/TechnicalReportMarkdownSectionBridge.cs"
@@ -81,7 +82,8 @@ $rendererClasses = @(
 )
 
 foreach ($rendererClass in $rendererClasses) {
-    Assert-Contains $bridge "$rendererClass.TryAppend(methodName, args)" "TechnicalReportMarkdownSectionBridge"
+    $expectedRenderer = $rendererClass + ".TryAppend(methodName, args)"
+    Assert-Contains $bridge $expectedRenderer "TechnicalReportMarkdownSectionBridge"
 }
 
 Assert-Contains $bridge 'throw new InvalidOperationException($"Technical report Markdown section renderer not found: {methodName}");' "TechnicalReportMarkdownSectionBridge"
