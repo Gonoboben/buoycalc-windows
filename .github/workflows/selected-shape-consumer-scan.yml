@@ -1,0 +1,34 @@
+name: Selected Shape Consumer Scan
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Selected Shape Consumer Scan
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run selected shape consumer scan
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scan-selected-shape-consumers.ps1 *> artifacts/selected-shape-consumers.txt
+          Get-Content artifacts/selected-shape-consumers.txt
+
+      - name: Upload selected shape consumer scan
+        uses: actions/upload-artifact@v4
+        with:
+          name: selected-shape-consumer-scan
+          path: artifacts/selected-shape-consumers.txt
+          if-no-files-found: error
