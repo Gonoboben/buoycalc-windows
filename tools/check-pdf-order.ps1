@@ -1,0 +1,22 @@
+$ErrorActionPreference = "Stop"
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+function R($p) { return Get-Content -LiteralPath (Join-Path $root $p) -Raw }
+function Has($text, $needle, $label) { if (-not $text.Contains($needle)) { throw "$label missing: $needle" } }
+$m = R "docs/CONTROL_MARK_PDF_DIAGRAM_SOURCE_ORDER_2026-07-03.md"
+$c = R "Services/PdfReportBuilder.cs"
+$s1 = R "Services/MooringAlternativeShapeStore.cs"
+$s2 = R "Services/SelectedShapeStore.cs"
+Has $m "PDF diagram source order" "marker"
+Has $m "MooringAlternativeShapeStore.Current" "marker"
+Has $m "SelectedShapeStore.Current" "marker"
+Has $m "TryReadReportMetric(reportText" "marker"
+Has $m "visualizationOffsetM" "marker"
+Has $m "PDF reportText parsing should not be expanded." "marker"
+Has $c "SelectDiagramSource(string reportText, double visualizationOffsetM)" "PdfReportBuilder"
+Has $c "MooringAlternativeShapeStore.Current" "PdfReportBuilder"
+Has $c "SelectedShapeStore.Current" "PdfReportBuilder"
+Has $c "TryReadReportMetric(reportText" "PdfReportBuilder"
+Has $c "visualizationOffsetM" "PdfReportBuilder"
+Has $s1 "MooringAlternativeShapeStore" "MooringAlternativeShapeStore"
+Has $s2 "SelectedShapeStore" "SelectedShapeStore"
+Write-Host "PDF order check passed."
