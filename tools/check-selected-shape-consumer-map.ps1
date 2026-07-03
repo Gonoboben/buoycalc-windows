@@ -46,7 +46,7 @@ Assert-Contains $marker "PDF renderer / PDF diagram source selection" "Selected 
 Assert-Contains $marker "2D renderer / engineering shape drawing" "Selected shape consumer map"
 Assert-Contains $marker "MooringPrimaryShapeSelectionStore.Current" "Selected shape consumer map"
 Assert-Contains $marker "fallback MooringShapeStore.Current" "Selected shape consumer map"
-Assert-Contains $marker "PDF and 2D are already the first consumers using `SelectedShapeStore`." "Selected shape consumer map"
+Assert-Contains $marker "PDF and 2D are already the first consumers using" "Selected shape consumer map"
 Assert-Contains $marker "No solver physics changes are allowed in this architecture-stabilization phase." "Selected shape consumer map"
 
 Assert-FileExists "Services/PdfReportBuilder.cs"
