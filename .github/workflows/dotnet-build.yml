@@ -85,6 +85,11 @@ jobs:
               throw "Report store consumer scan failed with exit code $LASTEXITCODE"
             }
 
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-report-store-consumer-map.ps1
+            if ($LASTEXITCODE -ne 0) {
+              throw "Report store consumer map check failed with exit code $LASTEXITCODE"
+            }
+
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
