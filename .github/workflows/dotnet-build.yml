@@ -95,6 +95,11 @@ jobs:
               throw "Selected shape consumer map check failed with exit code $LASTEXITCODE"
             }
 
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-pdf-diagram-source-order.ps1
+            if ($LASTEXITCODE -ne 0) {
+              throw "PDF diagram source order smoke check failed with exit code $LASTEXITCODE"
+            }
+
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
