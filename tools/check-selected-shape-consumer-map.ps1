@@ -78,6 +78,6 @@ Assert-Contains $iterativeSolver "MooringShapeStore.Set(selection.Shape);" "Moor
 
 $primaryShapeGate = Read-RepoText "Services/MooringPrimaryShapeGate.cs"
 Assert-Contains $primaryShapeGate "public static class MooringPrimaryShapeSelectionStore" "MooringPrimaryShapeGate"
-Assert-Contains $primaryShapeGate "public static MooringPrimaryShapeSelection? Current { get; private set; }" "MooringPrimaryShapeGate"
+Assert-Contains $primaryShapeGate "public static MooringPrimaryShapeSelectionResult? Current { get; private set; }" "MooringPrimaryShapeGate"
 
 Write-Host "Selected shape consumer map smoke check passed."
