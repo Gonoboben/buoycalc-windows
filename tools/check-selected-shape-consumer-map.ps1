@@ -51,6 +51,7 @@ Assert-Contains $marker "No solver physics changes are allowed in this architect
 
 Assert-FileExists "Services/PdfReportBuilder.cs"
 Assert-FileExists "Services/PdfDiagramSourceSelector.cs"
+Assert-FileExists "Services/Mooring2DDiagramSourceSelector.cs"
 Assert-FileExists "Views/Mooring2DCanvas.cs"
 Assert-FileExists "Services/SelectedShapeStore.cs"
 Assert-FileExists "Services/MooringIterativeSolver.cs"
@@ -65,9 +66,18 @@ Assert-Contains $pdfDiagramSourceSelector "new PdfDiagramSource(alternativeShape
 Assert-Contains $pdfDiagramSourceSelector "TryReadReportMetric(reportText" "PdfDiagramSourceSelector"
 
 $canvas = Read-RepoText "Views/Mooring2DCanvas.cs"
-Assert-Contains $canvas "var selectedShape = SelectedShapeStore.Current;" "Mooring2DCanvas"
-Assert-Contains $canvas "if (selectedShape is not null && shape is { Nodes.Count: >= 2 })" "Mooring2DCanvas"
-Assert-Contains $canvas "DrawEngineeringComparison(context, selectedShape" "Mooring2DCanvas"
+Assert-Contains $canvas "var diagramSource = Mooring2DDiagramSourceSelector.Select(vm?.ReportText);" "Mooring2DCanvas"
+Assert-Contains $canvas "if (diagramSource.HasSelectedShape)" "Mooring2DCanvas"
+Assert-Contains $canvas "DrawEngineeringComparison(context, diagramSource.SelectedShape!" "Mooring2DCanvas"
+Assert-Contains $canvas "if (diagramSource.ParsedNodes.Count >= 2)" "Mooring2DCanvas"
+
+$diagramSourceSelector = Read-RepoText "Services/Mooring2DDiagramSourceSelector.cs"
+Assert-Contains $diagramSourceSelector "var selectedShape = SelectedShapeStore.Current;" "Mooring2DDiagramSourceSelector"
+Assert-Contains $diagramSourceSelector "var alternativeShape = MooringAlternativeShapeStore.Current;" "Mooring2DDiagramSourceSelector"
+Assert-Contains $diagramSourceSelector "selectedShape is not null && selectedShape.Shape.Nodes.Count >= 2" "Mooring2DDiagramSourceSelector"
+Assert-Contains $diagramSourceSelector "ParseCalculatedNodes(reportText)" "Mooring2DDiagramSourceSelector"
+Assert-Contains $diagramSourceSelector "## Расчётная форма постановки X/Z" "Mooring2DDiagramSourceSelector"
+Assert-Contains $diagramSourceSelector "## Расчётные узлы линии X/Z" "Mooring2DDiagramSourceSelector"
 
 $selectedShapeStore = Read-RepoText "Services/SelectedShapeStore.cs"
 Assert-Contains $selectedShapeStore "public static class SelectedShapeStore" "SelectedShapeStore"
