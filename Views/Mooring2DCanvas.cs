@@ -64,19 +64,16 @@ public sealed class Mooring2DCanvas : Control
         DrawLabel(context, depth > 0 ? $"глубина {depth:0.##} м" : "глубина не задана", new Point(padding + 12, surfaceY + 12), 11, false, MutedTextBrush);
         DrawLabel(context, lineLength > 0 ? $"линия {lineLength:0.##} м" : "линия не задана", new Point(width - padding - 145, surfaceY + 12), 11, false, MutedTextBrush);
 
-        var selectedShape = SelectedShapeStore.Current;
-        var shape = selectedShape?.Shape;
-        var alternative = MooringAlternativeShapeStore.Current;
-        if (selectedShape is not null && shape is { Nodes.Count: >= 2 })
+        var diagramSource = Mooring2DDiagramSourceSelector.Select(vm?.ReportText);
+        if (diagramSource.HasSelectedShape)
         {
-            DrawEngineeringComparison(context, selectedShape, alternative, vm, width, surfaceY, bottomY, usableHeight, padding);
+            DrawEngineeringComparison(context, diagramSource.SelectedShape!, diagramSource.AlternativeShape, vm, width, surfaceY, bottomY, usableHeight, padding);
             return;
         }
 
-        var parsedNodes = ParseCalculatedNodes(vm?.ReportText);
-        if (parsedNodes.Count >= 2)
+        if (diagramSource.ParsedNodes.Count >= 2)
         {
-            DrawCalculatedLine(context, parsedNodes, vm, depth, offset, lineLength, BuoyShapeState.Unknown, width, surfaceY, bottomY, usableHeight, padding, fromEngineeringCore: false);
+            DrawCalculatedLine(context, diagramSource.ParsedNodes, vm, depth, offset, lineLength, BuoyShapeState.Unknown, width, surfaceY, bottomY, usableHeight, padding, fromEngineeringCore: false);
         }
         else
         {
@@ -96,8 +93,8 @@ public sealed class Mooring2DCanvas : Control
         double padding)
     {
         var shape = selectedShape.Shape;
-        var mainNodes = shape.Nodes.Select(x => new CalculatedNode(x.Number, x.XOffsetM, x.ZDepthM, x.Label)).ToList();
-        var altNodes = alternative?.Shape.Rows.Select(x => new CalculatedNode(x.Number, x.XOffsetM, x.ZDepthM, x.SourceElement)).ToList() ?? new List<CalculatedNode>();
+        var mainNodes = shape.Nodes.Select(x => new Mooring2DCalculatedNode(x.Number, x.XOffsetM, x.ZDepthM, x.Label)).ToList();
+        var altNodes = alternative?.Shape.Rows.Select(x => new Mooring2DCalculatedNode(x.Number, x.XOffsetM, x.ZDepthM, x.SourceElement)).ToList() ?? new List<Mooring2DCalculatedNode>();
         var allNodes = mainNodes.Concat(altNodes).ToList();
 
         var minNodeX = allNodes.Min(x => x.X);
@@ -207,7 +204,7 @@ public sealed class Mooring2DCanvas : Control
 
     private static void DrawCalculatedLine(
         DrawingContext context,
-        IReadOnlyList<CalculatedNode> nodes,
+        IReadOnlyList<Mooring2DCalculatedNode> nodes,
         MainWindowViewModel? vm,
         double depth,
         double offset,
@@ -306,56 +303,6 @@ public sealed class Mooring2DCanvas : Control
         }
     }
 
-    private static List<CalculatedNode> ParseCalculatedNodes(string? reportText)
-    {
-        var nodes = new List<CalculatedNode>();
-        if (string.IsNullOrWhiteSpace(reportText))
-        {
-            return nodes;
-        }
-
-        var inNodeSection = false;
-        foreach (var rawLine in reportText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
-        {
-            var line = rawLine.Trim();
-            if (line.StartsWith("## Расчётная форма постановки X/Z", StringComparison.OrdinalIgnoreCase) ||
-                line.StartsWith("## Расчётные узлы линии X/Z", StringComparison.OrdinalIgnoreCase))
-            {
-                inNodeSection = true;
-                continue;
-            }
-
-            if (inNodeSection && line.StartsWith("## ", StringComparison.Ordinal))
-            {
-                break;
-            }
-
-            if (!inNodeSection || !line.StartsWith("|", StringComparison.Ordinal) || line.Contains("---"))
-            {
-                continue;
-            }
-
-            var parts = line.Split('|').Select(x => x.Trim()).ToArray();
-            if (parts.Length < 7 || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
-            {
-                continue;
-            }
-
-            if (TryParseNumber(parts[5], out var x) && TryParseNumber(parts[6], out var z))
-            {
-                nodes.Add(new CalculatedNode(number, x, z, parts[3]));
-            }
-        }
-
-        return nodes.OrderBy(x => x.Number).ToList();
-    }
-
-    private static bool TryParseNumber(string value, out double number)
-    {
-        value = (value ?? string.Empty).Replace(',', '.');
-        return double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out number);
-    }
-
     private static void DrawElementNodes(DrawingContext context, MainWindowViewModel? vm, Point buoyPoint, Point anchorPoint)
     {
         if (vm is null)
@@ -446,6 +393,4 @@ public sealed class Mooring2DCanvas : Control
         value ??= string.Empty;
         return value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 1)] + "…";
     }
-
-    private sealed record CalculatedNode(int Number, double X, double Z, string Label);
 }
