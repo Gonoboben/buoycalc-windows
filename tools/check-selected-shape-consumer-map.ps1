@@ -50,15 +50,19 @@ Assert-Contains $marker "PDF and 2D are already the first consumers using" "Sele
 Assert-Contains $marker "No solver physics changes are allowed in this architecture-stabilization phase." "Selected shape consumer map"
 
 Assert-FileExists "Services/PdfReportBuilder.cs"
+Assert-FileExists "Services/PdfDiagramSourceSelector.cs"
 Assert-FileExists "Views/Mooring2DCanvas.cs"
 Assert-FileExists "Services/SelectedShapeStore.cs"
 Assert-FileExists "Services/MooringIterativeSolver.cs"
 Assert-FileExists "Services/MooringPrimaryShapeGate.cs"
 
 $pdfReportBuilder = Read-RepoText "Services/PdfReportBuilder.cs"
-Assert-Contains $pdfReportBuilder "var selectedShape = SelectedShapeStore.Current;" "PdfReportBuilder"
-Assert-Contains $pdfReportBuilder "new PdfDiagramSource(alternativeShape, selectedShape" "PdfReportBuilder"
-Assert-Contains $pdfReportBuilder "TryReadReportMetric(reportText" "PdfReportBuilder"
+Assert-Contains $pdfReportBuilder "var diagramSource = PdfDiagramSourceSelector.Select(reportText, visualizationOffsetM);" "PdfReportBuilder"
+
+$pdfDiagramSourceSelector = Read-RepoText "Services/PdfDiagramSourceSelector.cs"
+Assert-Contains $pdfDiagramSourceSelector "var selectedShape = SelectedShapeStore.Current;" "PdfDiagramSourceSelector"
+Assert-Contains $pdfDiagramSourceSelector "new PdfDiagramSource(alternativeShape, selectedShape" "PdfDiagramSourceSelector"
+Assert-Contains $pdfDiagramSourceSelector "TryReadReportMetric(reportText" "PdfDiagramSourceSelector"
 
 $canvas = Read-RepoText "Views/Mooring2DCanvas.cs"
 Assert-Contains $canvas "var selectedShape = SelectedShapeStore.Current;" "Mooring2DCanvas"
