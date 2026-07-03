@@ -1,0 +1,34 @@
+name: Report Store Consumer Scan
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Report Store Consumer Scan
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run report store consumer scan
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scan-report-store-consumers.ps1 *> artifacts/report-store-consumers.txt
+          Get-Content artifacts/report-store-consumers.txt
+
+      - name: Upload report store consumer scan
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-store-consumer-scan
+          path: artifacts/report-store-consumers.txt
+          if-no-files-found: error
