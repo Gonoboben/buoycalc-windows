@@ -515,32 +515,34 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void FromDto(BuoyProjectDto dto)
     {
-        ProjectName = dto.ProjectName;
-        WaterDensity = dto.WaterDensity;
-        Depth = dto.Depth;
-        CurrentSpeed = dto.CurrentSpeed;
-        UseCurrentProfile = string.Equals(dto.UseCurrentProfile, "true", StringComparison.OrdinalIgnoreCase);
-        WaveHeight = dto.WaveHeight;
-        WavePeriod = dto.WavePeriod;
-        SelectedSeabedPreset = SeabedPresets.FirstOrDefault(x => x.Id == dto.SelectedSeabedPresetId) ?? SeabedCatalog.ById("unknown");
-        BuoyName = string.IsNullOrWhiteSpace(dto.BuoyName) ? "Буй" : dto.BuoyName;
+        var restore = MainWindowProjectDtoMapper.FromDto(dto);
+
+        ProjectName = restore.Environment.ProjectName;
+        WaterDensity = restore.Environment.WaterDensity;
+        Depth = restore.Environment.Depth;
+        CurrentSpeed = restore.Environment.CurrentSpeed;
+        UseCurrentProfile = restore.Environment.UseCurrentProfile;
+        WaveHeight = restore.Environment.WaveHeight;
+        WavePeriod = restore.Environment.WavePeriod;
+        SelectedSeabedPreset = SeabedPresets.FirstOrDefault(x => x.Id == restore.Environment.SelectedSeabedPresetId) ?? SeabedCatalog.ById("unknown");
+        BuoyName = restore.Buoy.Name;
         RefreshLibraries();
-        SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == dto.SelectedBuoyPresetId) ?? SelectedBuoyPreset;
-        SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == dto.SelectedAnchorPresetId) ?? SelectedAnchorPreset;
-        if (!string.IsNullOrWhiteSpace(dto.AnchorName)) AnchorName = dto.AnchorName;
-        if (!string.IsNullOrWhiteSpace(dto.AnchorType)) AnchorType = dto.AnchorType;
-        if (!string.IsNullOrWhiteSpace(dto.AnchorMaterial)) AnchorMaterial = dto.AnchorMaterial;
-        if (!string.IsNullOrWhiteSpace(dto.AnchorWeight)) AnchorWeight = dto.AnchorWeight;
-        if (!string.IsNullOrWhiteSpace(dto.AnchorVolume)) AnchorVolume = dto.AnchorVolume;
-        if (!string.IsNullOrWhiteSpace(dto.AnchorCoefficient)) AnchorCoefficient = dto.AnchorCoefficient;
-        SafetyFactor = dto.SafetyFactor;
+        SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == restore.Buoy.SelectedPresetId) ?? SelectedBuoyPreset;
+        SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == restore.Anchor.SelectedPresetId) ?? SelectedAnchorPreset;
+        if (!string.IsNullOrWhiteSpace(restore.Anchor.Name)) AnchorName = restore.Anchor.Name;
+        if (!string.IsNullOrWhiteSpace(restore.Anchor.Type)) AnchorType = restore.Anchor.Type;
+        if (!string.IsNullOrWhiteSpace(restore.Anchor.Material)) AnchorMaterial = restore.Anchor.Material;
+        if (!string.IsNullOrWhiteSpace(restore.Anchor.Weight)) AnchorWeight = restore.Anchor.Weight;
+        if (!string.IsNullOrWhiteSpace(restore.Anchor.Volume)) AnchorVolume = restore.Anchor.Volume;
+        if (!string.IsNullOrWhiteSpace(restore.Anchor.BaseHoldingCoefficient)) AnchorCoefficient = restore.Anchor.BaseHoldingCoefficient;
+        SafetyFactor = restore.SafetyFactor;
         ResultText = "Проект загружен. Нажмите «Рассчитать».";
         ReportText = "";
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
 
         ClearCurrentProfilePoints();
-        foreach (var point in dto.CurrentProfilePoints)
+        foreach (var point in restore.CurrentProfilePoints)
         {
             AddCurrentProfilePoint(CurrentProfilePointViewModel.FromDto(point));
         }
@@ -550,7 +552,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         ClearAssemblyItems();
-        foreach (var item in dto.AssemblyItems)
+        foreach (var item in restore.AssemblyItems)
         {
             AddAssemblyItem(new AssemblyItemViewModel
             {

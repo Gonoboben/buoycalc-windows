@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using BuoyCalc.Windows.Models;
@@ -38,6 +39,37 @@ internal sealed record MainWindowProjectSaveSource(
     string SafetyFactor,
     IReadOnlyList<CurrentProfilePointViewModel> CurrentProfilePoints,
     IReadOnlyList<AssemblyItemViewModel> AssemblyItems);
+
+internal sealed record MainWindowProjectEnvironmentRestoreModel(
+    string ProjectName,
+    string WaterDensity,
+    string Depth,
+    string CurrentSpeed,
+    bool UseCurrentProfile,
+    string WaveHeight,
+    string WavePeriod,
+    string SelectedSeabedPresetId);
+
+internal sealed record MainWindowProjectBuoyRestoreModel(
+    string Name,
+    string SelectedPresetId);
+
+internal sealed record MainWindowProjectAnchorRestoreModel(
+    string SelectedPresetId,
+    string Name,
+    string Type,
+    string Material,
+    string Weight,
+    string Volume,
+    string BaseHoldingCoefficient);
+
+internal sealed record MainWindowProjectRestoreModel(
+    MainWindowProjectEnvironmentRestoreModel Environment,
+    MainWindowProjectBuoyRestoreModel Buoy,
+    MainWindowProjectAnchorRestoreModel Anchor,
+    string SafetyFactor,
+    IReadOnlyList<CurrentProfilePointDto> CurrentProfilePoints,
+    IReadOnlyList<AssemblyItemDto> AssemblyItems);
 
 internal static class MainWindowProjectDtoMapper
 {
@@ -88,5 +120,33 @@ internal static class MainWindowProjectDtoMapper
                 })
                 .ToList()
         };
+    }
+
+    internal static MainWindowProjectRestoreModel FromDto(BuoyProjectDto dto)
+    {
+        return new MainWindowProjectRestoreModel(
+            new MainWindowProjectEnvironmentRestoreModel(
+                dto.ProjectName,
+                dto.WaterDensity,
+                dto.Depth,
+                dto.CurrentSpeed,
+                string.Equals(dto.UseCurrentProfile, "true", StringComparison.OrdinalIgnoreCase),
+                dto.WaveHeight,
+                dto.WavePeriod,
+                dto.SelectedSeabedPresetId),
+            new MainWindowProjectBuoyRestoreModel(
+                string.IsNullOrWhiteSpace(dto.BuoyName) ? "Буй" : dto.BuoyName,
+                dto.SelectedBuoyPresetId),
+            new MainWindowProjectAnchorRestoreModel(
+                dto.SelectedAnchorPresetId,
+                dto.AnchorName,
+                dto.AnchorType,
+                dto.AnchorMaterial,
+                dto.AnchorWeight,
+                dto.AnchorVolume,
+                dto.AnchorCoefficient),
+            dto.SafetyFactor,
+            dto.CurrentProfilePoints,
+            dto.AssemblyItems);
     }
 }
