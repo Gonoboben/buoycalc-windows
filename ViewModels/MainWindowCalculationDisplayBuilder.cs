@@ -42,53 +42,28 @@ internal static class MainWindowCalculationDisplayBuilder
     {
         var reports = ReportBuildBoundary.Build(projectName, environment, buoy, anchor, result);
         var elementRows = result.ElementRows.Select(ElementCalculationDisplayRow.From).ToList();
-        var enabledItems = assemblyItems.Where(x => x.IsEnabled).ToList();
-        var lineLengthM = enabledItems.Where(x => x.Kind == AssemblyItemKind.Line).Sum(x => x.LengthM);
-        var connectorCount = enabledItems.Count(x => x.Kind == AssemblyItemKind.Connector);
-        var payloadWeightKg = enabledItems.Where(x => x.Kind == AssemblyItemKind.Payload).Sum(x => x.PayloadWeightAirKg);
-        var sequenceSummary = $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы: {payloadWeightKg:0.##} кг";
-
-        var sequenceDiagramLines = new List<string>
-        {
-            $"● Буй: {SafeText(buoyName, "Буй")}"
-        };
-
-        foreach (var item in sequenceItems.Where(x => x.IsEnabled))
-        {
-            sequenceDiagramLines.Add("↓");
-            sequenceDiagramLines.Add($"○ {item.KindDisplayName}: {SafeText(item.Title, "Элемент")} · {item.Summary}");
-        }
-
-        sequenceDiagramLines.Add("↓");
-        sequenceDiagramLines.Add($"■ Якорь: {SafeText(anchorName, "Якорь")} · {SafeText(anchorType, "тип не задан")}");
-
-        var depthM = environment.DepthM;
-        var slackRatio = depthM > 0 ? lineLengthM / depthM : 0;
-        var offsetM = result.EstimatedOffsetM;
-        var visualizationStatusText = depthM <= 0
-            ? "WARNING: глубина не задана"
-            : lineLengthM >= depthM
-                ? "OK: длина линии не меньше глубины"
-                : "WARNING: линия короче глубины";
+        var sequenceVisualization = MainWindowSequenceVisualizationDisplayBuilder.Build(
+            environment.DepthM,
+            assemblyItems,
+            sequenceItems,
+            buoyName,
+            anchorName,
+            anchorType,
+            result.EstimatedOffsetM);
 
         return new MainWindowCalculationDisplay(
             elementRows,
             reports.UserResultText,
             reports.TechnicalReportText,
-            sequenceSummary,
-            sequenceDiagramLines,
-            depthM,
-            lineLengthM,
-            offsetM,
-            $"Глубина: {depthM:0.##} м",
-            $"Длина линии: {lineLengthM:0.##} м",
-            $"Оценочный снос: {offsetM:0.##} м",
-            depthM > 0 ? $"L/Depth: {slackRatio:0.###}" : "L/Depth: не определено",
-            visualizationStatusText);
-    }
-
-    private static string SafeText(string value, string fallback)
-    {
-        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+            sequenceVisualization.SequenceSummary,
+            sequenceVisualization.SequenceDiagramLines,
+            sequenceVisualization.VisualizationDepthM,
+            sequenceVisualization.VisualizationLineLengthM,
+            sequenceVisualization.VisualizationOffsetM,
+            sequenceVisualization.VisualizationDepthText,
+            sequenceVisualization.VisualizationLineLengthText,
+            sequenceVisualization.VisualizationOffsetText,
+            sequenceVisualization.VisualizationSlackRatioText,
+            sequenceVisualization.VisualizationStatusText);
     }
 }
