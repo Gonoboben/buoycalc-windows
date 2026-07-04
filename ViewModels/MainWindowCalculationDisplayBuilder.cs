@@ -50,7 +50,7 @@ internal static class MainWindowCalculationDisplayBuilder
 
         var sequenceDiagramLines = new List<string>
         {
-            $"● Буй: {SafeText(buoyName, "Буй")}" 
+            $"● Буй: {SafeText(buoyName, "Буй")}"
         };
 
         foreach (var item in sequenceItems.Where(x => x.IsEnabled))
