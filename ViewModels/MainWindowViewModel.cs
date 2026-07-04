@@ -482,47 +482,35 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private BuoyProjectDto ToDto()
     {
-        return new BuoyProjectDto
-        {
-            ProjectName = ProjectName,
-            WaterDensity = WaterDensity,
-            Depth = Depth,
-            CurrentSpeed = CurrentSpeed,
-            UseCurrentProfile = UseCurrentProfile ? "true" : "false",
-            WaveHeight = WaveHeight,
-            WavePeriod = WavePeriod,
-            SelectedSeabedPresetId = SelectedSeabedPreset?.Id ?? "unknown",
-            BuoyName = BuoyName,
-            SelectedBuoyPresetId = SelectedBuoyPreset?.Id ?? string.Empty,
-            BuoyVolume = BuoyVolume,
-            BuoyWeight = BuoyWeight,
-            BuoyArea = BuoyArea,
-            BuoyCd = BuoyCd,
-            SelectedAnchorPresetId = SelectedAnchorPreset?.Id ?? string.Empty,
-            AnchorName = AnchorName,
-            AnchorType = AnchorType,
-            AnchorMaterial = AnchorMaterial,
-            AnchorWeight = AnchorWeight,
-            AnchorVolume = AnchorVolume,
-            AnchorCoefficient = AnchorCoefficient,
-            SafetyFactor = SafetyFactor,
-            CurrentProfilePoints = CurrentProfilePoints.Select(x => x.ToDto()).ToList(),
-            AssemblyItems = AssemblyItems.Select(x => new AssemblyItemDto
-            {
-                IsEnabled = x.IsEnabled,
-                Kind = x.Kind,
-                Title = x.Title,
-                RopePresetId = x.RopePresetStorageId,
-                ConnectorPresetId = x.ConnectorPresetStorageId,
-                PayloadPresetId = x.PayloadPresetStorageId,
-                LengthM = x.LengthM,
-                Count = x.IsConnector ? "1" : x.Count,
-                PayloadWeightAirKg = x.PayloadWeightAirKg,
-                PayloadVolumeM3 = x.PayloadVolumeM3,
-                PayloadProjectedAreaM2 = x.PayloadProjectedAreaM2,
-                PayloadDragCoefficient = x.PayloadDragCoefficient
-            }).ToList()
-        };
+        return MainWindowProjectDtoMapper.ToDto(
+            new MainWindowProjectSaveSource(
+                new MainWindowProjectEnvironmentSaveSource(
+                    ProjectName,
+                    WaterDensity,
+                    Depth,
+                    CurrentSpeed,
+                    UseCurrentProfile,
+                    WaveHeight,
+                    WavePeriod,
+                    SelectedSeabedPreset?.Id),
+                new MainWindowProjectBuoySaveSource(
+                    BuoyName,
+                    SelectedBuoyPreset?.Id,
+                    BuoyVolume,
+                    BuoyWeight,
+                    BuoyArea,
+                    BuoyCd),
+                new MainWindowProjectAnchorSaveSource(
+                    SelectedAnchorPreset?.Id,
+                    AnchorName,
+                    AnchorType,
+                    AnchorMaterial,
+                    AnchorWeight,
+                    AnchorVolume,
+                    AnchorCoefficient),
+                SafetyFactor,
+                CurrentProfilePoints.ToList(),
+                AssemblyItems.ToList()));
     }
 
     private void FromDto(BuoyProjectDto dto)
