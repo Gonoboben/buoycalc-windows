@@ -641,30 +641,48 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void Calculate()
     {
-        var currentProfile = CurrentProfilePoints.Select(x => x.ToInput()).OrderBy(x => x.DepthM).ToList();
-        var environment = new EnvironmentInput(
-            Parse(WaterDensity),
-            Parse(Depth),
-            Parse(CurrentSpeed),
-            Parse(WaveHeight),
-            Parse(WavePeriod),
-            SelectedSeabedPreset ?? SeabedCatalog.ById("unknown"),
-            UseCurrentProfile,
-            currentProfile);
+        var input = MainWindowCalculationInputBuilder.Build(
+            new MainWindowCalculationInputSource(
+                new MainWindowEnvironmentInputSource(
+                    WaterDensity,
+                    Depth,
+                    CurrentSpeed,
+                    WaveHeight,
+                    WavePeriod,
+                    SelectedSeabedPreset,
+                    UseCurrentProfile,
+                    CurrentProfilePoints.ToList()),
+                new MainWindowBuoyInputSource(
+                    BuoyName,
+                    BuoyVolume,
+                    BuoyWeight,
+                    BuoyArea,
+                    BuoyCd),
+                new MainWindowAnchorInputSource(
+                    AnchorName,
+                    AnchorType,
+                    AnchorMaterial,
+                    AnchorWeight,
+                    AnchorVolume,
+                    AnchorCoefficient),
+                AssemblyItems.ToList(),
+                SafetyFactor));
 
-        var buoy = new BuoyInput(BuoyName, Parse(BuoyVolume), Parse(BuoyWeight), Parse(BuoyArea), Parse(BuoyCd));
-        var anchor = new AnchorInput(AnchorName, AnchorType, AnchorMaterial, Parse(AnchorWeight), Parse(AnchorVolume), Parse(AnchorCoefficient));
-        var items = AssemblyItems.Select(x => x.ToInput()).ToList();
-        var result = BuoyCalculator.Calculate(environment, buoy, items, anchor, Parse(SafetyFactor));
+        var result = BuoyCalculator.Calculate(
+            input.Environment,
+            input.Buoy,
+            input.AssemblyItems,
+            input.Anchor,
+            input.SafetyFactor);
         var sequenceItems = AssemblyItems
             .Select(x => new MainWindowSequenceDisplayItem(x.IsEnabled, x.KindDisplayName, x.Title, x.Summary))
             .ToList();
         var display = MainWindowCalculationDisplayBuilder.Build(
             ProjectName,
-            environment,
-            buoy,
-            anchor,
-            items,
+            input.Environment,
+            input.Buoy,
+            input.Anchor,
+            input.AssemblyItems,
             sequenceItems,
             BuoyName,
             AnchorName,
