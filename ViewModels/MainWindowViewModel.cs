@@ -656,18 +656,51 @@ public sealed class MainWindowViewModel : ViewModelBase
         var anchor = new AnchorInput(AnchorName, AnchorType, AnchorMaterial, Parse(AnchorWeight), Parse(AnchorVolume), Parse(AnchorCoefficient));
         var items = AssemblyItems.Select(x => x.ToInput()).ToList();
         var result = BuoyCalculator.Calculate(environment, buoy, items, anchor, Parse(SafetyFactor));
+        var sequenceItems = AssemblyItems
+            .Select(x => new MainWindowSequenceDisplayItem(x.IsEnabled, x.KindDisplayName, x.Title, x.Summary))
+            .ToList();
+        var display = MainWindowCalculationDisplayBuilder.Build(
+            ProjectName,
+            environment,
+            buoy,
+            anchor,
+            items,
+            sequenceItems,
+            BuoyName,
+            AnchorName,
+            AnchorType,
+            result);
 
+        PublishCalculationDisplay(display);
+        UpdateCurrentProfileSummary();
+    }
+
+    private void PublishCalculationDisplay(MainWindowCalculationDisplay display)
+    {
         ElementRows.Clear();
-        foreach (var row in result.ElementRows)
+        foreach (var row in display.ElementRows)
         {
-            ElementRows.Add(ElementCalculationDisplayRow.From(row));
+            ElementRows.Add(row);
         }
 
-        var reports = ReportBuildBoundary.Build(ProjectName, environment, buoy, anchor, result);
-        ResultText = reports.UserResultText;
-        ReportText = reports.TechnicalReportText;
-        UpdateSequenceSummary(result);
-        UpdateCurrentProfileSummary();
+        ResultText = display.UserResultText;
+        ReportText = display.TechnicalReportText;
+        SequenceSummary = display.SequenceSummary;
+
+        SequenceDiagramLines.Clear();
+        foreach (var line in display.SequenceDiagramLines)
+        {
+            SequenceDiagramLines.Add(line);
+        }
+
+        VisualizationDepthM = display.VisualizationDepthM;
+        VisualizationLineLengthM = display.VisualizationLineLengthM;
+        VisualizationOffsetM = display.VisualizationOffsetM;
+        VisualizationDepthText = display.VisualizationDepthText;
+        VisualizationLineLengthText = display.VisualizationLineLengthText;
+        VisualizationOffsetText = display.VisualizationOffsetText;
+        VisualizationSlackRatioText = display.VisualizationSlackRatioText;
+        VisualizationStatusText = display.VisualizationStatusText;
     }
 
     private static double Parse(string value)
