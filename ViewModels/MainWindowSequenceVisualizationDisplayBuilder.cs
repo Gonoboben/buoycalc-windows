@@ -4,6 +4,16 @@ using BuoyCalc.Windows.Models;
 
 namespace BuoyCalc.Windows.ViewModels;
 
+internal sealed record MainWindowVisualizationDisplay(
+    double VisualizationDepthM,
+    double VisualizationLineLengthM,
+    double VisualizationOffsetM,
+    string VisualizationDepthText,
+    string VisualizationLineLengthText,
+    string VisualizationOffsetText,
+    string VisualizationSlackRatioText,
+    string VisualizationStatusText);
+
 internal sealed record MainWindowSequenceVisualizationDisplay(
     string SequenceSummary,
     IReadOnlyList<string> SequenceDiagramLines,
@@ -27,11 +37,38 @@ internal static class MainWindowSequenceVisualizationDisplayBuilder
         string anchorType,
         double? offsetM)
     {
+        var visualization = BuildVisualization(depthM, assemblyItems, offsetM);
+
+        return new MainWindowSequenceVisualizationDisplay(
+            BuildSummary(assemblyItems),
+            BuildDiagram(sequenceItems, buoyName, anchorName, anchorType),
+            visualization.VisualizationDepthM,
+            visualization.VisualizationLineLengthM,
+            visualization.VisualizationOffsetM,
+            visualization.VisualizationDepthText,
+            visualization.VisualizationLineLengthText,
+            visualization.VisualizationOffsetText,
+            visualization.VisualizationSlackRatioText,
+            visualization.VisualizationStatusText);
+    }
+
+    internal static string BuildSummary(IReadOnlyList<AssemblyItemInput> assemblyItems)
+    {
         var enabledItems = assemblyItems.Where(x => x.IsEnabled).ToList();
         var lineLengthM = enabledItems.Where(x => x.Kind == AssemblyItemKind.Line).Sum(x => x.LengthM);
         var connectorCount = enabledItems.Count(x => x.Kind == AssemblyItemKind.Connector);
         var payloadWeightKg = enabledItems.Where(x => x.Kind == AssemblyItemKind.Payload).Sum(x => x.PayloadWeightAirKg);
-        var sequenceSummary = $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы: {payloadWeightKg:0.##} кг";
+        return $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы: {payloadWeightKg:0.##} кг";
+    }
+
+    internal static MainWindowVisualizationDisplay BuildVisualization(
+        double depthM,
+        IReadOnlyList<AssemblyItemInput> assemblyItems,
+        double? offsetM)
+    {
+        var lineLengthM = assemblyItems
+            .Where(x => x.IsEnabled && x.Kind == AssemblyItemKind.Line)
+            .Sum(x => x.LengthM);
         var resolvedOffsetM = offsetM ?? 0;
         var slackRatio = depthM > 0 ? lineLengthM / depthM : 0;
         var visualizationStatusText = depthM <= 0
@@ -40,9 +77,7 @@ internal static class MainWindowSequenceVisualizationDisplayBuilder
                 ? "OK: длина линии не меньше глубины"
                 : "WARNING: линия короче глубины";
 
-        return new MainWindowSequenceVisualizationDisplay(
-            sequenceSummary,
-            BuildDiagram(sequenceItems, buoyName, anchorName, anchorType),
+        return new MainWindowVisualizationDisplay(
             depthM,
             lineLengthM,
             resolvedOffsetM,
