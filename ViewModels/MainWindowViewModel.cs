@@ -584,6 +584,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void UpdateSequenceDiagram()
     {
+        SequenceDiagramLines.Clear();
+
         var sequenceItems = AssemblyItems
             .Where(x => x.IsEnabled)
             .Select(x => new MainWindowSequenceDisplayItem(x.IsEnabled, x.KindDisplayName, x.Title, x.Summary))
@@ -594,7 +596,6 @@ public sealed class MainWindowViewModel : ViewModelBase
             AnchorName,
             AnchorType);
 
-        SequenceDiagramLines.Clear();
         foreach (var line in lines)
         {
             SequenceDiagramLines.Add(line);
@@ -603,9 +604,10 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void UpdateVisualizationSummary(CalculationResult? result = null)
     {
+        var depthM = Parse(Depth);
         var enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
         var visualization = MainWindowSequenceVisualizationDisplayBuilder.BuildVisualization(
-            Parse(Depth),
+            depthM,
             enabledItems,
             result?.EstimatedOffsetM);
 
