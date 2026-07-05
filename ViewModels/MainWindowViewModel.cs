@@ -577,56 +577,46 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void UpdateSequenceSummary(CalculationResult? result = null)
     {
         var enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
-        var lineLengthM = enabledItems.Where(x => x.Kind == AssemblyItemKind.Line).Sum(x => x.LengthM);
-        var connectorCount = enabledItems.Count(x => x.Kind == AssemblyItemKind.Connector);
-        var payloadWeightKg = enabledItems.Where(x => x.Kind == AssemblyItemKind.Payload).Sum(x => x.PayloadWeightAirKg);
-        SequenceSummary = $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы: {payloadWeightKg:0.##} кг";
+        SequenceSummary = MainWindowSequenceVisualizationDisplayBuilder.BuildSummary(enabledItems);
         UpdateSequenceDiagram();
         UpdateVisualizationSummary(result);
     }
 
     private void UpdateSequenceDiagram()
     {
+        var sequenceItems = AssemblyItems
+            .Where(x => x.IsEnabled)
+            .Select(x => new MainWindowSequenceDisplayItem(x.IsEnabled, x.KindDisplayName, x.Title, x.Summary))
+            .ToList();
+        var lines = MainWindowSequenceVisualizationDisplayBuilder.BuildDiagram(
+            sequenceItems,
+            BuoyName,
+            AnchorName,
+            AnchorType);
+
         SequenceDiagramLines.Clear();
-        SequenceDiagramLines.Add($"● Буй: {SafeText(BuoyName, "Буй")}");
-
-        foreach (var item in AssemblyItems.Where(x => x.IsEnabled))
+        foreach (var line in lines)
         {
-            SequenceDiagramLines.Add("↓");
-            SequenceDiagramLines.Add($"○ {item.KindDisplayName}: {SafeText(item.Title, "Элемент")} · {item.Summary}");
+            SequenceDiagramLines.Add(line);
         }
-
-        SequenceDiagramLines.Add("↓");
-        SequenceDiagramLines.Add($"■ Якорь: {SafeText(AnchorName, "Якорь")} · {SafeText(AnchorType, "тип не задан")}");
     }
 
     private void UpdateVisualizationSummary(CalculationResult? result = null)
     {
-        var depthM = Parse(Depth);
-        var lineLengthM = AssemblyItems
-            .Where(x => x.IsEnabled)
-            .Select(x => x.ToInput())
-            .Where(x => x.Kind == AssemblyItemKind.Line)
-            .Sum(x => x.LengthM);
+        var enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
+        var visualization = MainWindowSequenceVisualizationDisplayBuilder.BuildVisualization(
+            Parse(Depth),
+            enabledItems,
+            result?.EstimatedOffsetM);
 
-        var slackRatio = depthM > 0 ? lineLengthM / depthM : 0;
-        var offsetM = result?.EstimatedOffsetM ?? 0;
-        var offsetText = result is null ? "после расчёта" : $"{offsetM:0.##} м";
-
-        VisualizationDepthM = depthM;
-        VisualizationLineLengthM = lineLengthM;
-        VisualizationOffsetM = offsetM;
-
-        VisualizationDepthText = $"Глубина: {depthM:0.##} м";
-        VisualizationLineLengthText = $"Длина линии: {lineLengthM:0.##} м";
-        VisualizationOffsetText = $"Оценочный снос: {offsetText}";
-        VisualizationSlackRatioText = depthM > 0 ? $"L/Depth: {slackRatio:0.###}" : "L/Depth: не определено";
-
-        VisualizationStatusText = depthM <= 0
-            ? "WARNING: глубина не задана"
-            : lineLengthM >= depthM
-                ? "OK: длина линии не меньше глубины"
-                : "WARNING: линия короче глубины";
+        VisualizationDepthM = visualization.VisualizationDepthM;
+        VisualizationLineLengthM = visualization.VisualizationLineLengthM;
+        VisualizationOffsetM = visualization.VisualizationOffsetM;
+        VisualizationDepthText = visualization.VisualizationDepthText;
+        VisualizationLineLengthText = visualization.VisualizationLineLengthText;
+        VisualizationOffsetText = visualization.VisualizationOffsetText;
+        VisualizationSlackRatioText = visualization.VisualizationSlackRatioText;
+        VisualizationStatusText = visualization.VisualizationStatusText;
     }
 
     private void Calculate()
