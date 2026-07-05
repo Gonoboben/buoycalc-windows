@@ -37,10 +37,11 @@ internal static class MainWindowSequenceVisualizationDisplayBuilder
         string anchorType,
         double? offsetM)
     {
+        var sequenceSummary = BuildSummary(assemblyItems);
         var visualization = BuildVisualization(depthM, assemblyItems, offsetM);
 
         return new MainWindowSequenceVisualizationDisplay(
-            BuildSummary(assemblyItems),
+            sequenceSummary,
             BuildDiagram(sequenceItems, buoyName, anchorName, anchorType),
             visualization.VisualizationDepthM,
             visualization.VisualizationLineLengthM,
