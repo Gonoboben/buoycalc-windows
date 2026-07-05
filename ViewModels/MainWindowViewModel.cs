@@ -217,22 +217,24 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void ApplySelectedBuoyPreset()
     {
         if (SelectedBuoyPreset is null) return;
-        BuoyName = SelectedBuoyPreset.Name;
-        BuoyVolume = FormatDouble(SelectedBuoyPreset.VolumeM3);
-        BuoyWeight = FormatDouble(SelectedBuoyPreset.WeightKg);
-        BuoyArea = FormatDouble(SelectedBuoyPreset.ProjectedAreaM2);
-        BuoyCd = FormatDouble(SelectedBuoyPreset.DragCoefficient);
+        var display = MainWindowSelectedPresetDisplayBuilder.BuildBuoy(SelectedBuoyPreset);
+        BuoyName = display.Name;
+        BuoyVolume = display.Volume;
+        BuoyWeight = display.Weight;
+        BuoyArea = display.ProjectedArea;
+        BuoyCd = display.DragCoefficient;
     }
 
     private void ApplySelectedAnchorPreset()
     {
         if (SelectedAnchorPreset is null) return;
-        AnchorName = SelectedAnchorPreset.Name;
-        AnchorType = SelectedAnchorPreset.Type;
-        AnchorMaterial = SelectedAnchorPreset.Material;
-        AnchorWeight = FormatDouble(SelectedAnchorPreset.WeightAirKg);
-        AnchorVolume = FormatDouble(SelectedAnchorPreset.VolumeM3);
-        AnchorCoefficient = FormatDouble(SelectedAnchorPreset.BaseHoldingCoefficient);
+        var display = MainWindowSelectedPresetDisplayBuilder.BuildAnchor(SelectedAnchorPreset);
+        AnchorName = display.Name;
+        AnchorType = display.Type;
+        AnchorMaterial = display.Material;
+        AnchorWeight = display.Weight;
+        AnchorVolume = display.Volume;
+        AnchorCoefficient = display.BaseHoldingCoefficient;
     }
 
     private void SaveCurrentBuoyToLibrary()
