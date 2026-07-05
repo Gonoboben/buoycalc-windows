@@ -18,3 +18,4 @@ jobs:
           commit_message: refactor: route current profile summary through builder
           branch: issue-85-current-profile-summary
           file_pattern: ViewModels/MainWindowViewModel.cs
+# trigger after workflow registration
