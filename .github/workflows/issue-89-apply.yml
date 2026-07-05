@@ -24,3 +24,4 @@ jobs:
           commit_message: refactor: route selected preset application through builder
           branch: step-89-preset-display-live
           file_pattern: ViewModels/MainWindowViewModel.cs
+# trigger after workflow registration
