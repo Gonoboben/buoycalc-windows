@@ -239,12 +239,17 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void SaveCurrentBuoyToLibrary()
     {
-        var name = string.IsNullOrWhiteSpace(BuoyName) ? "Пользовательский буй" : BuoyName.Trim();
-        var selectedUserId = SelectedBuoyPreset is { Source: "User" } ? SelectedBuoyPreset.Id : string.Empty;
-        var buoy = new BuoyLibraryItem { Id = selectedUserId, Source = "User", Name = name, VolumeM3 = Parse(BuoyVolume), WeightKg = Parse(BuoyWeight), ProjectedAreaM2 = Parse(BuoyArea), DragCoefficient = Parse(BuoyCd), Note = "Сохранено пользователем из формы буя." };
-        BuoyLibraryStorage.UpsertUserBuoy(buoy);
+        var request = MainWindowUserBuoySaveBuilder.Build(
+            new MainWindowUserBuoySaveSource(
+                BuoyName,
+                SelectedBuoyPreset,
+                BuoyVolume,
+                BuoyWeight,
+                BuoyArea,
+                BuoyCd));
+        BuoyLibraryStorage.UpsertUserBuoy(request.Buoy);
         RefreshLibraries();
-        BuoyLibraryStatusText = $"Буй сохранён в библиотеку: {name}";
+        BuoyLibraryStatusText = $"Буй сохранён в библиотеку: {request.NormalizedName}";
     }
 
     private void DeleteSelectedBuoyPreset()
