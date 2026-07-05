@@ -254,12 +254,18 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void DeleteSelectedBuoyPreset()
     {
-        if (SelectedBuoyPreset is null) { BuoyLibraryStatusText = "Выберите пользовательский буй для удаления."; return; }
-        if (SelectedBuoyPreset.Source != "User" || SelectedBuoyPreset.Id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase)) { BuoyLibraryStatusText = "Встроенный буй удалить нельзя. Удалять можно только пользовательские буи."; return; }
-        var deletedName = SelectedBuoyPreset.Name;
-        var deleted = BuoyLibraryStorage.DeleteUserBuoy(SelectedBuoyPreset.Id);
+        var decision = MainWindowUserBuoyDeleteDecisionBuilder.Build(SelectedBuoyPreset);
+        if (!decision.CanDelete)
+        {
+            BuoyLibraryStatusText = decision.BlockedStatusText;
+            return;
+        }
+
+        var deleted = BuoyLibraryStorage.DeleteUserBuoy(decision.SelectedId);
         RefreshLibraries();
-        BuoyLibraryStatusText = deleted ? $"Удалён пользовательский буй: {deletedName}" : "Пользовательский буй не найден в файле библиотеки.";
+        BuoyLibraryStatusText = deleted
+            ? $"Удалён пользовательский буй: {decision.CapturedName}"
+            : "Пользовательский буй не найден в файле библиотеки.";
     }
 
     private void AddAssemblyItem(AssemblyItemViewModel item)
