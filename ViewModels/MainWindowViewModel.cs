@@ -391,21 +391,27 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         if (!UseCurrentProfile)
         {
-            CurrentProfileSummary = $"Профиль течения отключён. Используется одно значение скорости: {CurrentSpeed} м/с.";
+            CurrentProfileSummary = MainWindowCurrentProfileSummaryBuilder.Build(
+                false,
+                CurrentSpeed,
+                Array.Empty<CurrentProfilePointInput>());
             return;
         }
 
         if (CurrentProfilePoints.Count == 0)
         {
-            CurrentProfileSummary = "Профиль включён, но точки не заданы. Будет использовано одно значение скорости.";
+            CurrentProfileSummary = MainWindowCurrentProfileSummaryBuilder.Build(
+                true,
+                string.Empty,
+                Array.Empty<CurrentProfilePointInput>());
             return;
         }
 
-        var inputs = CurrentProfilePoints.Select(x => x.ToInput()).OrderBy(x => x.DepthM).ToList();
-        var maxSpeed = inputs.Max(x => x.HorizontalSpeedMS);
-        var minDepth = inputs.Min(x => x.DepthM);
-        var maxDepth = inputs.Max(x => x.DepthM);
-        CurrentProfileSummary = $"Профиль включён: {inputs.Count} точек, глубины {minDepth:0.##}–{maxDepth:0.##} м, max |Uгор|={maxSpeed:0.###} м/с. В v0.19 расчёт использует эту max-скорость как переходную оценку.";
+        var inputs = CurrentProfilePoints.Select(x => x.ToInput()).ToList();
+        CurrentProfileSummary = MainWindowCurrentProfileSummaryBuilder.Build(
+            true,
+            string.Empty,
+            inputs);
     }
 
     private void NewProject()
