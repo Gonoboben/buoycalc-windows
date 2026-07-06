@@ -364,7 +364,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void AddCurrentProfilePoint()
     {
-        var existingDepths = CurrentProfilePoints.Count == 0
+        System.Collections.Generic.IReadOnlyList<double> existingDepths = CurrentProfilePoints.Count == 0
             ? Array.Empty<double>()
             : CurrentProfilePoints.Select(x => x.ToInput().DepthM).ToList();
         var point = new CurrentProfilePointViewModel();
