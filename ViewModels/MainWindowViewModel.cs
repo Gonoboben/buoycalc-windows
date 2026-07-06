@@ -364,15 +364,22 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void AddCurrentProfilePoint()
     {
-        var depth = CurrentProfilePoints.Count == 0 ? 0 : CurrentProfilePoints.Select(x => x.ToInput().DepthM).Max() + 10;
-        var point = new CurrentProfilePointViewModel
-        {
-            DepthM = FormatDouble(depth),
-            EastCurrentMS = CurrentProfilePoints.Count == 0 ? CurrentSpeed : "0.3",
-            NorthCurrentMS = "0",
-            VerticalCurrentMS = "0",
-            WaterDensityKgM3 = WaterDensity
-        };
+        System.Collections.Generic.IReadOnlyList<double> existingDepths = CurrentProfilePoints.Count == 0
+            ? Array.Empty<double>()
+            : CurrentProfilePoints.Select(x => x.ToInput().DepthM).ToList();
+        var point = new CurrentProfilePointViewModel();
+        var useCurrentSpeed = CurrentProfilePoints.Count == 0;
+        var defaults = MainWindowCurrentProfilePointLifecyclePlanBuilder.BuildNewPointDefaults(
+            existingDepths,
+            useCurrentSpeed,
+            useCurrentSpeed ? CurrentSpeed : string.Empty,
+            WaterDensity);
+
+        point.DepthM = defaults.DepthM;
+        point.EastCurrentMS = defaults.EastCurrentMS;
+        point.NorthCurrentMS = defaults.NorthCurrentMS;
+        point.VerticalCurrentMS = defaults.VerticalCurrentMS;
+        point.WaterDensityKgM3 = defaults.WaterDensityKgM3;
         AddCurrentProfilePoint(point);
     }
 

@@ -43,6 +43,7 @@ internal static class MainWindowCurrentProfilePointLifecyclePlanBuilder
 
     internal static MainWindowCurrentProfilePointDefaults BuildNewPointDefaults(
         IReadOnlyList<double> existingDepths,
+        bool useCurrentSpeed,
         string currentSpeed,
         string waterDensity)
     {
@@ -52,7 +53,7 @@ internal static class MainWindowCurrentProfilePointLifecyclePlanBuilder
 
         return new MainWindowCurrentProfilePointDefaults(
             depth.ToString("0.###", CultureInfo.InvariantCulture),
-            existingDepths.Count == 0 ? currentSpeed : "0.3",
+            useCurrentSpeed ? currentSpeed : "0.3",
             "0",
             "0",
             waterDensity);
