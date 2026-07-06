@@ -378,28 +378,47 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void AddCurrentProfilePoint(CurrentProfilePointViewModel point)
     {
-        point.RemoveRequested += RemoveCurrentProfilePoint;
-        point.PropertyChanged += OnCurrentProfilePointChanged;
+        var routes = MainWindowCurrentProfilePointLifecyclePlanBuilder.Build().WireRoutes;
+        ApplyCurrentProfilePointLifecycleRoutes(point, routes, subscribe: true);
         CurrentProfilePoints.Add(point);
         UpdateCurrentProfileSummary();
     }
 
     private void RemoveCurrentProfilePoint(CurrentProfilePointViewModel point)
     {
-        point.RemoveRequested -= RemoveCurrentProfilePoint;
-        point.PropertyChanged -= OnCurrentProfilePointChanged;
+        var routes = MainWindowCurrentProfilePointLifecyclePlanBuilder.Build().UnwireRoutes;
+        ApplyCurrentProfilePointLifecycleRoutes(point, routes, subscribe: false);
         CurrentProfilePoints.Remove(point);
         UpdateCurrentProfileSummary();
     }
 
     private void ClearCurrentProfilePoints()
     {
+        var routes = MainWindowCurrentProfilePointLifecyclePlanBuilder.Build().UnwireRoutes;
         foreach (var point in CurrentProfilePoints)
         {
-            point.RemoveRequested -= RemoveCurrentProfilePoint;
-            point.PropertyChanged -= OnCurrentProfilePointChanged;
+            ApplyCurrentProfilePointLifecycleRoutes(point, routes, subscribe: false);
         }
         CurrentProfilePoints.Clear();
+    }
+
+    private void ApplyCurrentProfilePointLifecycleRoutes(
+        CurrentProfilePointViewModel point,
+        System.Collections.Generic.IReadOnlyList<MainWindowCurrentProfilePointLifecycleRoute> routes,
+        bool subscribe)
+    {
+        foreach (var route in routes)
+        {
+            switch (route)
+            {
+                case MainWindowCurrentProfilePointLifecycleRoute.RemoveRequested:
+                    if (subscribe) point.RemoveRequested += RemoveCurrentProfilePoint; else point.RemoveRequested -= RemoveCurrentProfilePoint;
+                    break;
+                case MainWindowCurrentProfilePointLifecycleRoute.PropertyChanged:
+                    if (subscribe) point.PropertyChanged += OnCurrentProfilePointChanged; else point.PropertyChanged -= OnCurrentProfilePointChanged;
+                    break;
+            }
+        }
     }
 
     private void ResetCurrentProfile()
