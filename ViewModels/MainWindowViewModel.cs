@@ -337,16 +337,18 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void MoveItemUp(AssemblyItemViewModel item)
     {
         var index = AssemblyItems.IndexOf(item);
-        if (index <= 0) return;
-        AssemblyItems.Move(index, index - 1);
+        var targetIndex = MainWindowAssemblyItemLifecyclePlanBuilder.ResolveMoveUpTarget(index);
+        if (!targetIndex.HasValue) return;
+        AssemblyItems.Move(index, targetIndex.Value);
         UpdateSequenceSummary();
     }
 
     private void MoveItemDown(AssemblyItemViewModel item)
     {
         var index = AssemblyItems.IndexOf(item);
-        if (index < 0 || index >= AssemblyItems.Count - 1) return;
-        AssemblyItems.Move(index, index + 1);
+        var targetIndex = MainWindowAssemblyItemLifecyclePlanBuilder.ResolveMoveDownTarget(index, AssemblyItems.Count);
+        if (!targetIndex.HasValue) return;
+        AssemblyItems.Move(index, targetIndex.Value);
         UpdateSequenceSummary();
     }
 
@@ -355,7 +357,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         var index = AssemblyItems.IndexOf(item);
         var copy = item.Clone();
         WireItem(copy);
-        if (index < 0 || index >= AssemblyItems.Count - 1) AssemblyItems.Add(copy); else AssemblyItems.Insert(index + 1, copy);
+        var insertionIndex = MainWindowAssemblyItemLifecyclePlanBuilder.ResolveDuplicateInsertionIndex(index, AssemblyItems.Count);
+        if (insertionIndex.HasValue) AssemblyItems.Insert(insertionIndex.Value, copy); else AssemblyItems.Add(copy);
         UpdateSequenceSummary();
     }
 
