@@ -196,7 +196,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         BuoyPresets.Clear();
         foreach (var buoy in BuoyLibraryStorage.LoadAllBuoys()) BuoyPresets.Add(buoy);
-        SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == selectedId) ?? BuoyPresets.FirstOrDefault();
+        SelectedBuoyPreset = MainWindowLibraryRefreshSelectionBuilder.SelectBuoy(BuoyPresets, selectedId);
         BuoyLibraryStatusText = $"Библиотека: буёв {BuoyPresets.Count}, якорей {AnchorPresets.Count}.";
     }
 
@@ -204,7 +204,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         AnchorPresets.Clear();
         foreach (var anchor in AnchorLibraryStorage.LoadAllAnchors()) AnchorPresets.Add(anchor);
-        SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == selectedId) ?? AnchorPresets.FirstOrDefault();
+        SelectedAnchorPreset = MainWindowLibraryRefreshSelectionBuilder.SelectAnchor(AnchorPresets, selectedId);
         BuoyLibraryStatusText = $"Библиотека: буёв {BuoyPresets.Count}, якорей {AnchorPresets.Count}.";
     }
 
