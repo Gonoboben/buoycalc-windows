@@ -210,14 +210,10 @@ public sealed class AssemblyItemViewModel : ViewModelBase
 
     public void RefreshLibraryOptions()
     {
-        OnPropertyChanged(nameof(RopePresetOptions));
-        OnPropertyChanged(nameof(RopePresetId));
-        OnPropertyChanged(nameof(ConnectorPresetOptions));
-        OnPropertyChanged(nameof(ConnectorPresetId));
-        OnPropertyChanged(nameof(PayloadPresetOptions));
-        OnPropertyChanged(nameof(PayloadPresetId));
-        OnPropertyChanged(nameof(EditorHint));
-        OnPropertyChanged(nameof(Summary));
+        foreach (var propertyName in AssemblyItemLibraryOptionNotificationPlanBuilder.Build())
+        {
+            OnPropertyChanged(propertyName);
+        }
     }
 
     public AssemblyItemViewModel Clone()
