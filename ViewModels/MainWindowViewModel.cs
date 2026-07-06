@@ -278,24 +278,46 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void ClearAssemblyItems()
     {
+        var routes = MainWindowAssemblyItemLifecyclePlanBuilder.Build().UnwireRoutes;
         foreach (var item in AssemblyItems)
         {
-            item.PropertyChanged -= OnAssemblyItemChanged;
-            item.RemoveRequested -= RemoveItem;
-            item.MoveUpRequested -= MoveItemUp;
-            item.MoveDownRequested -= MoveItemDown;
-            item.DuplicateRequested -= DuplicateItem;
+            ApplyAssemblyItemLifecycleRoutes(item, routes, subscribe: false);
         }
         AssemblyItems.Clear();
     }
 
     private void WireItem(AssemblyItemViewModel item)
     {
-        item.RemoveRequested += RemoveItem;
-        item.MoveUpRequested += MoveItemUp;
-        item.MoveDownRequested += MoveItemDown;
-        item.DuplicateRequested += DuplicateItem;
-        item.PropertyChanged += OnAssemblyItemChanged;
+        var routes = MainWindowAssemblyItemLifecyclePlanBuilder.Build().WireRoutes;
+        ApplyAssemblyItemLifecycleRoutes(item, routes, subscribe: true);
+    }
+
+    private void ApplyAssemblyItemLifecycleRoutes(
+        AssemblyItemViewModel item,
+        System.Collections.Generic.IReadOnlyList<MainWindowAssemblyItemLifecycleRoute> routes,
+        bool subscribe)
+    {
+        foreach (var route in routes)
+        {
+            switch (route)
+            {
+                case MainWindowAssemblyItemLifecycleRoute.RemoveRequested:
+                    if (subscribe) item.RemoveRequested += RemoveItem; else item.RemoveRequested -= RemoveItem;
+                    break;
+                case MainWindowAssemblyItemLifecycleRoute.MoveUpRequested:
+                    if (subscribe) item.MoveUpRequested += MoveItemUp; else item.MoveUpRequested -= MoveItemUp;
+                    break;
+                case MainWindowAssemblyItemLifecycleRoute.MoveDownRequested:
+                    if (subscribe) item.MoveDownRequested += MoveItemDown; else item.MoveDownRequested -= MoveItemDown;
+                    break;
+                case MainWindowAssemblyItemLifecycleRoute.DuplicateRequested:
+                    if (subscribe) item.DuplicateRequested += DuplicateItem; else item.DuplicateRequested -= DuplicateItem;
+                    break;
+                case MainWindowAssemblyItemLifecycleRoute.PropertyChanged:
+                    if (subscribe) item.PropertyChanged += OnAssemblyItemChanged; else item.PropertyChanged -= OnAssemblyItemChanged;
+                    break;
+            }
+        }
     }
 
     private void OnAssemblyItemChanged(object? sender, PropertyChangedEventArgs e)
@@ -306,11 +328,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void RemoveItem(AssemblyItemViewModel item)
     {
-        item.PropertyChanged -= OnAssemblyItemChanged;
-        item.RemoveRequested -= RemoveItem;
-        item.MoveUpRequested -= MoveItemUp;
-        item.MoveDownRequested -= MoveItemDown;
-        item.DuplicateRequested -= DuplicateItem;
+        var routes = MainWindowAssemblyItemLifecyclePlanBuilder.Build().UnwireRoutes;
+        ApplyAssemblyItemLifecycleRoutes(item, routes, subscribe: false);
         AssemblyItems.Remove(item);
         UpdateSequenceSummary();
     }
