@@ -1,12 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="using:BuoyCalc.Windows.Services"
         x:Class="BuoyCalc.Windows.Views.CurrentProfileWindow"
         Width="860"
         Height="680"
         MinWidth="760"
         MinHeight="560"
         Background="#F3F6FA"
-        Title="Профиль течения по глубине v0.19">
+        Title="Профиль течения по глубине">
 
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="18" RowSpacing="14">
     <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
@@ -16,7 +17,7 @@
           <TextBlock Text="Задайте компоненты течения U/V/W и плотность воды по слоям. В v0.19 профиль уже сохраняется и участвует как переходная оценка скорости; послойная интеграция сил будет следующим этапом." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
         </StackPanel>
         <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Top">
-          <TextBlock Text="v0.19" FontSize="12" Foreground="#263653" FontWeight="Bold" />
+          <TextBlock Text="{x:Static services:AppInfo.DisplayVersion}" FontSize="12" Foreground="#263653" FontWeight="Bold" />
         </Border>
       </Grid>
     </Border>
