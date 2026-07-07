@@ -1,12 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="using:BuoyCalc.Windows.Services"
         x:Class="BuoyCalc.Windows.Views.MainWindow"
         Width="1360"
         Height="860"
         MinWidth="1160"
         MinHeight="760"
         Background="#F3F6FA"
-        Title="BuoyCalc Windows v0.21.3">
+        Title="{x:Static services:AppInfo.WindowTitle}">
 
   <Grid RowDefinitions="Auto,*">
     <Border Grid.Row="0" Background="#172033" Padding="20,16">
@@ -24,7 +25,7 @@
           </Button>
           <Button Click="OpenReportTextButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
             <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="14,8">
-              <TextBlock Text="Отчёт текстом..." Foreground="White" FontSize="13" FontWeight="SemiBold" />
+              <TextBlock Text="Полный отчёт..." Foreground="White" FontSize="13" FontWeight="SemiBold" />
             </Border>
           </Button>
           <Button Click="OpenLibraryButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
@@ -33,7 +34,7 @@
             </Border>
           </Button>
           <Border Background="#263653" CornerRadius="12" Padding="14,8" VerticalAlignment="Center">
-            <TextBlock Text="v0.21.3 cleanup" Foreground="#C7D2E5" FontSize="13" />
+            <TextBlock Text="{x:Static services:AppInfo.DisplayVersion}" Foreground="#C7D2E5" FontSize="13" />
           </Border>
         </StackPanel>
       </Grid>
