@@ -1,9 +1,7 @@
-using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using BuoyCalc.Windows.Services;
 using BuoyCalc.Windows.ViewModels;
@@ -130,15 +128,8 @@ public partial class MainWindow : Window
         }
 
         var suggestedFileName = MainWindowPdfExportWorkflowBuilder.BuildSuggestedFileName(viewModel.ProjectName);
-        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = "Сохранить PDF-отчёт BuoyCalc",
-            SuggestedFileName = suggestedFileName,
-            DefaultExtension = "pdf",
-            FileTypeChoices = PdfFileTypes
-        });
-
-        var path = file?.Path.LocalPath;
+        var path = await new AvaloniaPdfExportDialogService(this)
+            .PickSavePathAsync(suggestedFileName);
         if (MainWindowPdfExportWorkflowBuilder.IsCanceled(path))
         {
             viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildCanceledStatus();
@@ -166,13 +157,4 @@ public partial class MainWindow : Window
             viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildErrorStatus(ex.Message);
         }
     }
-
-    private static IReadOnlyList<FilePickerFileType> PdfFileTypes { get; } = new[]
-    {
-        new FilePickerFileType("PDF report")
-        {
-            Patterns = new[] { "*.pdf" }
-        },
-        FilePickerFileTypes.All
-    };
 }
