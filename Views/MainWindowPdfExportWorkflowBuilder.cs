@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace BuoyCalc.Windows.Views;
@@ -14,7 +15,7 @@ internal static class MainWindowPdfExportWorkflowBuilder
         return MakeSafeFileName(projectName) + "_report.pdf";
     }
 
-    internal static bool IsCanceled(string? path)
+    internal static bool IsCanceled([NotNullWhen(false)] string? path)
     {
         return string.IsNullOrWhiteSpace(path);
     }
