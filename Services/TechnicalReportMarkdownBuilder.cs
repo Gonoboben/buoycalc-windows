@@ -72,7 +72,7 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine(alternativeDiscreteNodes.MethodNote);
         sb.AppendLine(iterativeSolver.MethodNote);
         sb.AppendLine(vectorBalance.MethodNote);
-        sb.AppendLine("v0.39 добавляет диагностический итерационный solver-слой. Он замыкает существующие блоки в цикл, но основной solver, 2D и PDF-схемы пока не заменяются.");
+        sb.AppendLine("Расчёт формы остаётся предварительным: итерационный solver формирует кандидатную форму с дискретными нагрузками. Только кандидат, прошедший MooringPrimaryShapeGate, становится основной выбранной формой; иначе используется fallback MooringShapeSolver. 2D читает выбранную форму, а PDF сохраняет собственный порядок источников: альтернативная форма, выбранная форма, метрики отчёта и визуализационный fallback.");
 
         return sb.ToString();
     }
