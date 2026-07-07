@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="using:BuoyCalc.Windows.Services"
         xmlns:views="clr-namespace:BuoyCalc.Windows.Views"
         x:Class="BuoyCalc.Windows.Views.Mooring2DWindow"
         Width="860"
@@ -7,14 +8,14 @@
         MinWidth="720"
         MinHeight="520"
         Background="#F3F6FA"
-        Title="2D-схема постановки v0.24.4">
+        Title="2D-схема постановки">
 
   <Border Background="White" CornerRadius="16" Padding="16" Margin="18" BoxShadow="0 2 12 #18000000">
     <Grid RowDefinitions="Auto,*" RowSpacing="12">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
         <TextBlock Text="2D-схема постановки" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" />
         <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Center">
-          <TextBlock Text="v0.24.4" FontSize="12" Foreground="#263653" FontWeight="Bold" />
+          <TextBlock Text="{x:Static services:AppInfo.DisplayVersion}" FontSize="12" Foreground="#263653" FontWeight="Bold" />
         </Border>
       </Grid>
 
