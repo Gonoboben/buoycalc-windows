@@ -14,7 +14,7 @@
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
         <StackPanel Spacing="4">
           <TextBlock Text="Профиль течения по глубине" FontSize="22" FontWeight="Bold" />
-          <TextBlock Text="Задайте компоненты течения U/V/W и плотность воды по слоям. В v0.19 профиль уже сохраняется и участвует как переходная оценка скорости; послойная интеграция сил будет следующим этапом." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+          <TextBlock Text="Задайте U/V/W и плотность воды по глубине. Линия разбивается на сегменты не длиннее 1 м; U/V и плотность интерполируются на глубине каждого сегмента. W сохраняется, но в текущей модели сопротивления не используется. Для буя, соединителей и приборов применяется max |Uгор| профиля, а для расчётов веса в воде — средняя плотность профиля." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
         </StackPanel>
         <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Top">
           <TextBlock Text="{x:Static services:AppInfo.DisplayVersion}" FontSize="12" Foreground="#263653" FontWeight="Bold" />
