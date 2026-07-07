@@ -25,6 +25,6 @@ internal static class MainWindowCurrentProfileSummaryBuilder
         var maxSpeed = orderedPoints.Max(x => x.HorizontalSpeedMS);
         var minDepth = orderedPoints.Min(x => x.DepthM);
         var maxDepth = orderedPoints.Max(x => x.DepthM);
-        return $"Профиль включён: {orderedPoints.Count} точек, глубины {minDepth:0.##}–{maxDepth:0.##} м, max |Uгор|={maxSpeed:0.###} м/с. В v0.19 расчёт использует эту max-скорость как переходную оценку.";
+        return $"Профиль включён: {orderedPoints.Count} точек, глубины {minDepth:0.##}–{maxDepth:0.##} м, max |Uгор|={maxSpeed:0.###} м/с. Сила течения на линии интегрируется по интерполированным сегментам ≤1 м; для буя, соединителей и приборов используется max |Uгор|.";
     }
 }
