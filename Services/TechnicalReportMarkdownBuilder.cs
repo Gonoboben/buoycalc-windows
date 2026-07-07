@@ -142,9 +142,9 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"- Полная плавучесть буя: {result.BuoyancyKg:0.####} кг");
         sb.AppendLine($"- Вес постановки в воде: {result.TotalWeightWaterKg:0.####} кг");
         sb.AppendLine($"- Чистая плавучесть: {result.NetBuoyancyKg:0.####} кг");
-        sb.AppendLine($"- Сила течения исходной модели: {result.CurrentForceN:0.####} Н");
+        sb.AppendLine($"- Суммарная сила течения базовой модели (буй + линия + соединители + приборы): {result.CurrentForceN:0.####} Н");
         sb.AppendLine($"- Волновая составляющая: {result.WaveForceN:0.####} Н");
-        sb.AppendLine($"- Горизонтальная сила исходной модели: {result.HorizontalForceN:0.####} Н");
+        sb.AppendLine($"- Суммарная горизонтальная нагрузка базовой модели (течение + волна): {result.HorizontalForceN:0.####} Н");
         sb.AppendLine($"- Расчётная нагрузка для проверки слабого звена: {result.TensionKn:0.####} кН");
         sb.AppendLine($"- Слабое звено: {result.WeakLinkName}");
         sb.AppendLine($"- MBL слабого звена: {result.WeakLinkBreakingLoadKn:0.####} кН");
@@ -154,7 +154,7 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"- Удержание якоря: {result.AnchorHoldingKg:0.####} кг");
         sb.AppendLine($"- Запас якоря: {result.AnchorReserve:0.####}");
         sb.AppendLine($"- Длина линии: {result.LineLengthM:0.####} м");
-        sb.AppendLine($"- Старая оценка сноса: {result.EstimatedOffsetM:0.####} м");
+        sb.AppendLine($"- Приближённый снос базовой модели (Fгор / Fверт × глубина): {result.EstimatedOffsetM:0.####} м");
         sb.AppendLine($"- Дискретных элементов с координатой s: {sequencePositions.DiscreteElementCount}; вес в воде: {sequencePositions.DiscreteWeightWaterKg:0.####} кг; Fx: {sequencePositions.DiscreteCurrentForceN:0.####} Н");
         sb.AppendLine($"- Дискретных X/Z-узлов альтернативной формы: {alternativeDiscreteNodes.DiscreteNodeCount}; max Δузла={alternativeDiscreteNodes.MaxNodeDeltaM:0.####} м");
         sb.AppendLine($"- Итерационный solver: {(iterativeSolver.Converged ? "сошёлся" : "не сошёлся")}; итераций={iterativeSolver.IterationCount}; ΔXпосл={iterativeSolver.FinalOffsetChangeM:0.####} м; max Δузла={iterativeSolver.FinalMaxNodeDeltaM:0.####} м; невязка Z={iterativeSolver.FinalGeometryResidualM:0.####} м; причина остановки: {iterativeSolver.StopReasonText}");
