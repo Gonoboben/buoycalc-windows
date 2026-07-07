@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -124,13 +123,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(viewModel.ReportText))
+        if (!MainWindowPdfExportWorkflowBuilder.CanExport(viewModel.ReportText))
         {
-            viewModel.ProjectStatusText = "Сначала выполните расчёт, затем экспортируйте PDF.";
+            viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildPreconditionStatus();
             return;
         }
 
-        var suggestedFileName = MakeSafeFileName(viewModel.ProjectName) + "_report.pdf";
+        var suggestedFileName = MainWindowPdfExportWorkflowBuilder.BuildSuggestedFileName(viewModel.ProjectName);
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Сохранить PDF-отчёт BuoyCalc",
@@ -140,9 +139,9 @@ public partial class MainWindow : Window
         });
 
         var path = file?.Path.LocalPath;
-        if (string.IsNullOrWhiteSpace(path))
+        if (MainWindowPdfExportWorkflowBuilder.IsCanceled(path))
         {
-            viewModel.ProjectStatusText = "Экспорт PDF отменён.";
+            viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildCanceledStatus();
             return;
         }
 
@@ -160,23 +159,12 @@ public partial class MainWindow : Window
                 viewModel.VisualizationLineLengthM,
                 viewModel.VisualizationOffsetM);
 
-            viewModel.ProjectStatusText = $"PDF сохранён: {path}";
+            viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildSuccessStatus(path);
         }
         catch (System.Exception ex)
         {
-            viewModel.ProjectStatusText = $"Ошибка экспорта PDF: {ex.Message}";
+            viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildErrorStatus(ex.Message);
         }
-    }
-
-    private static string MakeSafeFileName(string value)
-    {
-        value = string.IsNullOrWhiteSpace(value) ? "BuoyCalc_Project" : value.Trim();
-        foreach (var invalidChar in Path.GetInvalidFileNameChars())
-        {
-            value = value.Replace(invalidChar, '_');
-        }
-
-        return value.Replace(' ', '_');
     }
 
     private static IReadOnlyList<FilePickerFileType> PdfFileTypes { get; } = new[]
