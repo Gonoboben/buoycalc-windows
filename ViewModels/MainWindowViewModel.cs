@@ -562,33 +562,70 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             var targetPath = ProjectFilePath;
-            if (promptForPath || string.IsNullOrWhiteSpace(targetPath))
+            var shouldRequestPath = promptForPath || string.IsNullOrWhiteSpace(targetPath);
+            var request = MainWindowProjectFileWorkflowBuilder.BuildSavePathRequest(
+                promptForPath,
+                targetPath,
+                shouldRequestPath ? ProjectName : string.Empty);
+
+            if (request.ShouldRequestPath)
             {
-                var suggestedFileName = MakeSafeFileName(ProjectName) + ".json";
-                targetPath = _fileDialogService is not null ? await _fileDialogService.PickSavePathAsync(suggestedFileName) ?? string.Empty : ProjectJsonStorage.DefaultProjectPath;
+                var dialogAvailable = _fileDialogService is not null;
+                string? pickerPath = null;
+                var defaultProjectPath = string.Empty;
+                if (dialogAvailable)
+                {
+                    pickerPath = await _fileDialogService!.PickSavePathAsync(request.SuggestedFileName);
+                }
+                else
+                {
+                    defaultProjectPath = ProjectJsonStorage.DefaultProjectPath;
+                }
+
+                targetPath = MainWindowProjectFileWorkflowBuilder.ResolveSaveTargetPath(
+                    request,
+                    dialogAvailable,
+                    pickerPath,
+                    defaultProjectPath);
             }
-            if (string.IsNullOrWhiteSpace(targetPath)) { ProjectStatusText = "Сохранение отменено."; return; }
+
+            if (MainWindowProjectFileWorkflowBuilder.IsCanceled(targetPath)) { ProjectStatusText = "Сохранение отменено."; return; }
             targetPath = ProjectJsonStorage.NormalizeJsonPath(targetPath);
             ProjectJsonStorage.Save(ToDto(), targetPath);
             ProjectFilePath = targetPath;
-            ProjectStatusText = $"Проект сохранён: {targetPath}";
+            ProjectStatusText = MainWindowProjectFileWorkflowBuilder.BuildSaveSuccessStatus(targetPath);
         }
-        catch (Exception ex) { ProjectStatusText = $"Ошибка сохранения: {ex.Message}"; }
+        catch (Exception ex) { ProjectStatusText = MainWindowProjectFileWorkflowBuilder.BuildSaveErrorStatus(ex.Message); }
     }
 
     private async Task LoadProjectAsync()
     {
         try
         {
-            var selectedPath = _fileDialogService is not null ? await _fileDialogService.PickOpenPathAsync() ?? string.Empty : ProjectFilePath;
-            if (string.IsNullOrWhiteSpace(selectedPath)) { ProjectStatusText = "Загрузка отменена."; return; }
+            var dialogAvailable = _fileDialogService is not null;
+            string? pickerPath = null;
+            var currentPath = string.Empty;
+            if (dialogAvailable)
+            {
+                pickerPath = await _fileDialogService!.PickOpenPathAsync();
+            }
+            else
+            {
+                currentPath = ProjectFilePath;
+            }
+
+            var selectedPath = MainWindowProjectFileWorkflowBuilder.ResolveLoadSelectedPath(
+                dialogAvailable,
+                pickerPath,
+                currentPath);
+            if (MainWindowProjectFileWorkflowBuilder.IsCanceled(selectedPath)) { ProjectStatusText = "Загрузка отменена."; return; }
             var dto = ProjectJsonStorage.Load(selectedPath);
-            if (dto is null) { ProjectStatusText = $"Файл проекта не найден: {selectedPath}"; return; }
+            if (dto is null) { ProjectStatusText = MainWindowProjectFileWorkflowBuilder.BuildLoadMissingStatus(selectedPath); return; }
             FromDto(dto);
             ProjectFilePath = selectedPath;
-            ProjectStatusText = $"Проект загружен: {selectedPath}";
+            ProjectStatusText = MainWindowProjectFileWorkflowBuilder.BuildLoadSuccessStatus(selectedPath);
         }
-        catch (Exception ex) { ProjectStatusText = $"Ошибка загрузки: {ex.Message}"; }
+        catch (Exception ex) { ProjectStatusText = MainWindowProjectFileWorkflowBuilder.BuildLoadErrorStatus(ex.Message); }
     }
 
     private BuoyProjectDto ToDto()
