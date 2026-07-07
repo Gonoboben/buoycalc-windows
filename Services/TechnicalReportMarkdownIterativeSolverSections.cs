@@ -19,10 +19,10 @@ internal static class TechnicalReportMarkdownIterativeSolverSections
 
     private static void AppendIterativeSolverRows(StringBuilder sb, MooringIterativeSolverResult solver)
     {
-        sb.AppendLine("## Итерационный solver v0.39 — диагностика");
-        sb.AppendLine("Этот раздел показывает отдельный feedback-слой: форма → силы по форме → натяжения → дискретные нагрузки → новая форма → сравнение со старой. Он не заменяет основной MooringShapeSolver.");
+        sb.AppendLine("## Итерационный solver — итерации и кандидатная форма");
+        sb.AppendLine("Раздел показывает feedback-цикл: форма → силы по форме → натяжения → дискретные нагрузки → новая форма → проверка сходимости. Финальная форма является кандидатом: при выполнении критериев и прохождении MooringPrimaryShapeGate она может стать основной; иначе сохраняется fallback MooringShapeSolver.");
         sb.AppendLine($"Критерий: {solver.ConvergenceCriterion}");
-        sb.AppendLine($"Итог: {(solver.Converged ? "OK" : "каркас / не сошлось")}; итераций={solver.IterationCount}; финальная ΔX={solver.FinalOffsetChangeM:0.####} м; финальный max Δузла={solver.FinalMaxNodeDeltaM:0.####} м.");
+        sb.AppendLine($"Итог: {(solver.Converged ? "сошёлся" : "не сошёлся")}; {solver.StopReasonText} Итераций={solver.IterationCount}; финальная ΔX={solver.FinalOffsetChangeM:0.####} м; финальный max Δузла={solver.FinalMaxNodeDeltaM:0.####} м; финальная невязка Z={solver.FinalGeometryResidualM:0.####} м; divergence={(solver.Diverged ? "YES" : "NO")}.");
         sb.AppendLine();
 
         if (solver.Rows.Count == 0)
