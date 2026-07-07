@@ -157,7 +157,7 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"- Старая оценка сноса: {result.EstimatedOffsetM:0.####} м");
         sb.AppendLine($"- Дискретных элементов с координатой s: {sequencePositions.DiscreteElementCount}; вес в воде: {sequencePositions.DiscreteWeightWaterKg:0.####} кг; Fx: {sequencePositions.DiscreteCurrentForceN:0.####} Н");
         sb.AppendLine($"- Дискретных X/Z-узлов альтернативной формы: {alternativeDiscreteNodes.DiscreteNodeCount}; max Δузла={alternativeDiscreteNodes.MaxNodeDeltaM:0.####} м");
-        sb.AppendLine($"- Итерационный solver v0.39: {(iterativeSolver.Converged ? "OK" : "каркас / не сошёлся")}; итераций={iterativeSolver.IterationCount}; ΔXпосл={iterativeSolver.FinalOffsetChangeM:0.####} м; max Δузла={iterativeSolver.FinalMaxNodeDeltaM:0.####} м");
+        sb.AppendLine($"- Итерационный solver: {(iterativeSolver.Converged ? "сошёлся" : "не сошёлся")}; итераций={iterativeSolver.IterationCount}; ΔXпосл={iterativeSolver.FinalOffsetChangeM:0.####} м; max Δузла={iterativeSolver.FinalMaxNodeDeltaM:0.####} м; невязка Z={iterativeSolver.FinalGeometryResidualM:0.####} м; причина остановки: {iterativeSolver.StopReasonText}");
         sb.AppendLine($"- Диагностика: {diagnostics.Summary}");
 
         if (tensionRows.Count > 0)
