@@ -78,13 +78,13 @@ public static class MooringAutocheckSuite
             failCount,
             hasFailures,
             summary,
-            "v0.46.3: автопроверки включают контроль качества базы элементов и согласованности расчётных слоёв. Они не меняют физику; они показывают пропущенные названия, пресеты, неверные количества, длины, Cd/площадь, WLL/MBL и неконечные запасы.");
+            "Автопроверки включают контроль качества базы элементов и согласованности расчётных слоёв. Они не меняют физику; они показывают пропущенные названия, пресеты, неверные количества, длины, Cd/площадь, WLL/MBL и неконечные запасы.");
     }
 
     public static string BuildReportTable(MooringAutocheckResult result)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("## Автопроверки сценариев и базы элементов v0.46.3");
+        sb.AppendLine("## Автопроверки сценариев и базы элементов");
         sb.AppendLine(result.MethodNote);
         sb.AppendLine();
         sb.AppendLine($"Итог: {result.Summary}; пройдено={result.PassCount}, информация={result.InfoCount}, предупреждения={result.WarningCount}, ошибки={result.FailCount}.");
