@@ -93,7 +93,7 @@ internal static class TechnicalReportMarkdownMovedSections
         sb.AppendLine("Координата s отсчитывается вдоль линии от верхнего конца к якорю. Линейные элементы занимают интервал s0–s1; соединители, приборы, буй и якорь имеют точечную позицию s.");
         sb.AppendLine($"Длина линии по позиционной модели: {positions.TotalLineLengthM:0.####} м; распределённых участков: {positions.DistributedElementCount}; дискретных элементов без буя/якоря: {positions.DiscreteElementCount}.");
         sb.AppendLine();
-        sb.AppendLine("| № | Тип | Элемент | Пресет | s0, м | s1, м | s, м | L, м | Вес в воде, кг | Fx, Н | Роль в solver | Состояние учёта |");
+        sb.AppendLine("| № | Тип | Элемент | Пресет | s0, м | s1, м | s, м | L, м | Вес в воде, кг | Fx, Н | Расчётная роль | Состояние учёта |");
         sb.AppendLine("|---:|---|---|---|---:|---:|---:|---:|---:|---:|---|---|");
         foreach (var row in positions.Rows)
         {
