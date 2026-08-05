@@ -160,7 +160,7 @@ public static class MooringShapeSolver
         }
 
         var finalScale = (low + high) / 2.0;
-        var finalResidual = Math.Abs(VerticalSpan(orderedSegments, tensionRows, finalScale, lineLengthM, targetAnchorDepthM) - targetAnchorDepthM);
+        var finalResidual = Math.Abs(VerticalSpan(orderedSegments, tensionRows, finalScale, lineLengthM, targetAnchorDepthM) - targetVerticalSpanM);
         return new IterationResult(finalScale, iterations, finalResidual <= DepthToleranceM, finalResidual);
     }
 
