@@ -73,8 +73,8 @@ public static class MooringShapeSolver
         var lineShorterThanDepth = targetAnchorDepthM > 0 && lineLengthM + DepthToleranceM < targetAnchorDepthM;
         var converged = iteration.ResidualM <= DepthToleranceM && iteration.Converged && !lineShorterThanDepth;
         var methodNote = lineShorterThanDepth
-            ? "v0.38.2: линия короче глубины. Форма построена как геометрия погружённого буя, но не считается сходимостью нормальной поверхностной постановки. Волновая нагрузка при этом не отключается."
-            : "v0.38.2: итерационная геометрическая сходимость формы включена. Углы сегментов берутся из накопленных сил, затем масштаб углов подбирается бисекцией так, чтобы якорный узел попал на проектную глубину. Это ещё не полный нелинейный solver равновесия сил и формы.";
+            ? "Линия короче глубины. Fallback-форма построена как геометрия погружённого буя, но не считается сошедшейся нормальной поверхностной постановкой. Волновая нагрузка при этом не отключается."
+            : "Fallback-форма MooringShapeSolver использует итерационное геометрическое замыкание: углы сегментов берутся из накопленных сил, затем масштаб углов подбирается бисекцией, чтобы якорный узел попал на проектную глубину. Это не полный нелинейный solver равновесия сил и формы.";
         var criterion = lineShorterThanDepth
             ? $"Для поверхностной постановки требуется L ≥ Depth; сейчас L={lineLengthM:0.####} м < Depth={targetAnchorDepthM:0.####} м"
             : $"|Zякоря - Depth| ≤ {DepthToleranceM:0.####} м";
@@ -160,7 +160,7 @@ public static class MooringShapeSolver
         }
 
         var finalScale = (low + high) / 2.0;
-        var finalResidual = Math.Abs(VerticalSpan(orderedSegments, tensionRows, finalScale, lineLengthM, targetAnchorDepthM) - targetVerticalSpanM);
+        var finalResidual = Math.Abs(VerticalSpan(orderedSegments, tensionRows, finalScale, lineLengthM, targetAnchorDepthM) - targetAnchorDepthM);
         return new IterationResult(finalScale, iterations, finalResidual <= DepthToleranceM, finalResidual);
     }
 
