@@ -58,8 +58,8 @@ public static class MooringDeploymentModeClassifier
     public static string BuildReportTable(MooringDeploymentModeResult mode)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("## Режим постановки v0.41");
-        sb.AppendLine("Классификация режима не меняет solver. Она только помечает расчёт как surface/submerged/short/excess line/overloaded для отчёта и будущих правил.");
+        sb.AppendLine("## Режим постановки");
+        sb.AppendLine("Классификация режима не меняет solver. Она помечает расчёт как surface/submerged/short/excess line/overloaded для отчёта и автопроверок.");
         sb.AppendLine();
         sb.AppendLine("| Параметр | Значение |");
         sb.AppendLine("|---|---|");
@@ -110,7 +110,7 @@ public static class MooringDeploymentModeClassifier
             mode == MooringDeploymentMode.ShortLine,
             mode == MooringDeploymentMode.ExcessLine,
             status,
-            "v0.41: режим постановки классифицируется отдельно от solver. Классификатор не меняет силы, натяжения или форму; он только помечает расчёт как surface/submerged/short/excess line/overloaded для отчёта и будущих правил solver.");
+            "Режим постановки классифицируется отдельно от solver. Классификатор не меняет силы, натяжения или форму; он передаёт текущий режим в отчёт и автопроверки.");
     }
 
     private static MooringDeploymentMode ResolveMode(
