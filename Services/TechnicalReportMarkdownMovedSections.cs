@@ -56,7 +56,7 @@ internal static class TechnicalReportMarkdownMovedSections
     {
         sb.AppendLine("## Векторная ведомость сил постановки");
         sb.AppendLine("Положительное направление X принято по направлению горизонтальной нагрузки. Положительное направление Z принято вверх.");
-        sb.AppendLine("Эта таблица показывает силовые члены, уже переданные расчётным ядром. Она не является результатом итерационного solver равновесной формы.");
+        sb.AppendLine("Таблица собирает силовые члены расчётного ядра. Значения R являются требуемыми реакциями для замыкания ΣF=0; отдельная система опорных реакций или равновесной формы здесь не решается.");
         sb.AppendLine();
         sb.AppendLine("| № | Тип | Элемент | Fx, Н | Fz, Н | Примечание |");
         sb.AppendLine("|---:|---|---|---:|---:|---|");
@@ -66,11 +66,11 @@ internal static class TechnicalReportMarkdownMovedSections
             sb.AppendLine($"| {number++} | {Escape(term.Kind)} | {Escape(term.Name)} | {term.FxN:0.####} | {term.FzN:0.####} | {Escape(term.Note)} |");
         }
         sb.AppendLine($"|  | **Σ** | **Сумма учтённых сил** | **{balance.SumExternalFxN:0.####}** | **{balance.SumExternalFzN:0.####}** | Сумма строк таблицы. |");
-        sb.AppendLine($"|  | **R** | **Требуемая реакция для ΣF=0** | **{balance.RequiredReactionFxN:0.####}** | **{balance.RequiredReactionFzN:0.####}** | Вычислена как минус сумма учтённых сил; пока не найдена solver-ом. |");
+        sb.AppendLine($"|  | **R** | **Требуемая реакция для ΣF=0** | **{balance.RequiredReactionFxN:0.####}** | **{balance.RequiredReactionFzN:0.####}** | Вычислена как минус сумма учтённых сил; это требуемое значение, а не решённая реакция опоры. |");
         sb.AppendLine();
         sb.AppendLine($"- Горизонтальная удерживающая способность якоря: {balance.AnchorHorizontalCapacityN:0.####} Н");
         sb.AppendLine($"- Запас горизонтального удержания по требуемой реакции Rx: {balance.AnchorHorizontalReserve:0.####}");
-        sb.AppendLine($"- Статус баланса: {(balance.IsSolved ? "решён" : "каркас собран; реакции не решены")}");
+        sb.AppendLine($"- Статус баланса: {(balance.IsSolved ? "решён" : "ведомость сформирована; показаны требуемые реакции")}");
         sb.AppendLine($"- Методическое примечание: {balance.MethodNote}");
         sb.AppendLine();
     }
