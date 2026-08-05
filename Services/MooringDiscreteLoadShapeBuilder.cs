@@ -134,10 +134,10 @@ public static class MooringDiscreteLoadShapeBuilder
         var angleScaleAcceptable = scaleResult.AngleScale <= AngleScaleWarningLimit;
         var engineeringStatusOk = geometryClosed && angleScaleAcceptable && !shortLine;
         var note = shortLine
-            ? $"v0.38.2: альтернативная форма построена для короткой линии L={lineLengthM:0.####} м < Depth={targetDepthM:0.####} м. Это WARNING: форма соответствует погружённому бую, а не нормальной поверхностной постановке. Волновая нагрузка не отключается."
+            ? $"Альтернативная кандидатная форма построена для короткой линии L={lineLengthM:0.####} м < Depth={targetDepthM:0.####} м. Это WARNING: форма соответствует погружённому бую, а не нормальной поверхностной постановке. Волновая нагрузка не отключается."
             : angleScaleAcceptable
-                ? "v0.38.2: построена альтернативная форма X/Z по натяжениям с дискретными нагрузками. Это сравнительная форма: основной solver пока не заменён."
-                : $"v0.38.2: альтернативная форма геометрически замкнута, но требует большого масштабирования углов scale={scaleResult.AngleScale:0.####}. Это WARNING: форма полезна для сравнения, но не должна трактоваться как физически сошедшийся solver.";
+                ? "Построена альтернативная форма X/Z по натяжениям с дискретными нагрузками. В итерационном цикле она используется как кандидатная форма; выбранной основной становится только после прохождения MooringPrimaryShapeGate, иначе сохраняется fallback MooringShapeSolver."
+                : $"Альтернативная кандидатная форма геометрически замкнута, но требует большого масштабирования углов scale={scaleResult.AngleScale:0.####}. Это WARNING: форма полезна для сравнения, но не должна трактоваться как физически сошедшийся solver.";
 
         return new MooringDiscreteLoadShapeResult(
             output,
