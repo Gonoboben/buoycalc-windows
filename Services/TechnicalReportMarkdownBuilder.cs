@@ -111,8 +111,8 @@ public static class TechnicalReportMarkdownBuilder
     {
         sb.AppendLine("## Буй");
         sb.AppendLine($"- Название: {buoy.Name}");
-        sb.AppendLine($"- Объём: {buoy.VolumeM3:0.####} м³");
-        sb.AppendLine($"- Масса: {buoy.WeightKg:0.####} кг");
+        sb.AppendLine($"- Вытесняемый объём: {buoy.VolumeM3:0.####} м³");
+        sb.AppendLine($"- Масса на воздухе: {buoy.WeightKg:0.####} кг");
         sb.AppendLine($"- Площадь: {buoy.ProjectedAreaM2:0.####} м²");
         sb.AppendLine($"- Cd: {buoy.DragCoefficient:0.####}");
         sb.AppendLine($"- Состояние по форме: {DisplayBuoyState(shape.BuoyState)}");
@@ -126,8 +126,8 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"- Название: {anchor.Name}");
         sb.AppendLine($"- Тип: {anchor.Type}");
         sb.AppendLine($"- Материал: {anchor.Material}");
-        sb.AppendLine($"- Масса: {anchor.WeightAirKg:0.####} кг");
-        sb.AppendLine($"- Объём: {anchor.VolumeM3:0.####} м³");
+        sb.AppendLine($"- Масса на воздухе: {anchor.WeightAirKg:0.####} кг");
+        sb.AppendLine($"- Вытесняемый объём: {anchor.VolumeM3:0.####} м³");
         sb.AppendLine($"- Вес якоря в воде: {result.AnchorWeightWaterKg:0.####} кг");
         sb.AppendLine($"- Базовый коэф. удержания якоря: {result.AnchorBaseHoldingCoefficient:0.####}");
         sb.AppendLine($"- Множитель типа якоря: {result.AnchorTypeMultiplier:0.####}");

@@ -110,11 +110,11 @@
               <TextBox Text="{Binding BuoyName}" IsReadOnly="True" />
               <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
                 <StackPanel Spacing="4">
-                  <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
+                  <TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" />
                   <TextBox Text="{Binding BuoyVolume}" IsReadOnly="True" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="4">
-                  <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
+                  <TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" />
                   <TextBox Text="{Binding BuoyWeight}" IsReadOnly="True" />
                 </StackPanel>
                 <StackPanel Grid.Row="1" Spacing="4">
@@ -147,11 +147,11 @@
                   <TextBox Text="{Binding AnchorMaterial}" IsReadOnly="True" />
                 </StackPanel>
                 <StackPanel Grid.Row="1" Spacing="4">
-                  <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
+                  <TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" />
                   <TextBox Text="{Binding AnchorWeight}" IsReadOnly="True" />
                 </StackPanel>
                 <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
-                  <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
+                  <TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" />
                   <TextBox Text="{Binding AnchorVolume}" IsReadOnly="True" />
                 </StackPanel>
                 <StackPanel Grid.Row="2" Spacing="4">
@@ -253,11 +253,11 @@
                             </StackPanel>
                             <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
                               <StackPanel Spacing="4">
-                                <TextBlock Text="Масса, кг" FontSize="12" Foreground="#697386" />
+                                <TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" />
                                 <TextBox Text="{Binding PayloadWeightAirKg}" IsReadOnly="True" />
                               </StackPanel>
                               <StackPanel Grid.Column="1" Spacing="4">
-                                <TextBlock Text="Объём, м³" FontSize="12" Foreground="#697386" />
+                                <TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" />
                                 <TextBox Text="{Binding PayloadVolumeM3}" IsReadOnly="True" />
                               </StackPanel>
                               <StackPanel Grid.Column="2" Spacing="4">
