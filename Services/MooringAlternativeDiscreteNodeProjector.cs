@@ -91,7 +91,7 @@ public static class MooringAlternativeDiscreteNodeProjector
             internalRows.Sum(x => x.WeightWaterKg),
             internalRows.Sum(x => x.CurrentForceN),
             rows.Count > 0 ? rows.Max(x => Math.Sqrt(x.DeltaXM * x.DeltaXM + x.DeltaZM * x.DeltaZM)) : 0,
-            "v0.37: дискретные элементы спроецированы на альтернативную X/Z-форму как отдельные точки и переданы в хранилище для 2D-сравнения. Это отчётно-визуальный слой; основной solver пока не заменён.");
+            "Дискретные элементы спроецированы на альтернативную X/Z-форму как отдельные отчётно-визуальные точки и переданы в хранилище для 2D-сравнения. Этот слой не рассчитывает новую физику и не выбирает основную форму.");
 
         MooringAlternativeShapeStore.Set(alternativeShape, result);
         return result;
