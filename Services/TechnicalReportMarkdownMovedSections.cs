@@ -107,7 +107,7 @@ internal static class TechnicalReportMarkdownMovedSections
     private static void AppendModelCoverageRows(StringBuilder sb, CalculationResult result)
     {
         sb.AppendLine("## Область учёта элементов в текущей модели");
-        sb.AppendLine("Эта таблица показывает, где элемент уже участвует в расчётах. В v0.39 добавлен отдельный итерационный solver-слой, но основной solver, 2D и PDF-схемы пока не заменены.");
+        sb.AppendLine("Эта таблица показывает участие элементов в базовой сегментной модели, дискретных нагрузках, альтернативной X/Z-форме и итерационном feedback-цикле. Выбор основной формы выполняется отдельно через MooringPrimaryShapeGate.");
         sb.AppendLine();
         sb.AppendLine("| № | Элемент | Тип | Ведомость элементов | Векторный баланс | Позиция s | Дискретные натяжения | Альт. форма X/Z | Дискретный X/Z-узел | Основная форма X/Z | Основные натяжения | Примечание |");
         sb.AppendLine("|---:|---|---|---|---|---|---|---|---|---|---|---|");
@@ -144,10 +144,10 @@ internal static class TechnicalReportMarkdownMovedSections
             };
             var note = row.Kind switch
             {
-                "Линия" => "используется в SegmentRows, ShapeRows, силах по форме X/Z, натяжениях и v0.39 feedback-цикле",
+                "Линия" => "используется в SegmentRows, ShapeRows, силах по форме X/Z, натяжениях и итерационном feedback-цикле",
                 "Буй" => "задаёт верхнее граничное условие и плавучесть",
                 "Якорь" => "задаёт нижнее граничное условие и удержание",
-                _ => "участвует как дискретная нагрузка по s в альтернативной форме и v0.39 feedback-цикле"
+                _ => "участвует как дискретная нагрузка по s в альтернативной форме и итерационном feedback-цикле"
             };
             sb.AppendLine($"| {row.Number} | {Escape(row.Title)} | {Escape(row.Kind)} | да | да | да | {discreteTensionScope} | {alternativeShapeScope} | {discreteNodeScope} | {shapeScope} | {tensionScope} | {Escape(note)} |");
         }
