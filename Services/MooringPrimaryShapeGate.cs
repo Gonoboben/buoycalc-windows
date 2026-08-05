@@ -86,7 +86,7 @@ public static class MooringPrimaryShapeGate
 
         if (candidateCanBecomePrimary)
         {
-            reasons.Add("Кандидатная форма прошла gate и может быть использована как основная в ветке v0.40.");
+            reasons.Add("Кандидатная форма прошла gate и может быть использована как основная.");
         }
         else
         {
@@ -106,7 +106,7 @@ public static class MooringPrimaryShapeGate
             maxNodeDeltaM,
             finalGeometryResidualM,
             DescribeDecision(decision),
-            "v0.40: gate оценивает, можно ли форму с дискретными нагрузками использовать как основную. Если gate не пройден, основной формой остаётся MooringShapeSolver.",
+            "Gate оценивает, можно ли форму с дискретными нагрузками использовать как основную. Если gate не пройден, основной формой остаётся fallback MooringShapeSolver.",
             reasons);
     }
 
@@ -114,7 +114,7 @@ public static class MooringPrimaryShapeGate
     {
         return decision switch
         {
-            MooringPrimaryShapeGateDecision.CandidateReadyForPrimary => "Кандидатная форма готова для подключения как основная форма v0.40.",
+            MooringPrimaryShapeGateDecision.CandidateReadyForPrimary => "Кандидатная форма готова для использования как основная.",
             MooringPrimaryShapeGateDecision.CandidateRejected => "Кандидатная форма есть, но gate запрещает использовать её как основную.",
             _ => "Оставить текущую основную форму MooringShapeSolver."
         };
@@ -132,8 +132,8 @@ public static class MooringPrimaryShapeSelector
         {
             var promotedShape = iterativeSolver.FinalShape with
             {
-                MethodNote = "v0.40: эта форма выбрана как основная через MooringPrimaryShapeSelector, потому что она включает дискретные нагрузки и прошла MooringPrimaryShapeGate. " + iterativeSolver.FinalShape.MethodNote,
-                ConvergenceCriterion = "v0.40 primary shape: gate=CandidateReadyForPrimary; " + iterativeSolver.ConvergenceCriterion
+                MethodNote = "Эта форма выбрана как основная через MooringPrimaryShapeSelector, потому что она включает дискретные нагрузки и прошла MooringPrimaryShapeGate. " + iterativeSolver.FinalShape.MethodNote,
+                ConvergenceCriterion = "primary shape: gate=CandidateReadyForPrimary; " + iterativeSolver.ConvergenceCriterion
             };
 
             return new MooringPrimaryShapeSelectionResult(
@@ -141,7 +141,7 @@ public static class MooringPrimaryShapeSelector
                 gate,
                 true,
                 "MooringIterativeSolver.FinalShape",
-                "v0.40: основная форма выбрана из итерационного solver с дискретными нагрузками. Старый MooringShapeSolver остаётся fallback.");
+                "Основная форма выбрана из итерационного solver с дискретными нагрузками. MooringShapeSolver сохраняется как fallback.");
         }
 
         return new MooringPrimaryShapeSelectionResult(
@@ -149,7 +149,7 @@ public static class MooringPrimaryShapeSelector
             gate,
             false,
             "MooringShapeSolver fallback",
-            "v0.40: кандидатная форма с дискретными нагрузками не стала основной, поэтому используется fallback-форма MooringShapeSolver.");
+            "Кандидатная форма с дискретными нагрузками не стала основной, поэтому используется fallback-форма MooringShapeSolver.");
     }
 }
 
