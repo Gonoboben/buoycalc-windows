@@ -58,7 +58,7 @@ public static class MooringShapeTensionAnalyzer
                 0,
                 0,
                 false,
-                "Нет сегментов линии или shape-based сил для расчёта альтернативных натяжений.");
+                "Нет сегментов линии или сил по форме X/Z для расчёта альтернативных натяжений.");
         }
 
         var weightPerMeterByElement = result.ElementRows
@@ -122,7 +122,7 @@ public static class MooringShapeTensionAnalyzer
                 angleDiffDeg,
                 cumulativeShapeHorizontalForceN,
                 cumulativeVerticalForceN,
-                relativeDiff <= RelativeTolerance ? "OK" : "INFO: shape-based натяжение заметно отличается");
+                relativeDiff <= RelativeTolerance ? "OK" : "INFO: натяжение по форме X/Z заметно отличается"));
         }
 
         var rows = workRows.Select(x => byNumber[x.Segment.Number]).OrderBy(x => x.Number).ToList();
@@ -146,7 +146,7 @@ public static class MooringShapeTensionAnalyzer
             topShape,
             relativeTopDiff,
             withinTolerance,
-            "v0.32: добавлена альтернативная ведомость натяжений от shape-based сил. Она сравнивает старые и новые натяжения, но пока не заменяет основной расчёт и не перестраивает форму.");
+            "Натяжения по форме X/Z пересчитываются снизу вверх и сравниваются с базовой сегментной моделью. В итерационном solver они передаются в feedback-цикл кандидатной формы; выбранной основной форма становится только после прохождения MooringPrimaryShapeGate.");
     }
 
     private sealed record WorkRow(SegmentCalculationRow Segment, double WeightWaterKg, double ShapeSegmentForceN);
