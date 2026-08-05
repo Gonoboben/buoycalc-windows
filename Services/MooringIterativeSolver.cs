@@ -169,7 +169,13 @@ public static class MooringIterativeSolver
         var finalStopReason = last?.StopReason ?? MooringIterativeSolverStopReason.NotStarted;
         var converged = last?.Converged ?? false;
         var diverged = finalStopReason == MooringIterativeSolverStopReason.DivergenceGuard;
-        var selectionReportTable = BuildPrimarySelectionReportTable(initialShape, currentShape, converged, diverged, finalStopReason);
+        var selectionReportTable = BuildPrimarySelectionReportTable(
+            initialShape,
+            currentShape,
+            last?.MaxNodeDeltaM ?? 0,
+            converged,
+            diverged,
+            finalStopReason);
         var deploymentMode = MooringDeploymentModeClassifier.Build(result, currentShape);
         var deploymentModeTable = MooringDeploymentModeClassifier.BuildReportTable(deploymentMode);
         var autochecks = MooringAutocheckSuite.Build(
@@ -351,6 +357,7 @@ public static class MooringIterativeSolver
     private static string BuildPrimarySelectionReportTable(
         MooringShapeResult fallbackShape,
         MooringShapeResult candidateShape,
+        double candidateMaxNodeDeltaM,
         bool converged,
         bool diverged,
         MooringIterativeSolverStopReason stopReason)
@@ -381,7 +388,7 @@ public static class MooringIterativeSolver
         sb.AppendLine($"| Fallback X-снос, м | {fallbackShape.HorizontalOffsetM:0.####} |");
         sb.AppendLine($"| Candidate X-снос, м | {candidateShape.HorizontalOffsetM:0.####} |");
         sb.AppendLine($"| ΔX candidate - fallback, м | {offsetDifferenceM:0.####} |");
-        sb.AppendLine($"| Candidate max Δузла, м | {candidateShape.ConvergenceResidualM:0.####} |");
+        sb.AppendLine($"| Candidate max Δузла, м | {candidateMaxNodeDeltaM:0.####} |");
         sb.AppendLine($"| Candidate Z-невязка, м | {candidateShape.VerticalResidualM:0.####} |");
         sb.AppendLine($"| Iterative solver converged | {(converged ? "YES" : "NO")} |");
         sb.AppendLine($"| Divergence guard | {(diverged ? "YES" : "NO")} |");
