@@ -76,13 +76,6 @@ public static class MooringDiscreteLoadTensionAnalyzer
                 x.CurrentForceN))
             .ToList();
 
-        var weightPerMeterByElement = result.ElementRows
-            .Where(x => x.Kind == "Линия" && x.LengthM > 0)
-            .GroupBy(x => x.Title)
-            .ToDictionary(
-                x => x.Key,
-                x => x.Sum(v => v.WeightWaterKg) / Math.Max(0.0001, x.Sum(v => v.LengthM)));
-
         var originalByNumber = originalTensionRows.ToDictionary(x => x.Number);
         var rowsBySegment = new Dictionary<int, MooringDiscreteLoadTensionRow>();
         var orderedSegments = result.SegmentRows.OrderBy(x => x.Number).ToList();
@@ -92,8 +85,7 @@ public static class MooringDiscreteLoadTensionAnalyzer
 
         foreach (var segment in orderedSegments.OrderByDescending(x => x.Number))
         {
-            weightPerMeterByElement.TryGetValue(segment.SourceElement, out var weightPerMeterKgM);
-            var segmentWeightKg = weightPerMeterKgM * segment.SegmentLengthM;
+            var segmentWeightKg = segment.WeightWaterKg;
             cumulativeSegmentHorizontalForceN += segment.CurrentForceN;
             cumulativeSegmentVerticalForceN += segmentWeightKg * G;
 

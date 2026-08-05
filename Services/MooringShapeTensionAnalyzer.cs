@@ -61,23 +61,14 @@ public static class MooringShapeTensionAnalyzer
                 "Нет сегментов линии или сил по форме X/Z для расчёта альтернативных натяжений.");
         }
 
-        var weightPerMeterByElement = result.ElementRows
-            .Where(x => x.Kind == "Линия" && x.LengthM > 0)
-            .GroupBy(x => x.Title)
-            .ToDictionary(
-                x => x.Key,
-                x => x.Sum(v => v.WeightWaterKg) / Math.Max(0.0001, x.Sum(v => v.LengthM)));
-
         var originalByNumber = originalTensionRows.ToDictionary(x => x.Number);
         var shapeForceBySegment = shapeForces.Rows.ToDictionary(x => x.SegmentNumber);
         var workRows = result.SegmentRows
             .OrderBy(x => x.Number)
             .Select(segment =>
             {
-                weightPerMeterByElement.TryGetValue(segment.SourceElement, out var weightPerMeterKgM);
-                var weightWaterKg = weightPerMeterKgM * segment.SegmentLengthM;
                 shapeForceBySegment.TryGetValue(segment.Number, out var shapeForce);
-                return new WorkRow(segment, weightWaterKg, shapeForce?.ShapeForceN ?? segment.CurrentForceN);
+                return new WorkRow(segment, segment.WeightWaterKg, shapeForce?.ShapeForceN ?? segment.CurrentForceN);
             })
             .ToList();
 

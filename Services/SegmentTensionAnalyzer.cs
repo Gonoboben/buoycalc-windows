@@ -29,20 +29,8 @@ public static class SegmentTensionAnalyzer
             return Array.Empty<SegmentTensionRow>();
         }
 
-        var weightPerMeterByElement = result.ElementRows
-            .Where(x => x.Kind == "Линия" && x.LengthM > 0)
-            .GroupBy(x => x.Title)
-            .ToDictionary(
-                x => x.Key,
-                x => x.Sum(v => v.WeightWaterKg) / Math.Max(0.0001, x.Sum(v => v.LengthM)));
-
         var topToBottom = result.SegmentRows
-            .Select(segment =>
-            {
-                weightPerMeterByElement.TryGetValue(segment.SourceElement, out var weightPerMeterKgM);
-                var weightWaterKg = weightPerMeterKgM * segment.SegmentLengthM;
-                return new SegmentWorkRow(segment, weightWaterKg);
-            })
+            .Select(segment => new SegmentWorkRow(segment, segment.WeightWaterKg))
             .ToList();
 
         var byNumber = new Dictionary<int, SegmentTensionRow>();

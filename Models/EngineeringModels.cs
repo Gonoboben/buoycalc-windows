@@ -111,7 +111,8 @@ public record SegmentCalculationRow(
     double WaterDensityKgM3,
     double ProjectedAreaM2,
     double DragCoefficient,
-    double CurrentForceN);
+    double CurrentForceN,
+    double WeightWaterKg);
 
 public record CalculationResult(
     string Verdict,
@@ -451,6 +452,7 @@ public static class BuoyCalculator
                     : environment.CurrentSpeedMS;
                 var projectedArea = Math.Max(0, endLength - startLength) * item.RopePreset.DiameterMm / 1000.0;
                 var currentForce = DragForce(rho, localSpeed, projectedArea, item.RopePreset.DragCoefficient);
+                var segmentWeightWaterKg = Math.Max(0, endLength - startLength) * item.RopePreset.WeightWaterKgM;
                 itemCurrentForce += currentForce;
 
                 rows.Add(new SegmentCalculationRow(
@@ -468,7 +470,8 @@ public static class BuoyCalculator
                     rho,
                     projectedArea,
                     item.RopePreset.DragCoefficient,
-                    currentForce));
+                    currentForce,
+                    segmentWeightWaterKg));
             }
 
             lineCurrentForces.Add(itemCurrentForce);
