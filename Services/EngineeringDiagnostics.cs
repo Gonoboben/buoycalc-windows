@@ -39,6 +39,8 @@ public sealed record EngineeringDiagnosticsResult(
 
 public static class EngineeringDiagnostics
 {
+    private const double G = 9.80665;
+
     public static EngineeringDiagnosticsResult Build(
         EnvironmentInput environment,
         CalculationResult result,
@@ -128,15 +130,15 @@ public static class EngineeringDiagnostics
         rows.Add(new EngineeringDiagnosticRow(
             "Контроль накопления ΣFx линии",
             $"{forceResiduals.ResidualFxN:0.####} Н ({forceResiduals.RelativeResidualFx:0.####})",
-            "информационно",
-            EngineeringCheckSeverity.Info,
+            "relative ≤ 1e-6",
+            tensionRows.Count > 0 && forceResiduals.RelativeResidualFx <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
             "Внутренний контроль накопления сил: сравнение суммы сегментных сил линии с верхней горизонтальной компонентой натяжения. Не является проверкой полного равновесия постановки."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Контроль накопления ΣFz линии",
             $"{forceResiduals.ResidualFzN:0.####} Н ({forceResiduals.RelativeResidualFz:0.####})",
-            "информационно",
-            EngineeringCheckSeverity.Info,
+            "relative ≤ 1e-6",
+            tensionRows.Count > 0 && forceResiduals.RelativeResidualFz <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
             "Внутренний контроль накопления сил: сравнение суммы весовых сил линии с верхней вертикальной компонентой натяжения. Не является проверкой полного равновесия постановки."));
 
         rows.Add(new EngineeringDiagnosticRow(
@@ -240,8 +242,8 @@ public static class EngineeringDiagnostics
         }
 
         var topRow = tensionRows.OrderBy(x => x.Number).First();
-        var lineSumFxN = topRow.CumulativeHorizontalForceN;
-        var lineSumFzN = topRow.CumulativeVerticalForceN;
+        var lineSumFxN = tensionRows.Sum(x => x.SegmentCurrentForceN);
+        var lineSumFzN = tensionRows.Sum(x => x.WeightWaterKg) * G;
         var topTensionFxN = topRow.CumulativeHorizontalForceN;
         var topTensionFzN = topRow.CumulativeVerticalForceN;
         var residualFxN = Math.Abs(lineSumFxN - topTensionFxN);
