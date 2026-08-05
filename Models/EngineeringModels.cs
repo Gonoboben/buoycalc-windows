@@ -144,6 +144,10 @@ public static class BuoyCalculator
 {
     private const double HighAnchorReserveForRockDeadweightNote = 10.0;
 
+    private sealed record SegmentBuildResult(
+        IReadOnlyList<SegmentCalculationRow> Rows,
+        IReadOnlyList<double> LineCurrentForces);
+
     public static CalculationResult Calculate(
         EnvironmentInput environment,
         BuoyInput buoy,
@@ -160,7 +164,8 @@ public static class BuoyCalculator
 
         var lineLength = lineItems.Sum(x => Math.Max(0, x.LengthM));
         var lineWeightWater = lineItems.Sum(x => Math.Max(0, x.LengthM) * x.RopePreset!.WeightWaterKgM);
-        var segmentRows = BuildSegmentRows(lineItems, environment, lineLength);
+        var segmentBuild = BuildSegmentRows(lineItems, environment, lineLength);
+        var segmentRows = segmentBuild.Rows;
         var lineCurrentForce = segmentRows.Count > 0
             ? segmentRows.Sum(x => x.CurrentForceN)
             : lineItems.Sum(x => DragForce(waterDensityKgM3, currentSpeedMS, Math.Max(0, x.LengthM) * x.RopePreset!.DiameterMm / 1000.0, x.RopePreset!.DragCoefficient));
@@ -187,7 +192,7 @@ public static class BuoyCalculator
         var tensionN = Math.Sqrt(horizontalForce * horizontalForce + verticalForceN * verticalForceN);
         var tensionKn = tensionN / 1000.0;
 
-        var assemblyRows = BuildAssemblyRows(enabledItems, environment, safetyFactor, tensionKn, segmentRows);
+        var assemblyRows = BuildAssemblyRows(enabledItems, environment, safetyFactor, tensionKn, segmentBuild.LineCurrentForces);
         var structuralRows = assemblyRows.Where(x => x.BreakingLoadKn > 0).ToList();
         var weakRow = structuralRows.OrderBy(x => x.BreakingLoadKn).FirstOrDefault();
         var weakLinkKn = weakRow?.BreakingLoadKn ?? 0;
@@ -290,10 +295,11 @@ public static class BuoyCalculator
         EnvironmentInput environment,
         double safetyFactor,
         double tensionKn,
-        IReadOnlyList<SegmentCalculationRow> segmentRows)
+        IReadOnlyList<double> lineCurrentForces)
     {
         var rows = new List<ElementCalculationRow>();
         var number = 1;
+        var lineIndex = 0;
         var currentSpeedMS = environment.EffectiveCurrentSpeedMS;
         var waterDensityKgM3 = environment.EffectiveWaterDensityKgM3;
 
@@ -317,11 +323,10 @@ public static class BuoyCalculator
                 areaM2 = lengthM * item.RopePreset.DiameterMm / 1000.0;
                 cd = item.RopePreset.DragCoefficient;
                 breakingLoadKn = item.RopePreset.BreakingLoadKn;
-                currentForceN = segmentRows.Where(x => x.SourceElement == item.Title).Sum(x => x.CurrentForceN);
-                if (currentForceN <= 0)
-                {
-                    currentForceN = DragForce(waterDensityKgM3, currentSpeedMS, areaM2, cd);
-                }
+                currentForceN = lineIndex < lineCurrentForces.Count
+                    ? lineCurrentForces[lineIndex]
+                    : DragForce(waterDensityKgM3, currentSpeedMS, areaM2, cd);
+                lineIndex++;
                 count = 1;
             }
             else if (item.Kind == AssemblyItemKind.Connector && item.ConnectorPreset is not null)
@@ -408,12 +413,13 @@ public static class BuoyCalculator
         return rows;
     }
 
-    private static IReadOnlyList<SegmentCalculationRow> BuildSegmentRows(IReadOnlyList<AssemblyItemInput> lineItems, EnvironmentInput environment, double totalLineLengthM)
+    private static SegmentBuildResult BuildSegmentRows(IReadOnlyList<AssemblyItemInput> lineItems, EnvironmentInput environment, double totalLineLengthM)
     {
         var rows = new List<SegmentCalculationRow>();
+        var lineCurrentForces = new List<double>();
         if (totalLineLengthM <= 0)
         {
-            return rows;
+            return new SegmentBuildResult(rows, lineCurrentForces);
         }
 
         var number = 1;
@@ -430,6 +436,7 @@ public static class BuoyCalculator
             var itemLength = Math.Max(0, item.LengthM);
             var segmentCount = Math.Max(1, (int)Math.Ceiling(itemLength / targetSegmentLengthM));
             var segmentLength = segmentCount > 0 ? itemLength / segmentCount : itemLength;
+            var itemCurrentForce = 0.0;
 
             for (var i = 0; i < segmentCount; i++)
             {
@@ -444,6 +451,7 @@ public static class BuoyCalculator
                     : environment.CurrentSpeedMS;
                 var projectedArea = Math.Max(0, endLength - startLength) * item.RopePreset.DiameterMm / 1000.0;
                 var currentForce = DragForce(rho, localSpeed, projectedArea, item.RopePreset.DragCoefficient);
+                itemCurrentForce += currentForce;
 
                 rows.Add(new SegmentCalculationRow(
                     number++,
@@ -463,10 +471,11 @@ public static class BuoyCalculator
                     currentForce));
             }
 
+            lineCurrentForces.Add(itemCurrentForce);
             accumulatedLength += itemLength;
         }
 
-        return rows;
+        return new SegmentBuildResult(rows, lineCurrentForces);
     }
 
     private static CurrentProfilePointInput CurrentAtDepth(EnvironmentInput environment, double depthM)
