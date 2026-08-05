@@ -27,7 +27,7 @@ internal static class TechnicalReportMarkdownDiscreteShapeSections
         sb.AppendLine($"Снос основной формы={shape.OriginalHorizontalOffsetM:0.####} м; снос альтернативной формы={shape.DiscreteHorizontalOffsetM:0.####} м; Δсноса={shape.OffsetDifferenceM:0.####} м.");
         sb.AppendLine($"Глубина якоря={shape.AnchorDepthM:0.####} м; невязка={shape.VerticalResidualM:0.####} м; max Δузла={shape.MaxNodeDeltaM:0.####} м; scale={shape.AngleScale:0.####}; итераций={shape.IterationCount}; статус={(shape.Converged ? "OK" : "WARNING")}.");
         sb.AppendLine();
-        sb.AppendLine("| Узел | Сегмент | Элемент | s, м | X дискр., м | Z дискр., м | Lсег, м | Угол старый, ° | Угол дискр., ° | Угол формы, ° | T дискр., кН | X осн., м | Z осн., м | ΔX, м | ΔZ, м | Статус |");
+        sb.AppendLine("| Узел | Сегмент | Элемент | s, м | X дискр., м | Z дискр., м | Lсег, м | Угол базовый, ° | Угол дискр., ° | Угол формы, ° | T дискр., кН | X осн., м | Z осн., м | ΔX, м | ΔZ, м | Статус |");
         sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
         foreach (var row in SampleRows(shape.Rows, 45, 45))
         {
