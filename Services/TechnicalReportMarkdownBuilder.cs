@@ -152,7 +152,7 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"- Запас по слабому звену: {result.TensionReserve:0.####}");
         sb.AppendLine($"- Требуемое удержание якоря: {result.RequiredAnchorHoldingKg:0.####} кг");
         sb.AppendLine($"- Удержание якоря: {result.AnchorHoldingKg:0.####} кг");
-        sb.AppendLine($"- Запас якоря: {result.AnchorReserve:0.####}");
+        sb.AppendLine($"- Запас удержания якоря по базовой горизонтальной нагрузке: {result.AnchorReserve:0.####}");
         sb.AppendLine($"- Длина линии: {result.LineLengthM:0.####} м");
         sb.AppendLine($"- Приближённый снос базовой модели (Fгор / Fверт × глубина): {result.EstimatedOffsetM:0.####} м");
         sb.AppendLine($"- Дискретных элементов с координатой s: {sequencePositions.DiscreteElementCount}; вес в воде: {sequencePositions.DiscreteWeightWaterKg:0.####} кг; Fx: {sequencePositions.DiscreteCurrentForceN:0.####} Н");
