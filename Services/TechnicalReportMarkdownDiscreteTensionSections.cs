@@ -23,7 +23,7 @@ internal static class TechnicalReportMarkdownDiscreteTensionSections
     {
         if (tensions.Rows.Count == 0) return;
         sb.AppendLine("## Натяжения линии с дискретными нагрузками по s");
-        sb.AppendLine("Эта таблица добавляет к распределённой линии локальные нагрузки приборов и соединителей, у которых в v0.33 появилась координата s. Расчёт идёт снизу вверх: в каждом сечении учитываются дискретные элементы ниже или на этом s.");
+        sb.AppendLine("Эта таблица добавляет к распределённой линии локальные нагрузки приборов и соединителей с заданной координатой s. Расчёт идёт снизу вверх: в каждом сечении учитываются дискретные элементы ниже или на этом s.");
         sb.AppendLine($"Дискретные нагрузки: вес в воде={tensions.TotalDiscreteWeightWaterKg:0.####} кг; Fx={tensions.TotalDiscreteForceN:0.####} Н.");
         sb.AppendLine($"Верхнее T базовой сегментной модели={tensions.TopOriginalTensionKn:0.####} кН; верхнее T модели с дискретными нагрузками по s={tensions.TopDiscreteTensionKn:0.####} кН; относительное отличие={tensions.RelativeTopTensionDifference:0.####}.");
         sb.AppendLine($"Макс. T базовой сегментной модели={tensions.MaxOriginalTensionKn:0.####} кН; макс. T модели с дискретными нагрузками по s={tensions.MaxDiscreteTensionKn:0.####} кН; Max ΔT={tensions.MaxTensionDifferenceKn:0.####} кН; Max Δугла={tensions.MaxAngleDifferenceDeg:0.####}°.");
