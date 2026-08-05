@@ -69,7 +69,7 @@ internal static class TechnicalReportMarkdownMovedSections
         sb.AppendLine($"|  | **R** | **Требуемая реакция для ΣF=0** | **{balance.RequiredReactionFxN:0.####}** | **{balance.RequiredReactionFzN:0.####}** | Вычислена как минус сумма учтённых сил; это требуемое значение, а не решённая реакция опоры. |");
         sb.AppendLine();
         sb.AppendLine($"- Горизонтальная удерживающая способность якоря: {balance.AnchorHorizontalCapacityN:0.####} Н");
-        sb.AppendLine($"- Запас горизонтального удержания по требуемой реакции Rx: {balance.AnchorHorizontalReserve:0.####}");
+        sb.AppendLine($"- Контрольный запас удержания по Rx векторной ведомости: {balance.AnchorHorizontalReserve:0.####}");
         sb.AppendLine($"- Статус баланса: {(balance.IsSolved ? "решён" : "ведомость сформирована; показаны требуемые реакции")}");
         sb.AppendLine($"- Методическое примечание: {balance.MethodNote}");
         sb.AppendLine();
