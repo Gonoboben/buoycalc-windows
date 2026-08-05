@@ -144,7 +144,7 @@ internal static class TechnicalReportMarkdownMovedSections
             };
             var note = row.Kind switch
             {
-                "Линия" => "используется в SegmentRows, ShapeRows, shape-based силах, натяжениях и v0.39 feedback-цикле",
+                "Линия" => "используется в SegmentRows, ShapeRows, силах по форме X/Z, натяжениях и v0.39 feedback-цикле",
                 "Буй" => "задаёт верхнее граничное условие и плавучесть",
                 "Якорь" => "задаёт нижнее граничное условие и удержание",
                 _ => "участвует как дискретная нагрузка по s в альтернативной форме и v0.39 feedback-цикле"
@@ -229,12 +229,12 @@ internal static class TechnicalReportMarkdownMovedSections
     private static void AppendShapeForceRows(StringBuilder sb, MooringShapeForceResult forces)
     {
         if (forces.Rows.Count == 0) return;
-        sb.AppendLine("## Shape-based силы линии по ориентации сегментов");
-        sb.AppendLine("Эта таблица сравнивает старую силу сегмента с оценкой по нормальной составляющей скорости к фактической X/Z-ориентации сегмента.");
-        sb.AppendLine($"Старая ΣFлинии={forces.OriginalLineForceN:0.####} Н; shape-based ΣFлинии={forces.ShapeLineForceN:0.####} Н; Δ={forces.DifferenceN:0.####} Н ({forces.RelativeDifference:0.####}).");
-        sb.AppendLine($"Максимальное отличие строки={forces.MaxRowDifferenceN:0.####} Н; статус={(forces.WithinTolerance ? "OK" : "INFO: заметное отличие от старой оценки")}");
+        sb.AppendLine("## Силы линии по форме X/Z и ориентации сегментов");
+        sb.AppendLine("Эта таблица сравнивает силу базовой сегментной модели с оценкой по нормальной составляющей скорости к фактической X/Z-ориентации сегмента.");
+        sb.AppendLine($"Базовая сегментная ΣFлинии={forces.OriginalLineForceN:0.####} Н; по форме X/Z ΣFлинии={forces.ShapeLineForceN:0.####} Н; Δ={forces.DifferenceN:0.####} Н ({forces.RelativeDifference:0.####}).");
+        sb.AppendLine($"Максимальное отличие строки={forces.MaxRowDifferenceN:0.####} Н; статус={(forces.WithinTolerance ? "OK" : "INFO: заметное отличие от базовой сегментной модели")}");
         sb.AppendLine();
-        sb.AppendLine("| № | Сегмент | Элемент | L, м | U, м/с | Uнорм, м/с | Угол, ° | F старая, Н | F shape, Н | ΔF, Н | Ratio | Статус |");
+        sb.AppendLine("| № | Сегмент | Элемент | L, м | U, м/с | Uнорм, м/с | Угол, ° | F базовая, Н | F по X/Z, Н | ΔF, Н | Ratio | Статус |");
         sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
         foreach (var row in SampleRows(forces.Rows, 45, 45))
         {
@@ -248,13 +248,13 @@ internal static class TechnicalReportMarkdownMovedSections
     private static void AppendShapeTensionRows(StringBuilder sb, MooringShapeTensionResult tensions)
     {
         if (tensions.Rows.Count == 0) return;
-        sb.AppendLine("## Shape-based натяжения линии");
-        sb.AppendLine("Эта таблица пересчитывает накопленные натяжения снизу вверх, используя shape-based силы сегментов вместо старых сил SegmentCalculationRow.");
-        sb.AppendLine($"Top T старая={tensions.TopOriginalTensionKn:0.####} кН; Top T shape={tensions.TopShapeTensionKn:0.####} кН; относительное отличие={tensions.RelativeTopTensionDifference:0.####}.");
-        sb.AppendLine($"Max T старая={tensions.MaxOriginalTensionKn:0.####} кН; Max T shape={tensions.MaxShapeTensionKn:0.####} кН; Max ΔT={tensions.MaxTensionDifferenceKn:0.####} кН; Max Δугла={tensions.MaxAngleDifferenceDeg:0.####}°.");
-        sb.AppendLine($"Статус={(tensions.WithinTolerance ? "OK" : "INFO: shape-based натяжение заметно отличается от старого")}");
+        sb.AppendLine("## Натяжения линии по форме X/Z");
+        sb.AppendLine("Эта таблица пересчитывает накопленные натяжения снизу вверх, используя силы по форме X/Z вместо сил базовой сегментной модели.");
+        sb.AppendLine($"Верхнее T базовой сегментной модели={tensions.TopOriginalTensionKn:0.####} кН; верхнее T модели по форме X/Z={tensions.TopShapeTensionKn:0.####} кН; относительное отличие={tensions.RelativeTopTensionDifference:0.####}.");
+        sb.AppendLine($"Макс. T базовой сегментной модели={tensions.MaxOriginalTensionKn:0.####} кН; макс. T модели по форме X/Z={tensions.MaxShapeTensionKn:0.####} кН; Max ΔT={tensions.MaxTensionDifferenceKn:0.####} кН; Max Δугла={tensions.MaxAngleDifferenceDeg:0.####}°.");
+        sb.AppendLine($"Статус={(tensions.WithinTolerance ? "OK" : "INFO: натяжение по форме X/Z заметно отличается от базовой сегментной модели")}");
         sb.AppendLine();
-        sb.AppendLine("| № | Сегмент | Элемент | z, м | L, м | Вес, кг | F старая, Н | F shape, Н | T старая, кН | T shape, кН | ΔT, кН | Угол старый, ° | Угол shape, ° | Δугла, ° | Статус |");
+        sb.AppendLine("| № | Сегмент | Элемент | z, м | L, м | Вес, кг | F базовая, Н | F по X/Z, Н | T базовая, кН | T по X/Z, кН | ΔT, кН | Угол базовый, ° | Угол по X/Z, ° | Δугла, ° | Статус |");
         sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
         foreach (var row in SampleRows(tensions.Rows, 45, 45))
         {
