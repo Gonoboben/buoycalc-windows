@@ -151,23 +151,23 @@ public static class EngineeringDiagnostics
 
         rows.Add(new EngineeringDiagnosticRow(
             "Требуемая реакция якоря Rx",
-            $"{vectorBalance.RequiredReactionFxN:0.####} Н; запас удержания {vectorBalance.AnchorHorizontalReserve:0.####}",
+            $"{vectorBalance.RequiredReactionFxN:0.####} Н; контрольный запас удержания {vectorBalance.AnchorHorizontalReserve:0.####}",
             "информационно",
             EngineeringCheckSeverity.Info,
-            "Реакция, которая потребовалась бы для замыкания ΣFx=0 по текущей векторной ведомости. Это ещё не результат итерационного solver."));
+            "Требуемое значение для замыкания ΣFx=0; не является решённой реакцией опоры."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Требуемая реакция якоря Rz",
             $"{vectorBalance.RequiredReactionFzN:0.####} Н",
             "информационно",
             EngineeringCheckSeverity.Info,
-            "Реакция, которая потребовалась бы для замыкания ΣFz=0 по текущей векторной ведомости. Вертикальная реакция пока не распределяется через контакт/грунт."));
+            "Требуемое значение для замыкания ΣFz=0; контактная/грунтовая модель в этой ведомости не решается."));
 
         rows.Add(new EngineeringDiagnosticRow(
-            "Полный баланс всей постановки",
-            vectorBalance.IsSolved ? "решён" : "каркас собран; реакции не решены",
-            "требуется итерационный solver",
-            EngineeringCheckSeverity.Warning,
+            "Ведомость требуемых реакций",
+            "ведомость сформирована; показаны требуемые реакции",
+            "проверочная ведомость; не решение равновесия",
+            EngineeringCheckSeverity.Info,
             vectorBalance.MethodNote));
 
         rows.Add(new EngineeringDiagnosticRow(
@@ -185,7 +185,7 @@ public static class EngineeringDiagnostics
             $"WLL слабого звена = {result.WorkingLoadKn:0.####} кН."));
 
         rows.Add(new EngineeringDiagnosticRow(
-            "Запас якоря",
+            "Запас удержания якоря по базовой горизонтальной нагрузке",
             $"{result.AnchorReserve:0.####}",
             "> 1",
             result.AnchorReserve >= 1 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
