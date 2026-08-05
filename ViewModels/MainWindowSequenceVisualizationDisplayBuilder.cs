@@ -60,7 +60,7 @@ internal static class MainWindowSequenceVisualizationDisplayBuilder
         var lineLengthM = enabledItems.Where(x => x.Kind == AssemblyItemKind.Line).Sum(x => x.LengthM);
         var connectorCount = enabledItems.Count(x => x.Kind == AssemblyItemKind.Connector);
         var payloadWeightKg = enabledItems.Where(x => x.Kind == AssemblyItemKind.Payload).Sum(x => x.PayloadWeightAirKg);
-        return $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы: {payloadWeightKg:0.##} кг";
+        return $"Активных элементов: {enabledItems.Count} · линия: {lineLengthM:0.##} м · соединителей: {connectorCount} · приборы, масса на воздухе: {payloadWeightKg:0.##} кг. Ввод: для буя, якоря, соединителей и приборов задаются масса на воздухе и вытесняемый объём; для линий пресет уже содержит вес в воде, кг/м.";
     }
 
     internal static MainWindowVisualizationDisplay BuildVisualization(
