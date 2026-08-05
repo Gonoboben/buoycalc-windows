@@ -78,7 +78,7 @@ public static class MooringIterativeSolver
 
         if (initialShape.Nodes.Count < 2 || result.SegmentRows.Count == 0)
         {
-            return Empty(criteria, "Нет исходной X/Z-формы или сегментов линии для запуска каркаса итерационного solver.");
+            return Empty(criteria, "Нет исходной X/Z-формы или сегментов линии для запуска итерационного solver.");
         }
 
         if (sequencePositions.Rows.Count == 0 || initialTensions.Count == 0)
@@ -195,7 +195,7 @@ public static class MooringIterativeSolver
             finalStopReason,
             last?.StopReasonText ?? DescribeStopReason(finalStopReason),
             BuildConvergenceCriterion(criteria),
-            "v0.42: итерационный solver остаётся источником кандидатной формы с дискретными нагрузками. Полный отчёт содержит таблицу выбора основной формы, таблицу режима постановки и встроенные автопроверки сценариев.\n\n" + selectionReportTable + deploymentModeTable + autocheckTable);
+            "Итерационный solver формирует кандидатную форму с дискретными нагрузками. Полный отчёт содержит таблицу выбора основной формы, таблицу режима постановки и встроенные автопроверки сценариев.\n\n" + selectionReportTable + deploymentModeTable + autocheckTable);
     }
 
     private static MooringIterativeSolverCriteria BuildCriteria(int requestedMaxIterations, MooringShapeResult initialShape)
@@ -226,7 +226,7 @@ public static class MooringIterativeSolver
             MooringIterativeSolverStopReason.InvalidInput,
             DescribeStopReason(MooringIterativeSolverStopReason.InvalidInput),
             BuildConvergenceCriterion(criteria),
-            note + "\n\n## Выбор основной формы v0.40.2\n| Параметр | Значение |\n|---|---|\n| Решение | KeepCurrentMainShape |\n| Источник основной формы | MooringShapeSolver fallback |\n| Используются дискретные нагрузки | NO |\n| Причина | Недостаточно входных данных для итерационного solver |\n\n## Режим постановки v0.41\n| Параметр | Значение |\n|---|---|\n| Режим | unknown |\n| Причина | Недостаточно входных данных для классификации |\n\n## Автопроверки сценариев v0.42\n| № | Сценарий | Проверка | Ожидается | Фактически | Статус | Примечание |\n|---:|---|---|---|---|---|---|\n| 1 | input | Данные для solver | присутствуют | отсутствуют | Fail | Итерационный solver не запущен |\n");
+            note + "\n\n## Выбор основной формы\n| Параметр | Значение |\n|---|---|\n| Решение | KeepCurrentMainShape |\n| Источник основной формы | MooringShapeSolver fallback |\n| Используются дискретные нагрузки | NO |\n| Причина | Недостаточно входных данных для итерационного solver |\n\n## Режим постановки\n| Параметр | Значение |\n|---|---|\n| Режим | unknown |\n| Причина | Недостаточно входных данных для классификации |\n\n## Автопроверки сценариев\n| № | Сценарий | Проверка | Ожидается | Фактически | Статус | Примечание |\n|---:|---|---|---|---|---|---|\n| 1 | input | Данные для solver | присутствуют | отсутствуют | Fail | Итерационный solver не запущен |\n");
     }
 
     private static IReadOnlyList<SegmentTensionRow> BuildFeedbackTensions(MooringShapeTensionResult shapeTensions)
@@ -251,7 +251,7 @@ public static class MooringIterativeSolver
                 row.ShapeAngleFromVerticalDeg,
                 row.Status.StartsWith("OK", StringComparison.OrdinalIgnoreCase)
                     ? "OK"
-                    : "INFO: натяжение передано в v0.39 feedback-цикл"))
+                    : "INFO: натяжение передано в итерационный feedback-цикл"))
             .ToList();
     }
 
@@ -345,7 +345,7 @@ public static class MooringIterativeSolver
 
     private static string BuildConvergenceCriterion(MooringIterativeSolverCriteria criteria)
     {
-        return $"v0.42: сходимость = |ΔXсноса| ≤ {criteria.OffsetToleranceM:0.####} м, max Δузла ≤ {criteria.NodeDeltaToleranceM:0.####} м, |невязка Z| ≤ {criteria.GeometryResidualToleranceM:0.####} м. Лимит итераций: {criteria.MaxIterations}. Защитная остановка: |ΔX| > {criteria.DivergenceOffsetChangeM:0.####} м или max Δузла > {criteria.DivergenceNodeDeltaM:0.####} м.";
+        return $"Сходимость = |ΔXсноса| ≤ {criteria.OffsetToleranceM:0.####} м, max Δузла ≤ {criteria.NodeDeltaToleranceM:0.####} м, |невязка Z| ≤ {criteria.GeometryResidualToleranceM:0.####} м. Лимит итераций: {criteria.MaxIterations}. Защитная остановка: |ΔX| > {criteria.DivergenceOffsetChangeM:0.####} м или max Δузла > {criteria.DivergenceNodeDeltaM:0.####} м.";
     }
 
     private static string BuildPrimarySelectionReportTable(
@@ -370,8 +370,8 @@ public static class MooringIterativeSolver
         var offsetDifferenceM = candidateShape.HorizontalOffsetM - fallbackShape.HorizontalOffsetM;
 
         var sb = new StringBuilder();
-        sb.AppendLine("## Выбор основной формы v0.40.2");
-        sb.AppendLine("Эта таблица показывает, какая форма передана в MooringShapeStore как основная: кандидатная форма с дискретными нагрузками или fallback от старого MooringShapeSolver.");
+        sb.AppendLine("## Выбор основной формы");
+        sb.AppendLine("Эта таблица показывает, какая форма передана в MooringShapeStore как основная: кандидатная форма с дискретными нагрузками или fallback MooringShapeSolver.");
         sb.AppendLine();
         sb.AppendLine("| Параметр | Значение |");
         sb.AppendLine("|---|---|");
@@ -432,11 +432,11 @@ public static class MooringIterativeSolver
             horizontalOffsetM,
             verticalResidualM,
             converged,
-            $"v0.42: временная форма итерации {iteration}; получена из альтернативной формы с дискретными нагрузками. Может стать основной только через MooringPrimaryShapeGate.",
+            $"Временная форма итерации {iteration}; получена из альтернативной формы с дискретными нагрузками. Может стать основной только через MooringPrimaryShapeGate.",
             iteration,
             verticalResidualM,
             nextShape.AngleScale,
-            $"v0.42 feedback: |ΔXсноса|={Math.Abs(offsetChangeM):0.####} м, max Δузла={nextShape.MaxNodeDeltaM:0.####} м");
+            $"feedback: |ΔXсноса|={Math.Abs(offsetChangeM):0.####} м, max Δузла={nextShape.MaxNodeDeltaM:0.####} м");
     }
 }
 
