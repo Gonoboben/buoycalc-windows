@@ -23,7 +23,7 @@ internal static class TechnicalReportMarkdownDiscreteShapeSections
     {
         if (shape.Rows.Count == 0) return;
         sb.AppendLine("## Альтернативная форма X/Z с дискретными нагрузками");
-        sb.AppendLine("Эта таблица строит сравнительную форму по углам, полученным из натяжений с дискретными нагрузками. Основной solver пока не заменяется.");
+        sb.AppendLine("Эта таблица строит форму по углам, полученным из натяжений с дискретными нагрузками. В итерационном цикле она используется как промежуточная кандидатная форма; выбранной основной она становится только после прохождения MooringPrimaryShapeGate.");
         sb.AppendLine($"Снос основной формы={shape.OriginalHorizontalOffsetM:0.####} м; снос альтернативной формы={shape.DiscreteHorizontalOffsetM:0.####} м; Δсноса={shape.OffsetDifferenceM:0.####} м.");
         sb.AppendLine($"Глубина якоря={shape.AnchorDepthM:0.####} м; невязка={shape.VerticalResidualM:0.####} м; max Δузла={shape.MaxNodeDeltaM:0.####} м; scale={shape.AngleScale:0.####}; итераций={shape.IterationCount}; статус={(shape.Converged ? "OK" : "WARNING")}.");
         sb.AppendLine();
