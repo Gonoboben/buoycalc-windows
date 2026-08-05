@@ -57,6 +57,10 @@ public static class EngineeringDiagnostics
         var vectorBalance = MooringVectorBalance.Build(result);
         var horizontalForceResidualN = Math.Abs(vectorBalance.SumExternalFxN - result.HorizontalForceN);
         var relativeHorizontalForceResidual = horizontalForceResidualN / Math.Max(1.0, Math.Abs(result.HorizontalForceN));
+        var lineElementWeightWaterKg = result.ElementRows.Where(x => x.Kind == "Линия").Sum(x => x.WeightWaterKg);
+        var segmentWeightWaterKg = result.SegmentRows.Sum(x => x.WeightWaterKg);
+        var lineWeightResidualKg = Math.Abs(segmentWeightWaterKg - lineElementWeightWaterKg);
+        var relativeLineWeightResidual = lineWeightResidualKg / Math.Max(1.0, Math.Abs(lineElementWeightWaterKg));
 
         rows.Add(Check(
             "Якорь на проектной глубине",
@@ -99,6 +103,13 @@ public static class EngineeringDiagnostics
             !double.IsNaN(buoyDepthM) && !double.IsNaN(anchorDepthM) && buoyDepthM < anchorDepthM,
             EngineeringCheckSeverity.Error,
             "Буй должен находиться выше нижнего граничного узла якоря."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Согласованность веса линии и расчётных сегментов",
+            $"Δm={lineWeightResidualKg:0.####} кг ({relativeLineWeightResidual:0.####})",
+            "relative ≤ 1e-6",
+            relativeLineWeightResidual <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            $"Вес участков линии={lineElementWeightWaterKg:0.####} кг; Σ веса сегментов={segmentWeightWaterKg:0.####} кг. Проверяется сохранение распределённого веса линии при сегментации."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "ΣFx линии",
