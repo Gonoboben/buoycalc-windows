@@ -122,7 +122,7 @@ public static class MooringShapeTensionAnalyzer
                 angleDiffDeg,
                 cumulativeShapeHorizontalForceN,
                 cumulativeVerticalForceN,
-                relativeDiff <= RelativeTolerance ? "OK" : "INFO: натяжение по форме X/Z заметно отличается"));
+                relativeDiff <= RelativeTolerance ? "OK" : "INFO: натяжение по форме X/Z заметно отличается");
         }
 
         var rows = workRows.Select(x => byNumber[x.Segment.Number]).OrderBy(x => x.Number).ToList();
