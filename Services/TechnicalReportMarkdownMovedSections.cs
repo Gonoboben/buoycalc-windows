@@ -118,7 +118,7 @@ internal static class TechnicalReportMarkdownMovedSections
                 "Буй" => "граничный узел",
                 "Якорь" => "граничный узел",
                 "Линия" => "да, сегменты",
-                _ => "нет, дискретный узел пока не вставлен"
+                _ => "нет отдельного узла; влияние через нагрузку по s"
             };
             var tensionScope = row.Kind == "Линия" ? "да" : "нет, только общая сила/вес";
             var discreteTensionScope = row.Kind switch
