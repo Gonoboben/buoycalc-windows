@@ -55,6 +55,8 @@ public static class EngineeringDiagnostics
         var maxTensionKn = tensionRows.Count > 0 ? tensionRows.Max(x => x.TensionKn) : result.TensionKn;
         var forceResiduals = BuildForceResiduals(tensionRows);
         var vectorBalance = MooringVectorBalance.Build(result);
+        var horizontalForceResidualN = Math.Abs(vectorBalance.SumExternalFxN - result.HorizontalForceN);
+        var relativeHorizontalForceResidual = horizontalForceResidualN / Math.Max(1.0, Math.Abs(result.HorizontalForceN));
 
         rows.Add(Check(
             "Якорь на проектной глубине",
@@ -125,6 +127,13 @@ public static class EngineeringDiagnostics
             "информационно",
             EngineeringCheckSeverity.Info,
             "Внутренний контроль накопления сил: сравнение суммы весовых сил линии с верхней вертикальной компонентой натяжения. Не является проверкой полного равновесия постановки."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Согласованность базовой нагрузки и векторной ведомости",
+            $"ΔFx={horizontalForceResidualN:0.####} Н ({relativeHorizontalForceResidual:0.####})",
+            "relative ≤ 1e-6",
+            relativeHorizontalForceResidual <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            $"HorizontalForceN={result.HorizontalForceN:0.####} Н; ΣFx ведомости={vectorBalance.SumExternalFxN:0.####} Н. Проверяется восстановление базовой горизонтальной нагрузки из строк элементов и волновой добавки."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "ΣFx учтённых сил постановки",
