@@ -167,7 +167,7 @@ public static class MooringDiscreteLoadTensionAnalyzer
             relativeTopDifference,
             maxAngleDifference,
             relativeTopDifference <= RelativeTolerance,
-            "v0.34: дискретные элементы с координатой s добавлены в альтернативную ведомость натяжений как локальные нагрузки ниже рассматриваемого сечения. Форма X/Z пока не перестраивается по этим натяжениям.");
+            "Дискретные элементы с координатой s учитываются как локальные вес в воде и горизонтальная сила ниже рассматриваемого сечения. Полученная ведомость используется для альтернативной X/Z-формы и итерационного feedback-цикла кандидатной формы.");
     }
 
     private static MooringDiscreteLoadTensionResult Empty(string note)
