@@ -425,7 +425,7 @@ public static class BuoyCalculator
 
         var number = 1;
         var accumulatedLength = 0.0;
-        const double targetSegmentLengthM = 1.0;
+        const double targetSegmentLengthM = 0.20;
 
         foreach (var item in lineItems)
         {
