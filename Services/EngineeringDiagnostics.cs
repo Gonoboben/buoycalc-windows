@@ -233,6 +233,16 @@ public static class EngineeringDiagnostics
         var minimumSourceLineLengthM = lineElementRows.Count > 0 ? lineElementRows.Min(x => x.SourceLengthM) : double.NaN;
         var invalidSourceLineDiameterCount = lineElementRows.Count(x => !double.IsFinite(x.SourceDiameterMm) || x.SourceDiameterMm <= 0);
         var minimumSourceLineDiameterMm = lineElementRows.Count > 0 ? lineElementRows.Min(x => x.SourceDiameterMm) : double.NaN;
+        var discreteElementRows = result.ElementRows.Where(x => x.Kind != "Линия").ToList();
+        var invalidSourceUnitWeightAirCount = discreteElementRows.Count(x => !double.IsFinite(x.SourceUnitWeightAirKg) || x.SourceUnitWeightAirKg < 0);
+        var invalidSourceUnitVolumeCount = discreteElementRows.Count(x => !double.IsFinite(x.SourceUnitVolumeM3) || x.SourceUnitVolumeM3 < 0);
+        var minimumSourceUnitWeightAirKg = discreteElementRows.Count > 0 ? discreteElementRows.Min(x => x.SourceUnitWeightAirKg) : double.NaN;
+        var minimumSourceUnitVolumeM3 = discreteElementRows.Count > 0 ? discreteElementRows.Min(x => x.SourceUnitVolumeM3) : double.NaN;
+        var buoyElementRows = result.ElementRows.Where(x => x.Kind == "Буй").ToList();
+        var minimumBuoySourceVolumeM3 = buoyElementRows.Count > 0 ? buoyElementRows.Min(x => x.SourceUnitVolumeM3) : double.NaN;
+        var buoySourceVolumeIsValid = buoyElementRows.Count == 1 &&
+            double.IsFinite(buoyElementRows[0].SourceUnitVolumeM3) &&
+            buoyElementRows[0].SourceUnitVolumeM3 > 0;
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная проектная глубина",
@@ -382,6 +392,32 @@ public static class EngineeringDiagnostics
             lineElementRows.Count == 0
                 ? "Активные строки линии отсутствуют; наличие линии и сегментов контролируется отдельными проверками."
                 : "SourceDiameterMm хранит исходный конечный диаметр RopePreset; площади и силы не пересчитываются этой диагностикой."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательные исходные массы и объёмы дискретных элементов",
+            discreteElementRows.Count == 0
+                ? "строк нет; нарушений массы 0; нарушений объёма 0"
+                : $"min mвозд={minimumSourceUnitWeightAirKg:0.####} кг; нарушений массы {invalidSourceUnitWeightAirCount}; min V={minimumSourceUnitVolumeM3:0.########} м³; нарушений объёма {invalidSourceUnitVolumeCount}; строк {discreteElementRows.Count}",
+            "каждые mвозд ≥ 0 и V ≥ 0; значения конечны",
+            invalidSourceUnitWeightAirCount == 0 && invalidSourceUnitVolumeCount == 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Проверяются per-unit исходные значения буя, соединителей, приборов и якоря; подписанный погонный вес линии исключён."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Положительный исходный объём буя",
+            buoyElementRows.Count == 0
+                ? "строка буя отсутствует"
+                : $"строк буя {buoyElementRows.Count}; min Vисх={minimumBuoySourceVolumeM3:0.########} м³",
+            "ровно одна строка; Vисх > 0 и конечен",
+            buoyElementRows.Count == 0
+                ? EngineeringCheckSeverity.Warning
+                : buoySourceVolumeIsValid
+                    ? EngineeringCheckSeverity.Ok
+                    : EngineeringCheckSeverity.Error,
+            buoyElementRows.Count == 0
+                ? "Расчётный read model не содержит строку источника плавучести."
+                : "Проверяется исходный объём до вычисления BuoyancyKg; значение не исправляется автоматически."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Неотрицательные глубины активного профиля течения",
