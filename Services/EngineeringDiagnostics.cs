@@ -243,6 +243,36 @@ public static class EngineeringDiagnostics
         var buoySourceVolumeIsValid = buoyElementRows.Count == 1 &&
             double.IsFinite(buoyElementRows[0].SourceUnitVolumeM3) &&
             buoyElementRows[0].SourceUnitVolumeM3 > 0;
+        var discreteSubmergedWeightResiduals = discreteElementRows
+            .Select(x =>
+            {
+                var expectedWeightWaterKg = x.Count * (x.SourceUnitWeightAirKg - effectiveWaterDensityKgM3 * x.SourceUnitVolumeM3);
+                var absoluteResidualKg = Math.Abs(x.WeightWaterKg - expectedWeightWaterKg);
+                var relativeResidual = absoluteResidualKg / Math.Max(1.0, Math.Abs(expectedWeightWaterKg));
+                var isValid =
+                    x.Count >= 0 &&
+                    double.IsFinite(x.SourceUnitWeightAirKg) &&
+                    double.IsFinite(x.SourceUnitVolumeM3) &&
+                    double.IsFinite(effectiveWaterDensityKgM3) &&
+                    double.IsFinite(x.WeightWaterKg) &&
+                    double.IsFinite(expectedWeightWaterKg) &&
+                    double.IsFinite(absoluteResidualKg) &&
+                    double.IsFinite(relativeResidual) &&
+                    relativeResidual <= 1e-6;
+                return (AbsoluteResidualKg: absoluteResidualKg, RelativeResidual: relativeResidual, IsValid: isValid);
+            })
+            .ToList();
+        var invalidDiscreteSubmergedWeightCount = discreteSubmergedWeightResiduals.Count(x => !x.IsValid);
+        var maximumDiscreteSubmergedWeightResidualKg = discreteSubmergedWeightResiduals
+            .Where(x => double.IsFinite(x.AbsoluteResidualKg))
+            .Select(x => x.AbsoluteResidualKg)
+            .DefaultIfEmpty(double.NaN)
+            .Max();
+        var maximumDiscreteSubmergedWeightRelativeResidual = discreteSubmergedWeightResiduals
+            .Where(x => double.IsFinite(x.RelativeResidual))
+            .Select(x => x.RelativeResidual)
+            .DefaultIfEmpty(double.NaN)
+            .Max();
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная проектная глубина",
@@ -418,6 +448,21 @@ public static class EngineeringDiagnostics
             buoyElementRows.Count == 0
                 ? "Расчётный read model не содержит строку источника плавучести."
                 : "Проверяется исходный объём до вычисления BuoyancyKg; значение не исправляется автоматически."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Согласованность исходных масс/объёмов и веса в воде",
+            discreteElementRows.Count == 0
+                ? "дискретных строк нет; локальный инвариант не применяется"
+                : $"max Δm={maximumDiscreteSubmergedWeightResidualKg:0.########} кг; max relative={maximumDiscreteSubmergedWeightRelativeResidual:0.########}; нарушений {invalidDiscreteSubmergedWeightCount}; строк {discreteElementRows.Count}",
+            "relative ≤ 1e-6; используется опубликованный Count",
+            invalidDiscreteSubmergedWeightCount > 0
+                ? EngineeringCheckSeverity.Error
+                : discreteElementRows.Count == 0
+                    ? EngineeringCheckSeverity.Warning
+                    : EngineeringCheckSeverity.Ok,
+            discreteElementRows.Count == 0
+                ? "Расчётный read model не содержит дискретные строки ожидаемой границы буя/якоря."
+                : "Ожидаемый вес вычисляется только для проверки тождества; опубликованные Count, источники, плотность и WeightWaterKg не изменяются."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Неотрицательные глубины активного профиля течения",
