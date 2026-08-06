@@ -95,7 +95,8 @@ public record ElementCalculationRow(
     double WorkingLoadKn,
     double Reserve,
     string Status,
-    double SourceLengthM);
+    double SourceLengthM,
+    double SourceDiameterMm);
 
 public record SegmentCalculationRow(
     int Number,
@@ -371,7 +372,8 @@ public static class BuoyCalculator
                 workingLoadKn,
                 reserve,
                 status,
-                item.Kind == AssemblyItemKind.Line ? item.LengthM : 0));
+                item.Kind == AssemblyItemKind.Line ? item.LengthM : 0,
+                item.Kind == AssemblyItemKind.Line && item.RopePreset is not null ? item.RopePreset.DiameterMm : 0));
         }
 
         return rows;
@@ -407,6 +409,7 @@ public static class BuoyCalculator
             0,
             0,
             "INFO: источник плавучести",
+            0,
             0));
 
         foreach (var row in assemblyRows)
@@ -429,6 +432,7 @@ public static class BuoyCalculator
             0,
             anchorReserve,
             anchorWeightWaterKg <= 0 ? "ERROR: якорь имеет отрицательный вес в воде" : anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря",
+            0,
             0));
 
         return rows;
