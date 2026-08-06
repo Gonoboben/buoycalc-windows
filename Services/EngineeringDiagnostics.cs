@@ -66,6 +66,10 @@ public static class EngineeringDiagnostics
         var segmentWeightWaterKg = result.SegmentRows.Sum(x => x.WeightWaterKg);
         var lineWeightResidualKg = Math.Abs(segmentWeightWaterKg - lineElementWeightWaterKg);
         var relativeLineWeightResidual = lineWeightResidualKg / Math.Max(1.0, Math.Abs(lineElementWeightWaterKg));
+        var lineElementForceN = result.ElementRows.Where(x => x.Kind == "Линия").Sum(x => x.CurrentForceN);
+        var segmentForceN = result.SegmentRows.Sum(x => x.CurrentForceN);
+        var lineForceResidualN = Math.Abs(segmentForceN - lineElementForceN);
+        var relativeLineForceResidual = lineForceResidualN / Math.Max(1.0, Math.Abs(lineElementForceN));
 
         rows.Add(Check(
             "Якорь на проектной глубине",
@@ -122,6 +126,13 @@ public static class EngineeringDiagnostics
             "relative ≤ 1e-6",
             relativeLineWeightResidual <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
             $"Вес участков линии={lineElementWeightWaterKg:0.####} кг; Σ веса сегментов={segmentWeightWaterKg:0.####} кг. Проверяется сохранение распределённого веса линии при сегментации."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Согласованность силы линии и расчётных сегментов",
+            $"ΔF={lineForceResidualN:0.####} Н ({relativeLineForceResidual:0.####})",
+            "relative ≤ 1e-6",
+            relativeLineForceResidual <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            $"Сила участков линии={lineElementForceN:0.####} Н; Σ сил сегментов={segmentForceN:0.####} Н. Проверяется сохранение распределённой силы течения линии при агрегации сегментов."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "ΣFx линии",
