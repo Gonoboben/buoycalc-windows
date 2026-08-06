@@ -1,4 +1,4 @@
-# Контрольная отметка: конечные пользовательские числовые значения
+# Контрольная отметка: конечная граница числового ввода расчёта
 
 Дата: 2026-08-06
 Issue: #259
@@ -6,9 +6,9 @@ Scope: documentation only
 
 ## Причина
 
-Пользовательские числовые поля преобразуются через `Double.TryParse` и при неудаче получают значение `0`.
+`MainWindowCalculationInputBuilder` является последней границей между пользовательскими/ViewModel-данными и расчётным ядром.
 
-В современных версиях .NET успешный `TryParse` не гарантирует конечный результат: переполненная числовая строка может дать `PositiveInfinity` или `NegativeInfinity`. Специальные представления плавающей точки также не должны проходить в инженерную модель как обычные числа.
+В современных версиях .NET успешный `Double.TryParse` не гарантирует конечный результат: переполненная числовая строка может дать `PositiveInfinity` или `NegativeInfinity`. Уже созданные объекты профиля или пользовательской библиотеки также могут содержать `NaN`/infinity до входа в builder.
 
 Неконечный результат опасен до стадии отчёта и autocheck, потому что может попасть в:
 
@@ -19,10 +19,21 @@ Scope: documentation only
 - параметры буя, якоря, соединителя, линии и прибора
 - drag, вес в воде, плавучесть, удержание и натяжения
 - X/Z solver и координаты выбранной формы
-- пользовательские библиотеки элементов
 ```
 
-## Действующая политика parser-а
+## Выбранная архитектурная граница
+
+Не размножать одинаковую политику по UI/ViewModel parser-ам.
+
+Поставить один авторитетный finite-gate в:
+
+```text
+ViewModels/MainWindowCalculationInputBuilder.cs
+```
+
+Он должен нормализовать как прямые строки, так и уже построенные вложенные calculation inputs.
+
+## Прямые строковые поля
 
 Существующая политика сохраняется:
 
@@ -30,18 +41,14 @@ Scope: documentation only
 нечисловой пользовательский ввод → 0
 ```
 
-Она расширяется на неконечные результаты:
+Она расширяется на неконечный parsed result:
 
 ```text
 TryParse success AND double.IsFinite(result) → result
 иначе → 0
 ```
 
-## Точный инвентарь production-границ
-
-### MainWindowCalculationInputBuilder
-
-Поля:
+Эта граница охватывает:
 
 ```text
 WaterDensity
@@ -54,9 +61,11 @@ Anchor Weight / Volume / BaseHoldingCoefficient
 SafetyFactor
 ```
 
-### CurrentProfilePointViewModel
+## Уже построенные значения
 
-Поля:
+### CurrentProfilePointInput
+
+Каждое числовое поле проходит `FiniteOrZero`:
 
 ```text
 DepthM
@@ -66,9 +75,9 @@ VerticalCurrentMS
 WaterDensityKgM3
 ```
 
-### AssemblyItemViewModel
+### AssemblyItemInput
 
-Поля:
+Каждое числовое поле проходит `FiniteOrZero`:
 
 ```text
 LengthM
@@ -78,41 +87,46 @@ PayloadProjectedAreaM2
 PayloadDragCoefficient
 ```
 
-### MainWindowViewModel
+`Count` является `int` и не меняется.
 
-Локальный parser используется только для оперативной визуальной сводки глубины и последовательности. Его конечность должна совпадать с основным input builder.
+### RopePreset
 
-### ElementLibraryViewModel
-
-Parser используется при сохранении всех пользовательских библиотечных элементов:
+При наличии пресета сохраняются текстовые поля и нормализуются:
 
 ```text
-буй
-линия
-соединитель
-якорь
-прибор
+DiameterMm
+BreakingLoadKn
+WeightWaterKgM
+DragCoefficient
 ```
 
-### MainWindowUserBuoySaveBuilder
+### ConnectorPreset
 
-Отдельный путь сохранения пользовательского буя из главного окна должен использовать ту же границу.
+При наличии пресета сохраняются текстовые поля и нормализуются:
 
-## Разрешённое production-изменение
-
-В каждом перечисленном private `Parse` заменить условие:
-
-```csharp
-TryParse(...) ? result : 0
+```text
+WeightAirKg
+VolumeM3
+BreakingLoadKn
+ProjectedAreaM2
+DragCoefficient
 ```
 
-на эквивалент:
+Это защищает расчёт даже при уже существующей пользовательской библиотечной записи с неконечным числом.
 
-```csharp
-TryParse(...) && double.IsFinite(result) ? result : 0
+## Private helpers
+
+Разрешены только private helpers внутри builder:
+
+```text
+FiniteOrZero(double)
+SanitizeCurrentProfilePoint(...)
+SanitizeAssemblyItem(...)
+SanitizeRopePreset(...)
+SanitizeConnectorPreset(...)
 ```
 
-Многострочное форматирование допускается без изменения логики.
+Публичный parser или новый глобальный сервис не вводится.
 
 ## Инварианты
 
@@ -123,6 +137,9 @@ TryParse(...) && double.IsFinite(result) ? result : 0
 - InvariantCulture сохраняется
 - отрицательные конечные значения не clamp-ятся
 - дополнительные диапазоны и физические критерии не вводятся
+- names, IDs, types, materials and notes не меняются
+- IsEnabled, Kind and Count не меняются
+- SelectedSeabedPreset не меняется
 - формулы расчётного ядра не меняются
 - current-profile interpolation не меняется
 - segmentation, drag, weight, tension and shape formulas не меняются
@@ -142,6 +159,12 @@ NaN          → 0
 +Infinity    → 0
 -Infinity    → 0
 переполнение → 0, если TryParse возвращает infinity
+```
+
+## Разрешённый production diff
+
+```text
+ViewModels/MainWindowCalculationInputBuilder.cs
 ```
 
 ## Проверки
