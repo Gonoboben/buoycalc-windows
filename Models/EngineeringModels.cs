@@ -435,6 +435,12 @@ public static class BuoyCalculator
             }
 
             var itemLength = Math.Max(0, item.LengthM);
+            if (itemLength <= 0)
+            {
+                lineCurrentForces.Add(0);
+                continue;
+            }
+
             var segmentCount = Math.Max(1, (int)Math.Ceiling(itemLength / targetSegmentLengthM));
             var segmentLength = segmentCount > 0 ? itemLength / segmentCount : itemLength;
             var itemCurrentForce = 0.0;
