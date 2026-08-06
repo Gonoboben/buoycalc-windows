@@ -94,7 +94,8 @@ public record ElementCalculationRow(
     double BreakingLoadKn,
     double WorkingLoadKn,
     double Reserve,
-    string Status);
+    string Status,
+    double SourceLengthM);
 
 public record SegmentCalculationRow(
     int Number,
@@ -355,7 +356,22 @@ public static class BuoyCalculator
             var reserve = tensionKn > 0 && workingLoadKn > 0 ? workingLoadKn / tensionKn : 0;
             var status = breakingLoadKn <= 0 ? "INFO: MBL не задан" : reserve >= 1 ? "OK" : "WARNING: малый запас";
 
-            rows.Add(new ElementCalculationRow(number++, kind, item.Title, presetName, lengthM, count, weightWaterKg, areaM2, cd, currentForceN, breakingLoadKn, workingLoadKn, reserve, status));
+            rows.Add(new ElementCalculationRow(
+                number++,
+                kind,
+                item.Title,
+                presetName,
+                lengthM,
+                count,
+                weightWaterKg,
+                areaM2,
+                cd,
+                currentForceN,
+                breakingLoadKn,
+                workingLoadKn,
+                reserve,
+                status,
+                item.Kind == AssemblyItemKind.Line ? item.LengthM : 0));
         }
 
         return rows;
@@ -390,7 +406,8 @@ public static class BuoyCalculator
             0,
             0,
             0,
-            "INFO: источник плавучести"));
+            "INFO: источник плавучести",
+            0));
 
         foreach (var row in assemblyRows)
         {
@@ -411,7 +428,8 @@ public static class BuoyCalculator
             0,
             0,
             anchorReserve,
-            anchorWeightWaterKg <= 0 ? "ERROR: якорь имеет отрицательный вес в воде" : anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря"));
+            anchorWeightWaterKg <= 0 ? "ERROR: якорь имеет отрицательный вес в воде" : anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря",
+            0));
 
         return rows;
     }
