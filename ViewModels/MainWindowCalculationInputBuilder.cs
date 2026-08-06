@@ -50,7 +50,7 @@ internal static class MainWindowCalculationInputBuilder
     internal static MainWindowCalculationInput Build(MainWindowCalculationInputSource source)
     {
         var currentProfile = source.Environment.CurrentProfilePoints
-            .Select(x => x.ToInput())
+            .Select(x => SanitizeCurrentProfilePoint(x.ToInput()))
             .OrderBy(x => x.DepthM)
             .ToList();
 
@@ -80,7 +80,7 @@ internal static class MainWindowCalculationInputBuilder
             Parse(source.Anchor.BaseHoldingCoefficient));
 
         var assemblyItems = source.AssemblyItems
-            .Select(x => x.ToInput())
+            .Select(x => SanitizeAssemblyItem(x.ToInput()))
             .ToList();
 
         return new MainWindowCalculationInput(
@@ -91,9 +91,65 @@ internal static class MainWindowCalculationInputBuilder
             Parse(source.SafetyFactor));
     }
 
+    private static CurrentProfilePointInput SanitizeCurrentProfilePoint(CurrentProfilePointInput point)
+    {
+        return point with
+        {
+            DepthM = FiniteOrZero(point.DepthM),
+            EastCurrentMS = FiniteOrZero(point.EastCurrentMS),
+            NorthCurrentMS = FiniteOrZero(point.NorthCurrentMS),
+            VerticalCurrentMS = FiniteOrZero(point.VerticalCurrentMS),
+            WaterDensityKgM3 = FiniteOrZero(point.WaterDensityKgM3)
+        };
+    }
+
+    private static AssemblyItemInput SanitizeAssemblyItem(AssemblyItemInput item)
+    {
+        return item with
+        {
+            RopePreset = item.RopePreset is null ? null : SanitizeRopePreset(item.RopePreset),
+            ConnectorPreset = item.ConnectorPreset is null ? null : SanitizeConnectorPreset(item.ConnectorPreset),
+            LengthM = FiniteOrZero(item.LengthM),
+            PayloadWeightAirKg = FiniteOrZero(item.PayloadWeightAirKg),
+            PayloadVolumeM3 = FiniteOrZero(item.PayloadVolumeM3),
+            PayloadProjectedAreaM2 = FiniteOrZero(item.PayloadProjectedAreaM2),
+            PayloadDragCoefficient = FiniteOrZero(item.PayloadDragCoefficient)
+        };
+    }
+
+    private static RopePreset SanitizeRopePreset(RopePreset preset)
+    {
+        return preset with
+        {
+            DiameterMm = FiniteOrZero(preset.DiameterMm),
+            BreakingLoadKn = FiniteOrZero(preset.BreakingLoadKn),
+            WeightWaterKgM = FiniteOrZero(preset.WeightWaterKgM),
+            DragCoefficient = FiniteOrZero(preset.DragCoefficient)
+        };
+    }
+
+    private static ConnectorPreset SanitizeConnectorPreset(ConnectorPreset preset)
+    {
+        return preset with
+        {
+            WeightAirKg = FiniteOrZero(preset.WeightAirKg),
+            VolumeM3 = FiniteOrZero(preset.VolumeM3),
+            BreakingLoadKn = FiniteOrZero(preset.BreakingLoadKn),
+            ProjectedAreaM2 = FiniteOrZero(preset.ProjectedAreaM2),
+            DragCoefficient = FiniteOrZero(preset.DragCoefficient)
+        };
+    }
+
     private static double Parse(string value)
     {
         value = (value ?? string.Empty).Replace(',', '.');
-        return double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : 0;
+        return double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
+            ? FiniteOrZero(result)
+            : 0;
+    }
+
+    private static double FiniteOrZero(double value)
+    {
+        return double.IsFinite(value) ? value : 0;
     }
 }
