@@ -40,6 +40,8 @@ public sealed record EngineeringDiagnosticsResult(
 public static class EngineeringDiagnostics
 {
     private const double G = 9.80665;
+    private const double MaximumAllowedSegmentLengthM = 0.20;
+    private const double SegmentLengthToleranceM = 1e-9;
 
     public static EngineeringDiagnosticsResult Build(
         EnvironmentInput environment,
@@ -71,6 +73,8 @@ public static class EngineeringDiagnostics
         }
         var nonPositiveSegmentCount = result.SegmentRows.Count(x => x.SegmentLengthM <= 0);
         var minimumSegmentLengthM = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.SegmentLengthM) : double.NaN;
+        var excessiveSegmentLengthCount = result.SegmentRows.Count(x => x.SegmentLengthM > MaximumAllowedSegmentLengthM + SegmentLengthToleranceM);
+        var maximumSegmentLengthM = result.SegmentRows.Count > 0 ? result.SegmentRows.Max(x => x.SegmentLengthM) : double.NaN;
         var buoyDepthM = shape.BuoyPoint?.ZDepthM ?? double.NaN;
         var anchorDepthM = shape.AnchorPoint?.ZDepthM ?? double.NaN;
         var lengthResidualM = shape.AnchorPoint is null ? double.NaN : Math.Abs(shape.AnchorPoint.AlongLineM - lineLengthM);
@@ -187,6 +191,17 @@ public static class EngineeringDiagnostics
             double.IsNaN(minimumSegmentLengthM)
                 ? "Коллекция сегментов пуста; этот локальный инвариант не проверяет наличие расчётной линии."
                 : "Проверяется отсутствие нулевых и отрицательных строк в сегментном read model."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Максимальная длина расчётного сегмента",
+            double.IsNaN(maximumSegmentLengthM)
+                ? "сегментов нет; превышений 0"
+                : $"max L={maximumSegmentLengthM:0.##########} м; превышений {excessiveSegmentLengthCount}",
+            "каждый L ≤ 0,20 м (+1e-9 м числового допуска)",
+            excessiveSegmentLengthCount == 0 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            double.IsNaN(maximumSegmentLengthM)
+                ? "Коллекция сегментов пуста; этот локальный инвариант не проверяет наличие расчётной линии."
+                : "Проверяется соблюдение фиксированного целевого шага сегментации 0,20 м без ограничения количества сегментов."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Согласованность веса линии и расчётных сегментов",
