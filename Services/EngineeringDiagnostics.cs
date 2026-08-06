@@ -94,6 +94,15 @@ public static class EngineeringDiagnostics
         var relativeLineForceResidual = lineForceResidualN / Math.Max(1.0, Math.Abs(lineElementForceN));
 
         rows.Add(new EngineeringDiagnosticRow(
+            "Положительная проектная глубина",
+            $"Depth={environment.DepthM:0.####} м",
+            "Depth > 0 и конечна",
+            double.IsFinite(environment.DepthM) && environment.DepthM > 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Проверяется исходная проектная глубина до локального геометрического ограничения значением 0."));
+
+        rows.Add(new EngineeringDiagnosticRow(
             "Положительная эффективная плотность воды",
             $"ρэфф={effectiveWaterDensityKgM3:0.####} кг/м³",
             "ρэфф > 0 и конечна",
