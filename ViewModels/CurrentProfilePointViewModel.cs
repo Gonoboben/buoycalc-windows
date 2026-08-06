@@ -34,7 +34,7 @@ public sealed class CurrentProfilePointViewModel : ViewModelBase
         get
         {
             var input = ToInput();
-            return $"z={input.DepthM:0.##} м · U={input.EastCurrentMS:0.###} · V={input.NorthCurrentMS:0.###} · W={input.VerticalCurrentMS:0.###} · |U|={input.SpeedMS:0.###} м/с · ρ={input.WaterDensityKgM3:0.##}";
+            return $"z={input.DepthM:0.##} м · U={input.EastCurrentMS:0.###} · V={input.NorthCurrentMS:0.###} · W={input.VerticalCurrentMS:0.###} · |Uгор|={input.HorizontalSpeedMS:0.###} м/с · |U3D|={input.SpeedMS:0.###} м/с · ρ={input.WaterDensityKgM3:0.##}";
         }
     }
 
