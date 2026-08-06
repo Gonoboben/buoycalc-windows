@@ -130,6 +130,9 @@ public static class EngineeringDiagnostics
         var minimumSegmentProjectedAreaText = double.IsNaN(minimumSegmentProjectedAreaM2) ? "нет данных" : $"min A={minimumSegmentProjectedAreaM2:0.####} м²";
         var minimumElementDragCoefficientText = double.IsNaN(minimumElementDragCoefficient) ? "нет данных" : $"min Cd={minimumElementDragCoefficient:0.####}";
         var minimumSegmentDragCoefficientText = double.IsNaN(minimumSegmentDragCoefficient) ? "нет данных" : $"min Cd={minimumSegmentDragCoefficient:0.####}";
+        var invalidElementMblCount = result.ElementRows.Count(x => !double.IsFinite(x.BreakingLoadKn) || x.BreakingLoadKn < 0);
+        var zeroElementMblCount = result.ElementRows.Count(x => x.BreakingLoadKn == 0);
+        var minimumElementMblKn = result.ElementRows.Count > 0 ? result.ElementRows.Min(x => x.BreakingLoadKn) : double.NaN;
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная проектная глубина",
@@ -211,6 +214,17 @@ public static class EngineeringDiagnostics
                 ? EngineeringCheckSeverity.Ok
                 : EngineeringCheckSeverity.Error,
             "Нулевой Cd допускается для строк без сопротивления; отрицательные и неконечные значения только диагностируются."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательные MBL элементов",
+            result.ElementRows.Count == 0
+                ? "строк элементов нет; нарушений 0; нулевых 0"
+                : $"min MBL={minimumElementMblKn:0.####} кН; отрицательных/неконечных {invalidElementMblCount}; нулевых {zeroElementMblCount}",
+            "каждая MBL ≥ 0 и конечна; 0 = не задана",
+            invalidElementMblCount == 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Проверяется знак опубликованных MBL; наличие слабого звена и полнота положительных MBL контролируются существующими проверками."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Неотрицательные глубины активного профиля течения",
