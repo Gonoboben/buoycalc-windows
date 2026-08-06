@@ -56,6 +56,19 @@ public static class EngineeringDiagnostics
         var effectiveWaterDensityKgM3 = environment.EffectiveWaterDensityKgM3;
         var invalidSegmentDensityCount = result.SegmentRows.Count(x => !double.IsFinite(x.WaterDensityKgM3) || x.WaterDensityKgM3 <= 0);
         var minimumSegmentDensityKgM3 = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.WaterDensityKgM3) : double.NaN;
+        var duplicateProfileDepthGroups = environment.UseCurrentProfile && environment.EffectiveCurrentProfile.Count >= 2
+            ? environment.EffectiveCurrentProfile
+                .GroupBy(x => x.DepthM)
+                .Where(x => x.Count() > 1)
+                .OrderBy(x => x.Key)
+                .ToList()
+            : new List<IGrouping<double, CurrentProfilePointInput>>();
+        var duplicateProfilePointCount = duplicateProfileDepthGroups.Sum(x => x.Count() - 1);
+        var duplicateProfileDepthText = string.Join(", ", duplicateProfileDepthGroups.Take(8).Select(x => $"{x.Key:0.####}"));
+        if (duplicateProfileDepthGroups.Count > 8)
+        {
+            duplicateProfileDepthText += ", ...";
+        }
         var nonPositiveSegmentCount = result.SegmentRows.Count(x => x.SegmentLengthM <= 0);
         var minimumSegmentLengthM = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.SegmentLengthM) : double.NaN;
         var buoyDepthM = shape.BuoyPoint?.ZDepthM ?? double.NaN;
@@ -95,6 +108,25 @@ public static class EngineeringDiagnostics
             double.IsNaN(minimumSegmentDensityKgM3)
                 ? "Коллекция сегментов пуста; этот локальный инвариант не проверяет наличие расчётной линии."
                 : "Проверяется плотность, используемая сегментным drag и shape-based X/Z силой линии."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Уникальные глубины активного профиля течения",
+            !environment.UseCurrentProfile
+                ? "профиль отключён"
+                : environment.EffectiveCurrentProfile.Count < 2
+                    ? $"точек {environment.EffectiveCurrentProfile.Count}; конфликтов интервалов нет"
+                    : duplicateProfileDepthGroups.Count == 0
+                        ? $"точек {environment.EffectiveCurrentProfile.Count}; дублированных глубин 0"
+                        : $"глубин-дублей {duplicateProfileDepthGroups.Count}; лишних точек {duplicateProfilePointCount}; z={duplicateProfileDepthText} м",
+            "точные DepthM уникальны",
+            duplicateProfileDepthGroups.Count == 0 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            !environment.UseCurrentProfile
+                ? "Профиль не участвует в текущем расчёте."
+                : environment.EffectiveCurrentProfile.Count < 2
+                    ? "Менее двух точек не образуют конфликтующий интерполяционный интервал."
+                    : duplicateProfileDepthGroups.Count == 0
+                        ? "Каждая опорная глубина активного профиля имеет единственный набор U/V/W/ρ."
+                        : "Точные дубли DepthM делают скачок профиля зависимым от порядка строк; значения не объединяются и не усредняются автоматически."));
 
         rows.Add(Check(
             "Якорь на проектной глубине",
