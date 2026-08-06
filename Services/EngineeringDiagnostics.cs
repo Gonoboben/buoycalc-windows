@@ -59,6 +59,12 @@ public static class EngineeringDiagnostics
         var effectiveWaterDensityKgM3 = environment.EffectiveWaterDensityKgM3;
         var invalidSegmentDensityCount = result.SegmentRows.Count(x => !double.IsFinite(x.WaterDensityKgM3) || x.WaterDensityKgM3 <= 0);
         var minimumSegmentDensityKgM3 = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.WaterDensityKgM3) : double.NaN;
+        var invalidProfileDepthCount = environment.UseCurrentProfile
+            ? environment.EffectiveCurrentProfile.Count(x => !double.IsFinite(x.DepthM) || x.DepthM < 0)
+            : 0;
+        var minimumProfileDepthM = environment.UseCurrentProfile && environment.EffectiveCurrentProfile.Count > 0
+            ? environment.EffectiveCurrentProfile.Min(x => x.DepthM)
+            : double.NaN;
         var duplicateProfileDepthGroups = environment.UseCurrentProfile && environment.EffectiveCurrentProfile.Count >= 2
             ? environment.EffectiveCurrentProfile
                 .GroupBy(x => x.DepthM)
@@ -156,6 +162,21 @@ public static class EngineeringDiagnostics
             double.IsNaN(minimumSegmentDensityKgM3)
                 ? "Коллекция сегментов пуста; этот локальный инвариант не проверяет наличие расчётной линии."
                 : "Проверяется плотность, используемая сегментным drag и shape-based X/Z силой линии."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательные глубины активного профиля течения",
+            !environment.UseCurrentProfile
+                ? "профиль отключён"
+                : double.IsNaN(minimumProfileDepthM)
+                    ? "точек 0; отрицательных/неконечных глубин 0"
+                    : $"min z={minimumProfileDepthM:0.####} м; отрицательных/неконечных глубин {invalidProfileDepthCount}",
+            "каждая DepthM ≥ 0 и конечна",
+            !environment.UseCurrentProfile || invalidProfileDepthCount == 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            !environment.UseCurrentProfile
+                ? "Профиль не участвует в текущем расчёте."
+                : "Проверяется нижняя физическая граница глубины; точки глубже проектной глубины не запрещаются."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Уникальные глубины активного профиля течения",
