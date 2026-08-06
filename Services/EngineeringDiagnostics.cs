@@ -112,6 +112,12 @@ public static class EngineeringDiagnostics
         var relativeWorkingLoadResidual = wllConsistencyApplies
             ? workingLoadResidualKn / Math.Max(1.0, Math.Abs(expectedWorkingLoadKn))
             : 0;
+        var invalidAnchorHoldingCoefficientCount = new[]
+        {
+            result.AnchorBaseHoldingCoefficient,
+            result.AnchorTypeMultiplier,
+            result.SeabedHoldingMultiplier
+        }.Count(x => !double.IsFinite(x) || x <= 0);
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная проектная глубина",
@@ -408,6 +414,15 @@ public static class EngineeringDiagnostics
             "> 1",
             result.TensionReserve >= 1 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
             $"WLL слабого звена = {result.WorkingLoadKn:0.####} кН."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Положительные коэффициенты удержания якоря",
+            $"Kякоря={result.AnchorBaseHoldingCoefficient:0.####}; Kтипа={result.AnchorTypeMultiplier:0.####}; Kгрунта={result.SeabedHoldingMultiplier:0.####}; нарушений {invalidAnchorHoldingCoefficientCount}",
+            "каждый K > 0 и конечен",
+            invalidAnchorHoldingCoefficientCount == 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Проверяются только множители модели удержания; вес якоря в воде и итоговый запас контролируются отдельными строками."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Запас удержания якоря по базовой горизонтальной нагрузке",
