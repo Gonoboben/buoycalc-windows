@@ -133,6 +133,18 @@ public static class EngineeringDiagnostics
         var invalidElementMblCount = result.ElementRows.Count(x => !double.IsFinite(x.BreakingLoadKn) || x.BreakingLoadKn < 0);
         var zeroElementMblCount = result.ElementRows.Count(x => x.BreakingLoadKn == 0);
         var minimumElementMblKn = result.ElementRows.Count > 0 ? result.ElementRows.Min(x => x.BreakingLoadKn) : double.NaN;
+        var invalidElementCurrentForceCount = result.ElementRows.Count(x => !double.IsFinite(x.CurrentForceN) || x.CurrentForceN < 0);
+        var invalidSegmentCurrentForceCount = result.SegmentRows.Count(x => !double.IsFinite(x.CurrentForceN) || x.CurrentForceN < 0);
+        var minimumElementCurrentForceN = result.ElementRows.Count > 0 ? result.ElementRows.Min(x => x.CurrentForceN) : double.NaN;
+        var minimumSegmentCurrentForceN = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.CurrentForceN) : double.NaN;
+        var invalidAggregateDragForceCount = new[]
+        {
+            result.CurrentForceN,
+            result.WaveForceN,
+            result.HorizontalForceN
+        }.Count(x => !double.IsFinite(x) || x < 0);
+        var minimumElementCurrentForceText = double.IsNaN(minimumElementCurrentForceN) ? "нет данных" : $"min F={minimumElementCurrentForceN:0.####} Н";
+        var minimumSegmentCurrentForceText = double.IsNaN(minimumSegmentCurrentForceN) ? "нет данных" : $"min F={minimumSegmentCurrentForceN:0.####} Н";
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная проектная глубина",
@@ -225,6 +237,15 @@ public static class EngineeringDiagnostics
                 ? EngineeringCheckSeverity.Ok
                 : EngineeringCheckSeverity.Error,
             "Проверяется знак опубликованных MBL; наличие слабого звена и полнота положительных MBL контролируются существующими проверками."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательные рассчитанные силы сопротивления",
+            $"элементы: {minimumElementCurrentForceText}; нарушений {invalidElementCurrentForceCount}; сегменты: {minimumSegmentCurrentForceText}; нарушений {invalidSegmentCurrentForceCount}; агрегаты: Fтеч={result.CurrentForceN:0.####} Н; Fволн={result.WaveForceN:0.####} Н; Fгор={result.HorizontalForceN:0.####} Н; нарушений {invalidAggregateDragForceCount}",
+            "каждая F ≥ 0 и конечна",
+            invalidElementCurrentForceCount == 0 && invalidSegmentCurrentForceCount == 0 && invalidAggregateDragForceCount == 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Проверяется знак опубликованных сил-модулей; исходные плотность, площадь, Cd и согласованность агрегации контролируются отдельными строками."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Неотрицательные глубины активного профиля течения",
