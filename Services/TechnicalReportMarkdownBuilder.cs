@@ -98,11 +98,11 @@ public static class TechnicalReportMarkdownBuilder
         }
 
         sb.AppendLine("## Профиль течения по глубине");
-        sb.AppendLine("| Глубина, м | U East, м/с | V North, м/с | W Vertical, м/с | |U|, м/с | ρ, кг/м³ |");
-        sb.AppendLine("|---:|---:|---:|---:|---:|---:|");
+        sb.AppendLine("| Глубина, м | U East, м/с | V North, м/с | W Vertical, м/с | |Uгор|, м/с | |U3D|, м/с | ρ, кг/м³ |");
+        sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|");
         foreach (var p in environment.EffectiveCurrentProfile)
         {
-            sb.AppendLine($"| {p.DepthM:0.####} | {p.EastCurrentMS:0.####} | {p.NorthCurrentMS:0.####} | {p.VerticalCurrentMS:0.####} | {p.SpeedMS:0.####} | {p.WaterDensityKgM3:0.####} |");
+            sb.AppendLine($"| {p.DepthM:0.####} | {p.EastCurrentMS:0.####} | {p.NorthCurrentMS:0.####} | {p.VerticalCurrentMS:0.####} | {p.HorizontalSpeedMS:0.####} | {p.SpeedMS:0.####} | {p.WaterDensityKgM3:0.####} |");
         }
         sb.AppendLine();
     }
