@@ -99,6 +99,19 @@ public static class EngineeringDiagnostics
         var segmentForceN = result.SegmentRows.Sum(x => x.CurrentForceN);
         var lineForceResidualN = Math.Abs(segmentForceN - lineElementForceN);
         var relativeLineForceResidual = lineForceResidualN / Math.Max(1.0, Math.Abs(lineElementForceN));
+        var wllConsistencyApplies =
+            double.IsFinite(result.SafetyFactor) &&
+            result.SafetyFactor > 0 &&
+            result.WeakLinkBreakingLoadKn > 0;
+        var expectedWorkingLoadKn = wllConsistencyApplies
+            ? result.WeakLinkBreakingLoadKn / result.SafetyFactor
+            : double.NaN;
+        var workingLoadResidualKn = wllConsistencyApplies
+            ? Math.Abs(result.WorkingLoadKn - expectedWorkingLoadKn)
+            : double.NaN;
+        var relativeWorkingLoadResidual = wllConsistencyApplies
+            ? workingLoadResidualKn / Math.Max(1.0, Math.Abs(expectedWorkingLoadKn))
+            : 0;
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная проектная глубина",
@@ -373,6 +386,21 @@ public static class EngineeringDiagnostics
                 : result.SafetyFactor > 0
                     ? "Положительный коэффициент ниже текущей рекомендуемой проектной границы 3."
                     : "Нулевой, отрицательный или неконечный коэффициент не может задавать допустимую рабочую нагрузку."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Согласованность WLL и коэффициента запаса",
+            wllConsistencyApplies
+                ? $"ΔWLL={workingLoadResidualKn:0.########} кН ({relativeWorkingLoadResidual:0.########})"
+                : !(result.WeakLinkBreakingLoadKn > 0)
+                    ? "не применяется: MBL слабого звена не определена"
+                    : "не применяется: коэффициент запаса недопустим",
+            "relative ≤ 1e-6 при MBL > 0 и SF > 0",
+            !wllConsistencyApplies || relativeWorkingLoadResidual <= 1e-6
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            wllConsistencyApplies
+                ? $"MBL={result.WeakLinkBreakingLoadKn:0.####} кН; SF={result.SafetyFactor:0.####}; ожидаемая WLL={expectedWorkingLoadKn:0.####} кН; опубликованная WLL={result.WorkingLoadKn:0.####} кН."
+                : "Локальный контроль формулы не заменяет отдельные проверки коэффициента запаса и наличия слабого звена."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Запас слабого звена",
