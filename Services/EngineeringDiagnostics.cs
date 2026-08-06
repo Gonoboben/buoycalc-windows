@@ -59,6 +59,16 @@ public static class EngineeringDiagnostics
         var effectiveWaterDensityKgM3 = environment.EffectiveWaterDensityKgM3;
         var invalidSegmentDensityCount = result.SegmentRows.Count(x => !double.IsFinite(x.WaterDensityKgM3) || x.WaterDensityKgM3 <= 0);
         var minimumSegmentDensityKgM3 = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.WaterDensityKgM3) : double.NaN;
+        var maximumAllowedSamplingDepthM = Math.Max(0, environment.DepthM);
+        var invalidSegmentSamplingDepthCount = result.SegmentRows.Count(x =>
+            !double.IsFinite(x.EstimatedDepthM) ||
+            x.EstimatedDepthM < 0 ||
+            x.EstimatedDepthM > maximumAllowedSamplingDepthM + SegmentLengthToleranceM);
+        var minimumSegmentSamplingDepthM = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.EstimatedDepthM) : double.NaN;
+        var maximumSegmentSamplingDepthM = result.SegmentRows.Count > 0 ? result.SegmentRows.Max(x => x.EstimatedDepthM) : double.NaN;
+        var invalidSegmentLocalSpeedCount = result.SegmentRows.Count(x => !double.IsFinite(x.LocalSpeedMS) || x.LocalSpeedMS < 0);
+        var minimumSegmentLocalSpeedMS = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.LocalSpeedMS) : double.NaN;
+        var maximumSegmentLocalSpeedMS = result.SegmentRows.Count > 0 ? result.SegmentRows.Max(x => x.LocalSpeedMS) : double.NaN;
         var invalidProfileDepthCount = environment.UseCurrentProfile
             ? environment.EffectiveCurrentProfile.Count(x => !double.IsFinite(x.DepthM) || x.DepthM < 0)
             : 0;
@@ -211,6 +221,24 @@ public static class EngineeringDiagnostics
             double.IsNaN(minimumSegmentDensityKgM3)
                 ? "Коллекция сегментов пуста; этот локальный инвариант не проверяет наличие расчётной линии."
                 : "Проверяется плотность, используемая сегментным drag и shape-based X/Z силой линии."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Глубина выборки расчётных сегментов",
+            result.SegmentRows.Count == 0
+                ? "сегментов нет; нарушений 0"
+                : $"min z={minimumSegmentSamplingDepthM:0.####} м; max z={maximumSegmentSamplingDepthM:0.####} м; нарушений {invalidSegmentSamplingDepthCount}; сегментов {result.SegmentRows.Count}",
+            "0 ≤ zseg ≤ max(0, Depth) (+1e-9 м)",
+            invalidSegmentSamplingDepthCount == 0 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            "Проверяется глубина, использованная для выборки профиля течения и плотности; пустая коллекция не проверяет наличие линии."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательная локальная скорость сегментов",
+            result.SegmentRows.Count == 0
+                ? "сегментов нет; нарушений 0"
+                : $"min Ulocal={minimumSegmentLocalSpeedMS:0.####} м/с; max Ulocal={maximumSegmentLocalSpeedMS:0.####} м/с; нарушений {invalidSegmentLocalSpeedCount}; сегментов {result.SegmentRows.Count}",
+            "каждая Ulocal ≥ 0 и конечна",
+            invalidSegmentLocalSpeedCount == 0 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            "Проверяется опубликованный модуль локальной скорости; scalar/profile источники контролируются отдельными строками."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Неотрицательные площади сопротивления",
