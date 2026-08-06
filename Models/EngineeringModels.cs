@@ -98,7 +98,8 @@ public record ElementCalculationRow(
     double SourceLengthM,
     double SourceDiameterMm,
     double SourceUnitWeightAirKg,
-    double SourceUnitVolumeM3);
+    double SourceUnitVolumeM3,
+    double SourceUnitProjectedAreaM2);
 
 public record SegmentCalculationRow(
     int Number,
@@ -323,6 +324,7 @@ public static class BuoyCalculator
             var currentForceN = 0.0;
             var sourceUnitWeightAirKg = 0.0;
             var sourceUnitVolumeM3 = 0.0;
+            var sourceUnitProjectedAreaM2 = 0.0;
 
             if (item.Kind == AssemblyItemKind.Line && item.RopePreset is not null)
             {
@@ -348,6 +350,7 @@ public static class BuoyCalculator
                 currentForceN = DragForce(waterDensityKgM3, currentSpeedMS, areaM2, cd);
                 sourceUnitWeightAirKg = item.ConnectorPreset.WeightAirKg;
                 sourceUnitVolumeM3 = item.ConnectorPreset.VolumeM3;
+                sourceUnitProjectedAreaM2 = item.ConnectorPreset.ProjectedAreaM2;
             }
             else if (item.Kind == AssemblyItemKind.Payload)
             {
@@ -359,6 +362,7 @@ public static class BuoyCalculator
                 count = 1;
                 sourceUnitWeightAirKg = item.PayloadWeightAirKg;
                 sourceUnitVolumeM3 = item.PayloadVolumeM3;
+                sourceUnitProjectedAreaM2 = item.PayloadProjectedAreaM2;
             }
 
             var workingLoadKn = safetyFactor > 0 && breakingLoadKn > 0 ? breakingLoadKn / safetyFactor : 0;
@@ -383,7 +387,8 @@ public static class BuoyCalculator
                 item.Kind == AssemblyItemKind.Line ? item.LengthM : 0,
                 item.Kind == AssemblyItemKind.Line && item.RopePreset is not null ? item.RopePreset.DiameterMm : 0,
                 sourceUnitWeightAirKg,
-                sourceUnitVolumeM3));
+                sourceUnitVolumeM3,
+                sourceUnitProjectedAreaM2));
         }
 
         return rows;
@@ -422,7 +427,8 @@ public static class BuoyCalculator
             0,
             0,
             buoy.WeightKg,
-            buoy.VolumeM3));
+            buoy.VolumeM3,
+            buoy.ProjectedAreaM2));
 
         foreach (var row in assemblyRows)
         {
@@ -447,7 +453,8 @@ public static class BuoyCalculator
             0,
             0,
             anchor.WeightAirKg,
-            anchor.VolumeM3));
+            anchor.VolumeM3,
+            0));
 
         return rows;
     }
