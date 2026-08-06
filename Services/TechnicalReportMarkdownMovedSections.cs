@@ -231,11 +231,11 @@ internal static class TechnicalReportMarkdownMovedSections
     {
         if (forces.Rows.Count == 0) return;
         sb.AppendLine("## Силы линии по форме X/Z и ориентации сегментов");
-        sb.AppendLine("Эта таблица сравнивает силу базовой сегментной модели с оценкой по нормальной составляющей скорости к фактической X/Z-ориентации сегмента.");
+        sb.AppendLine("Эта таблица сравнивает силу базовой сегментной модели с оценкой по нормальной составляющей Uнорм,XZ вектора Uxz = sqrt(|Uгор|² + W²) относительно фактической X/Z-ориентации сегмента.");
         sb.AppendLine($"Базовая сегментная ΣFлинии={forces.OriginalLineForceN:0.####} Н; по форме X/Z ΣFлинии={forces.ShapeLineForceN:0.####} Н; Δ={forces.DifferenceN:0.####} Н ({forces.RelativeDifference:0.####}).");
         sb.AppendLine($"Максимальное отличие строки={forces.MaxRowDifferenceN:0.####} Н; статус={(forces.WithinTolerance ? "OK" : "INFO: заметное отличие от базовой сегментной модели")}");
         sb.AppendLine();
-        sb.AppendLine("| № | Сегмент | Элемент | L, м | U, м/с | Uнорм, м/с | Угол, ° | F базовая, Н | F по X/Z, Н | ΔF, Н | Ratio | Статус |");
+        sb.AppendLine("| № | Сегмент | Элемент | L, м | Uxz, м/с | Uнорм,XZ, м/с | Угол, ° | F базовая, Н | F по X/Z, Н | ΔF, Н | Ratio | Статус |");
         sb.AppendLine("|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
         foreach (var row in SampleRows(forces.Rows, 45, 45))
         {
