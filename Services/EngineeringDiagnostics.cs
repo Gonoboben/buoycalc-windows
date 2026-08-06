@@ -118,6 +118,18 @@ public static class EngineeringDiagnostics
             result.AnchorTypeMultiplier,
             result.SeabedHoldingMultiplier
         }.Count(x => !double.IsFinite(x) || x <= 0);
+        var invalidElementProjectedAreaCount = result.ElementRows.Count(x => !double.IsFinite(x.ProjectedAreaM2) || x.ProjectedAreaM2 < 0);
+        var invalidSegmentProjectedAreaCount = result.SegmentRows.Count(x => !double.IsFinite(x.ProjectedAreaM2) || x.ProjectedAreaM2 < 0);
+        var minimumElementProjectedAreaM2 = result.ElementRows.Count > 0 ? result.ElementRows.Min(x => x.ProjectedAreaM2) : double.NaN;
+        var minimumSegmentProjectedAreaM2 = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.ProjectedAreaM2) : double.NaN;
+        var invalidElementDragCoefficientCount = result.ElementRows.Count(x => !double.IsFinite(x.DragCoefficient) || x.DragCoefficient < 0);
+        var invalidSegmentDragCoefficientCount = result.SegmentRows.Count(x => !double.IsFinite(x.DragCoefficient) || x.DragCoefficient < 0);
+        var minimumElementDragCoefficient = result.ElementRows.Count > 0 ? result.ElementRows.Min(x => x.DragCoefficient) : double.NaN;
+        var minimumSegmentDragCoefficient = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.DragCoefficient) : double.NaN;
+        var minimumElementProjectedAreaText = double.IsNaN(minimumElementProjectedAreaM2) ? "нет данных" : $"min A={minimumElementProjectedAreaM2:0.####} м²";
+        var minimumSegmentProjectedAreaText = double.IsNaN(minimumSegmentProjectedAreaM2) ? "нет данных" : $"min A={minimumSegmentProjectedAreaM2:0.####} м²";
+        var minimumElementDragCoefficientText = double.IsNaN(minimumElementDragCoefficient) ? "нет данных" : $"min Cd={minimumElementDragCoefficient:0.####}";
+        var minimumSegmentDragCoefficientText = double.IsNaN(minimumSegmentDragCoefficient) ? "нет данных" : $"min Cd={minimumSegmentDragCoefficient:0.####}";
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная проектная глубина",
@@ -181,6 +193,24 @@ public static class EngineeringDiagnostics
             double.IsNaN(minimumSegmentDensityKgM3)
                 ? "Коллекция сегментов пуста; этот локальный инвариант не проверяет наличие расчётной линии."
                 : "Проверяется плотность, используемая сегментным drag и shape-based X/Z силой линии."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательные площади сопротивления",
+            $"элементы: {minimumElementProjectedAreaText}; нарушений {invalidElementProjectedAreaCount}; сегменты: {minimumSegmentProjectedAreaText}; нарушений {invalidSegmentProjectedAreaCount}",
+            "каждая A ≥ 0 и конечна",
+            invalidElementProjectedAreaCount == 0 && invalidSegmentProjectedAreaCount == 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Ноль допускается для строк, намеренно не участвующих в drag; значения не исправляются автоматически."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательные коэффициенты сопротивления",
+            $"элементы: {minimumElementDragCoefficientText}; нарушений {invalidElementDragCoefficientCount}; сегменты: {minimumSegmentDragCoefficientText}; нарушений {invalidSegmentDragCoefficientCount}",
+            "каждый Cd ≥ 0 и конечен",
+            invalidElementDragCoefficientCount == 0 && invalidSegmentDragCoefficientCount == 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Нулевой Cd допускается для строк без сопротивления; отрицательные и неконечные значения только диагностируются."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Неотрицательные глубины активного профиля течения",
