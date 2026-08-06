@@ -231,6 +231,8 @@ public static class EngineeringDiagnostics
         var lineElementRows = result.ElementRows.Where(x => x.Kind == "Линия").ToList();
         var invalidSourceLineLengthCount = lineElementRows.Count(x => !double.IsFinite(x.SourceLengthM) || x.SourceLengthM <= 0);
         var minimumSourceLineLengthM = lineElementRows.Count > 0 ? lineElementRows.Min(x => x.SourceLengthM) : double.NaN;
+        var invalidSourceLineDiameterCount = lineElementRows.Count(x => !double.IsFinite(x.SourceDiameterMm) || x.SourceDiameterMm <= 0);
+        var minimumSourceLineDiameterMm = lineElementRows.Count > 0 ? lineElementRows.Min(x => x.SourceDiameterMm) : double.NaN;
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная проектная глубина",
@@ -365,6 +367,21 @@ public static class EngineeringDiagnostics
             lineElementRows.Count == 0
                 ? "Активные строки линии отсутствуют; общая длина, сегменты и форма контролируются отдельными проверками."
                 : "SourceLengthM хранит исходное конечное значение до локального Math.Max(0, LengthM); расчётная LengthM не изменяется."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Положительные исходные диаметры участков линии",
+            lineElementRows.Count == 0
+                ? "участков линии нет"
+                : $"min Dисх={minimumSourceLineDiameterMm:0.####} мм; неположительных/неконечных {invalidSourceLineDiameterCount}; участков {lineElementRows.Count}",
+            "каждый Dисх > 0 и конечен",
+            invalidSourceLineDiameterCount > 0
+                ? EngineeringCheckSeverity.Error
+                : lineElementRows.Count == 0
+                    ? EngineeringCheckSeverity.Warning
+                    : EngineeringCheckSeverity.Ok,
+            lineElementRows.Count == 0
+                ? "Активные строки линии отсутствуют; наличие линии и сегментов контролируется отдельными проверками."
+                : "SourceDiameterMm хранит исходный конечный диаметр RopePreset; площади и силы не пересчитываются этой диагностикой."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Неотрицательные глубины активного профиля течения",
