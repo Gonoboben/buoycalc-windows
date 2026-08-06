@@ -117,6 +117,27 @@ public static class EngineeringDiagnostics
                 : "Непустой активный профиль заменяет скалярное поле подписанными компонентами U/V/W."));
 
         rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательная высота волны",
+            $"H={environment.WaveHeightM:0.####} м",
+            "H ≥ 0 и конечна",
+            double.IsFinite(environment.WaveHeightM) && environment.WaveHeightM >= 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Высота используется в оценке волновой скорости и не нормализуется по модулю."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Согласованность периода и высоты волны",
+            $"H={environment.WaveHeightM:0.####} м; T={environment.WavePeriodS:0.####} с",
+            environment.WaveHeightM > 0 ? "T > 0 при H > 0" : "T ≥ 0 при H = 0",
+            double.IsFinite(environment.WavePeriodS) &&
+            (environment.WaveHeightM > 0 ? environment.WavePeriodS > 0 : environment.WavePeriodS >= 0)
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            environment.WaveHeightM > 0
+                ? "Положительная высота требует положительного периода для расчёта ненулевой волновой добавки."
+                : "При нулевой высоте допускается нулевой период; отрицательный период физически недопустим."));
+
+        rows.Add(new EngineeringDiagnosticRow(
             "Положительная эффективная плотность воды",
             $"ρэфф={effectiveWaterDensityKgM3:0.####} кг/м³",
             "ρэфф > 0 и конечна",
