@@ -53,6 +53,9 @@ public static class EngineeringDiagnostics
         var segmentLengthM = result.SegmentRows.Sum(x => x.SegmentLengthM);
         var segmentLengthResidualM = Math.Abs(segmentLengthM - lineLengthM);
         var relativeSegmentLengthResidual = segmentLengthResidualM / Math.Max(1.0, Math.Abs(lineLengthM));
+        var effectiveWaterDensityKgM3 = environment.EffectiveWaterDensityKgM3;
+        var invalidSegmentDensityCount = result.SegmentRows.Count(x => !double.IsFinite(x.WaterDensityKgM3) || x.WaterDensityKgM3 <= 0);
+        var minimumSegmentDensityKgM3 = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.WaterDensityKgM3) : double.NaN;
         var nonPositiveSegmentCount = result.SegmentRows.Count(x => x.SegmentLengthM <= 0);
         var minimumSegmentLengthM = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.SegmentLengthM) : double.NaN;
         var buoyDepthM = shape.BuoyPoint?.ZDepthM ?? double.NaN;
@@ -72,6 +75,26 @@ public static class EngineeringDiagnostics
         var segmentForceN = result.SegmentRows.Sum(x => x.CurrentForceN);
         var lineForceResidualN = Math.Abs(segmentForceN - lineElementForceN);
         var relativeLineForceResidual = lineForceResidualN / Math.Max(1.0, Math.Abs(lineElementForceN));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Положительная эффективная плотность воды",
+            $"ρэфф={effectiveWaterDensityKgM3:0.####} кг/м³",
+            "ρэфф > 0 и конечна",
+            double.IsFinite(effectiveWaterDensityKgM3) && effectiveWaterDensityKgM3 > 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Проверяется плотность, используемая общей базовой моделью и fallback-семантикой профиля течения."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Положительная плотность расчётных сегментов",
+            double.IsNaN(minimumSegmentDensityKgM3)
+                ? "сегментов нет; нарушений 0"
+                : $"min ρ={minimumSegmentDensityKgM3:0.####} кг/м³; нарушений {invalidSegmentDensityCount}",
+            "каждый ρ > 0 и конечен",
+            invalidSegmentDensityCount == 0 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            double.IsNaN(minimumSegmentDensityKgM3)
+                ? "Коллекция сегментов пуста; этот локальный инвариант не проверяет наличие расчётной линии."
+                : "Проверяется плотность, используемая сегментным drag и shape-based X/Z силой линии."));
 
         rows.Add(Check(
             "Якорь на проектной глубине",
