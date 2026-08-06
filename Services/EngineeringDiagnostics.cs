@@ -69,6 +69,79 @@ public static class EngineeringDiagnostics
         var invalidSegmentLocalSpeedCount = result.SegmentRows.Count(x => !double.IsFinite(x.LocalSpeedMS) || x.LocalSpeedMS < 0);
         var minimumSegmentLocalSpeedMS = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.LocalSpeedMS) : double.NaN;
         var maximumSegmentLocalSpeedMS = result.SegmentRows.Count > 0 ? result.SegmentRows.Max(x => x.LocalSpeedMS) : double.NaN;
+        var orderedSegmentRows = result.SegmentRows.OrderBy(x => x.Number).ToList();
+        var invalidSegmentSpanCount = result.SegmentRows.Count(x =>
+            !double.IsFinite(x.StartLengthM) ||
+            !double.IsFinite(x.EndLengthM) ||
+            !double.IsFinite(x.SegmentLengthM) ||
+            x.StartLengthM < 0 ||
+            x.EndLengthM <= x.StartLengthM ||
+            Math.Abs((x.EndLengthM - x.StartLengthM) - x.SegmentLengthM) > SegmentLengthToleranceM);
+        var maximumSegmentSpanResidualM = result.SegmentRows.Count > 0
+            ? result.SegmentRows.Max(x => Math.Abs((x.EndLengthM - x.StartLengthM) - x.SegmentLengthM))
+            : double.NaN;
+        var segmentChainNumberingViolationCount = 0;
+        var segmentChainCoordinateViolationCount = 0;
+        var segmentChainStartResidualM = 0.0;
+        var segmentChainEndResidualM = 0.0;
+        var maximumSegmentJunctionGapM = 0.0;
+
+        if (orderedSegmentRows.Count > 0)
+        {
+            var firstSegment = orderedSegmentRows[0];
+            var lastSegment = orderedSegmentRows[^1];
+            if (firstSegment.Number != 1)
+            {
+                segmentChainNumberingViolationCount++;
+            }
+
+            if (double.IsFinite(firstSegment.StartLengthM))
+            {
+                segmentChainStartResidualM = Math.Abs(firstSegment.StartLengthM);
+            }
+            else
+            {
+                segmentChainStartResidualM = double.NaN;
+                segmentChainCoordinateViolationCount++;
+            }
+
+            if (double.IsFinite(lastSegment.EndLengthM) && double.IsFinite(result.LineLengthM))
+            {
+                segmentChainEndResidualM = Math.Abs(lastSegment.EndLengthM - result.LineLengthM);
+            }
+            else
+            {
+                segmentChainEndResidualM = double.NaN;
+                segmentChainCoordinateViolationCount++;
+            }
+
+            for (var i = 1; i < orderedSegmentRows.Count; i++)
+            {
+                var previous = orderedSegmentRows[i - 1];
+                var current = orderedSegmentRows[i];
+                if (current.Number != previous.Number + 1)
+                {
+                    segmentChainNumberingViolationCount++;
+                }
+
+                if (double.IsFinite(current.StartLengthM) && double.IsFinite(previous.EndLengthM))
+                {
+                    maximumSegmentJunctionGapM = Math.Max(maximumSegmentJunctionGapM, Math.Abs(current.StartLengthM - previous.EndLengthM));
+                }
+                else
+                {
+                    maximumSegmentJunctionGapM = double.NaN;
+                    segmentChainCoordinateViolationCount++;
+                }
+            }
+        }
+
+        var segmentChainIsValid = orderedSegmentRows.Count == 0 ||
+            segmentChainNumberingViolationCount == 0 &&
+            segmentChainCoordinateViolationCount == 0 &&
+            segmentChainStartResidualM <= SegmentLengthToleranceM &&
+            maximumSegmentJunctionGapM <= SegmentLengthToleranceM &&
+            segmentChainEndResidualM <= SegmentLengthToleranceM;
         var invalidProfileDepthCount = environment.UseCurrentProfile
             ? environment.EffectiveCurrentProfile.Count(x => !double.IsFinite(x.DepthM) || x.DepthM < 0)
             : 0;
@@ -397,6 +470,24 @@ public static class EngineeringDiagnostics
             double.IsNaN(maximumSegmentLengthM)
                 ? "Коллекция сегментов пуста; этот локальный инвариант не проверяет наличие расчётной линии."
                 : "Проверяется соблюдение фиксированного целевого шага сегментации 0,20 м без ограничения количества сегментов."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Согласованность интервалов расчётных сегментов",
+            result.SegmentRows.Count == 0
+                ? "сегментов нет; нарушений 0"
+                : $"max Δspan={maximumSegmentSpanResidualM:0.##########} м; нарушений {invalidSegmentSpanCount}; сегментов {result.SegmentRows.Count}",
+            "Start ≥ 0; End > Start; |(End-Start)-L| ≤ 1e-9 м",
+            invalidSegmentSpanCount == 0 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            "Проверяется тождество каждого опубликованного интервала без исправления координат или длины."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Непрерывность цепочки расчётных сегментов",
+            orderedSegmentRows.Count == 0
+                ? "сегментов нет; локальный инвариант не применяется"
+                : $"Δstart={segmentChainStartResidualM:0.##########} м; max gap={maximumSegmentJunctionGapM:0.##########} м; Δend={segmentChainEndResidualM:0.##########} м; нарушений нумерации {segmentChainNumberingViolationCount}; неконечных стыков {segmentChainCoordinateViolationCount}; сегментов {orderedSegmentRows.Count}",
+            "Number последовательно; start/gap/end ≤ 1e-9 м",
+            segmentChainIsValid ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            "Строки анализируются по Number только внутри диагностики; исходная коллекция и координаты не сортируются и не изменяются."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Согласованность веса линии и расчётных сегментов",
