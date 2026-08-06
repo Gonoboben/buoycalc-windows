@@ -145,6 +145,9 @@ public static class EngineeringDiagnostics
         }.Count(x => !double.IsFinite(x) || x < 0);
         var minimumElementCurrentForceText = double.IsNaN(minimumElementCurrentForceN) ? "нет данных" : $"min F={minimumElementCurrentForceN:0.####} Н";
         var minimumSegmentCurrentForceText = double.IsNaN(minimumSegmentCurrentForceN) ? "нет данных" : $"min F={minimumSegmentCurrentForceN:0.####} Н";
+        var lineElementRows = result.ElementRows.Where(x => x.Kind == "Линия").ToList();
+        var invalidSourceLineLengthCount = lineElementRows.Count(x => !double.IsFinite(x.SourceLengthM) || x.SourceLengthM <= 0);
+        var minimumSourceLineLengthM = lineElementRows.Count > 0 ? lineElementRows.Min(x => x.SourceLengthM) : double.NaN;
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная проектная глубина",
@@ -246,6 +249,21 @@ public static class EngineeringDiagnostics
                 ? EngineeringCheckSeverity.Ok
                 : EngineeringCheckSeverity.Error,
             "Проверяется знак опубликованных сил-модулей; исходные плотность, площадь, Cd и согласованность агрегации контролируются отдельными строками."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Положительные исходные длины участков линии",
+            lineElementRows.Count == 0
+                ? "участков линии нет"
+                : $"min Lисх={minimumSourceLineLengthM:0.####} м; неположительных/неконечных {invalidSourceLineLengthCount}; участков {lineElementRows.Count}",
+            "каждая Lисх > 0 и конечна",
+            invalidSourceLineLengthCount > 0
+                ? EngineeringCheckSeverity.Error
+                : lineElementRows.Count == 0
+                    ? EngineeringCheckSeverity.Warning
+                    : EngineeringCheckSeverity.Ok,
+            lineElementRows.Count == 0
+                ? "Активные строки линии отсутствуют; общая длина, сегменты и форма контролируются отдельными проверками."
+                : "SourceLengthM хранит исходное конечное значение до локального Math.Max(0, LengthM); расчётная LengthM не изменяется."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Неотрицательные глубины активного профиля течения",
