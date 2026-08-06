@@ -96,7 +96,9 @@ public record ElementCalculationRow(
     double Reserve,
     string Status,
     double SourceLengthM,
-    double SourceDiameterMm);
+    double SourceDiameterMm,
+    double SourceUnitWeightAirKg,
+    double SourceUnitVolumeM3);
 
 public record SegmentCalculationRow(
     int Number,
@@ -319,6 +321,8 @@ public static class BuoyCalculator
             var cd = 1.0;
             var breakingLoadKn = 0.0;
             var currentForceN = 0.0;
+            var sourceUnitWeightAirKg = 0.0;
+            var sourceUnitVolumeM3 = 0.0;
 
             if (item.Kind == AssemblyItemKind.Line && item.RopePreset is not null)
             {
@@ -342,6 +346,8 @@ public static class BuoyCalculator
                 cd = item.ConnectorPreset.DragCoefficient;
                 breakingLoadKn = item.ConnectorPreset.BreakingLoadKn;
                 currentForceN = DragForce(waterDensityKgM3, currentSpeedMS, areaM2, cd);
+                sourceUnitWeightAirKg = item.ConnectorPreset.WeightAirKg;
+                sourceUnitVolumeM3 = item.ConnectorPreset.VolumeM3;
             }
             else if (item.Kind == AssemblyItemKind.Payload)
             {
@@ -351,6 +357,8 @@ public static class BuoyCalculator
                 cd = item.PayloadDragCoefficient;
                 currentForceN = DragForce(waterDensityKgM3, currentSpeedMS, areaM2, cd);
                 count = 1;
+                sourceUnitWeightAirKg = item.PayloadWeightAirKg;
+                sourceUnitVolumeM3 = item.PayloadVolumeM3;
             }
 
             var workingLoadKn = safetyFactor > 0 && breakingLoadKn > 0 ? breakingLoadKn / safetyFactor : 0;
@@ -373,7 +381,9 @@ public static class BuoyCalculator
                 reserve,
                 status,
                 item.Kind == AssemblyItemKind.Line ? item.LengthM : 0,
-                item.Kind == AssemblyItemKind.Line && item.RopePreset is not null ? item.RopePreset.DiameterMm : 0));
+                item.Kind == AssemblyItemKind.Line && item.RopePreset is not null ? item.RopePreset.DiameterMm : 0,
+                sourceUnitWeightAirKg,
+                sourceUnitVolumeM3));
         }
 
         return rows;
@@ -410,7 +420,9 @@ public static class BuoyCalculator
             0,
             "INFO: источник плавучести",
             0,
-            0));
+            0,
+            buoy.WeightKg,
+            buoy.VolumeM3));
 
         foreach (var row in assemblyRows)
         {
@@ -433,7 +445,9 @@ public static class BuoyCalculator
             anchorReserve,
             anchorWeightWaterKg <= 0 ? "ERROR: якорь имеет отрицательный вес в воде" : anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря",
             0,
-            0));
+            0,
+            anchor.WeightAirKg,
+            anchor.VolumeM3));
 
         return rows;
     }
