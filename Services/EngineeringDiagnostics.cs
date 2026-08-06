@@ -50,6 +50,9 @@ public static class EngineeringDiagnostics
         var rows = new List<EngineeringDiagnosticRow>();
         var depthM = Math.Max(0, environment.DepthM);
         var lineLengthM = Math.Max(0, result.LineLengthM);
+        var segmentLengthM = result.SegmentRows.Sum(x => x.SegmentLengthM);
+        var segmentLengthResidualM = Math.Abs(segmentLengthM - lineLengthM);
+        var relativeSegmentLengthResidual = segmentLengthResidualM / Math.Max(1.0, Math.Abs(lineLengthM));
         var buoyDepthM = shape.BuoyPoint?.ZDepthM ?? double.NaN;
         var anchorDepthM = shape.AnchorPoint?.ZDepthM ?? double.NaN;
         var lengthResidualM = shape.AnchorPoint is null ? double.NaN : Math.Abs(shape.AnchorPoint.AlongLineM - lineLengthM);
@@ -105,6 +108,13 @@ public static class EngineeringDiagnostics
             !double.IsNaN(buoyDepthM) && !double.IsNaN(anchorDepthM) && buoyDepthM < anchorDepthM,
             EngineeringCheckSeverity.Error,
             "Буй должен находиться выше нижнего граничного узла якоря."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Согласованность длины линии и расчётных сегментов",
+            $"ΔL={segmentLengthResidualM:0.####} м ({relativeSegmentLengthResidual:0.####})",
+            "relative ≤ 1e-6",
+            relativeSegmentLengthResidual <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            $"Длина линии={lineLengthM:0.####} м; Σ длин сегментов={segmentLengthM:0.####} м. Проверяется сохранение длины распределённой линии при сегментации."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Согласованность веса линии и расчётных сегментов",
