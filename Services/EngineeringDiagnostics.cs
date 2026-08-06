@@ -55,6 +55,7 @@ public static class EngineeringDiagnostics
         var segmentLengthM = result.SegmentRows.Sum(x => x.SegmentLengthM);
         var segmentLengthResidualM = Math.Abs(segmentLengthM - lineLengthM);
         var relativeSegmentLengthResidual = segmentLengthResidualM / Math.Max(1.0, Math.Abs(lineLengthM));
+        var scalarCurrentIsActive = !environment.UseCurrentProfile || environment.EffectiveCurrentProfile.Count == 0;
         var effectiveWaterDensityKgM3 = environment.EffectiveWaterDensityKgM3;
         var invalidSegmentDensityCount = result.SegmentRows.Count(x => !double.IsFinite(x.WaterDensityKgM3) || x.WaterDensityKgM3 <= 0);
         var minimumSegmentDensityKgM3 = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.WaterDensityKgM3) : double.NaN;
@@ -101,6 +102,19 @@ public static class EngineeringDiagnostics
                 ? EngineeringCheckSeverity.Ok
                 : EngineeringCheckSeverity.Error,
             "Проверяется исходная проектная глубина до локального геометрического ограничения значением 0."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательная активная скалярная скорость течения",
+            scalarCurrentIsActive
+                ? $"Uскал={environment.CurrentSpeedMS:0.####} м/с"
+                : $"скалярное значение не используется; активных точек {environment.EffectiveCurrentProfile.Count}",
+            scalarCurrentIsActive ? "Uскал ≥ 0 и конечна" : "локальный инвариант не применяется",
+            !scalarCurrentIsActive || double.IsFinite(environment.CurrentSpeedMS) && environment.CurrentSpeedMS >= 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            scalarCurrentIsActive
+                ? "Скалярное поле участвует в расчёте как модуль скорости течения."
+                : "Непустой активный профиль заменяет скалярное поле подписанными компонентами U/V/W."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Положительная эффективная плотность воды",
