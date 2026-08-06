@@ -491,15 +491,16 @@ public static class BuoyCalculator
         var points = environment.EffectiveCurrentProfile
             .OrderBy(x => x.DepthM)
             .ToList();
+        var fallbackDensityKgM3 = environment.EffectiveWaterDensityKgM3;
 
         if (depthM <= points[0].DepthM)
         {
-            return points[0];
+            return points[0] with { WaterDensityKgM3 = NormalizeProfileDensity(points[0].WaterDensityKgM3, fallbackDensityKgM3) };
         }
 
         if (depthM >= points[^1].DepthM)
         {
-            return points[^1];
+            return points[^1] with { WaterDensityKgM3 = NormalizeProfileDensity(points[^1].WaterDensityKgM3, fallbackDensityKgM3) };
         }
 
         for (var i = 0; i < points.Count - 1; i++)
@@ -513,15 +514,22 @@ public static class BuoyCalculator
 
             var span = lower.DepthM - upper.DepthM;
             var t = span > 0 ? (depthM - upper.DepthM) / span : 0;
+            var upperDensityKgM3 = NormalizeProfileDensity(upper.WaterDensityKgM3, fallbackDensityKgM3);
+            var lowerDensityKgM3 = NormalizeProfileDensity(lower.WaterDensityKgM3, fallbackDensityKgM3);
             return new CurrentProfilePointInput(
                 depthM,
                 Lerp(upper.EastCurrentMS, lower.EastCurrentMS, t),
                 Lerp(upper.NorthCurrentMS, lower.NorthCurrentMS, t),
                 Lerp(upper.VerticalCurrentMS, lower.VerticalCurrentMS, t),
-                Lerp(upper.WaterDensityKgM3, lower.WaterDensityKgM3, t));
+                Lerp(upperDensityKgM3, lowerDensityKgM3, t));
         }
 
-        return points[^1];
+        return points[^1] with { WaterDensityKgM3 = NormalizeProfileDensity(points[^1].WaterDensityKgM3, fallbackDensityKgM3) };
+    }
+
+    private static double NormalizeProfileDensity(double densityKgM3, double fallbackDensityKgM3)
+    {
+        return densityKgM3 > 0 ? densityKgM3 : fallbackDensityKgM3;
     }
 
     private static double Lerp(double a, double b, double t)
