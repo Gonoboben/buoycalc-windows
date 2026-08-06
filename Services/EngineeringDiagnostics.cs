@@ -53,6 +53,8 @@ public static class EngineeringDiagnostics
         var segmentLengthM = result.SegmentRows.Sum(x => x.SegmentLengthM);
         var segmentLengthResidualM = Math.Abs(segmentLengthM - lineLengthM);
         var relativeSegmentLengthResidual = segmentLengthResidualM / Math.Max(1.0, Math.Abs(lineLengthM));
+        var nonPositiveSegmentCount = result.SegmentRows.Count(x => x.SegmentLengthM <= 0);
+        var minimumSegmentLengthM = result.SegmentRows.Count > 0 ? result.SegmentRows.Min(x => x.SegmentLengthM) : double.NaN;
         var buoyDepthM = shape.BuoyPoint?.ZDepthM ?? double.NaN;
         var anchorDepthM = shape.AnchorPoint?.ZDepthM ?? double.NaN;
         var lengthResidualM = shape.AnchorPoint is null ? double.NaN : Math.Abs(shape.AnchorPoint.AlongLineM - lineLengthM);
@@ -119,6 +121,17 @@ public static class EngineeringDiagnostics
             "relative ≤ 1e-6",
             relativeSegmentLengthResidual <= 1e-6 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
             $"Длина линии={lineLengthM:0.####} м; Σ длин сегментов={segmentLengthM:0.####} м. Проверяется сохранение длины распределённой линии при сегментации."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Положительная длина расчётных сегментов",
+            double.IsNaN(minimumSegmentLengthM)
+                ? "сегментов нет; нарушений 0"
+                : $"min L={minimumSegmentLengthM:0.####} м; нарушений {nonPositiveSegmentCount}",
+            "каждый L > 0",
+            nonPositiveSegmentCount == 0 ? EngineeringCheckSeverity.Ok : EngineeringCheckSeverity.Error,
+            double.IsNaN(minimumSegmentLengthM)
+                ? "Коллекция сегментов пуста; этот локальный инвариант не проверяет наличие расчётной линии."
+                : "Проверяется отсутствие нулевых и отрицательных строк в сегментном read model."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Согласованность веса линии и расчётных сегментов",
