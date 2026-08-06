@@ -360,6 +360,21 @@ public static class EngineeringDiagnostics
             tensionRows.Count > 0 ? "По сегментной оценке натяжений." : "По общей оценке результата."));
 
         rows.Add(new EngineeringDiagnosticRow(
+            "Коэффициент запаса слабого звена",
+            $"SF={result.SafetyFactor:0.####}",
+            "SF > 0; рекомендуемое SF ≥ 3",
+            !double.IsFinite(result.SafetyFactor) || result.SafetyFactor <= 0
+                ? EngineeringCheckSeverity.Error
+                : result.SafetyFactor < 3
+                    ? EngineeringCheckSeverity.Warning
+                    : EngineeringCheckSeverity.Ok,
+            result.SafetyFactor >= 3
+                ? "Коэффициент соответствует текущей рекомендуемой проектной границе."
+                : result.SafetyFactor > 0
+                    ? "Положительный коэффициент ниже текущей рекомендуемой проектной границы 3."
+                    : "Нулевой, отрицательный или неконечный коэффициент не может задавать допустимую рабочую нагрузку."));
+
+        rows.Add(new EngineeringDiagnosticRow(
             "Запас слабого звена",
             $"{result.TensionReserve:0.####}",
             "> 1",
