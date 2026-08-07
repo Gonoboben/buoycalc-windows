@@ -7,9 +7,8 @@ internal sealed record PdfDiagramSource(
 
 internal static class PdfDiagramSourceSelector
 {
-    public static PdfDiagramSource Select()
+    public static PdfDiagramSource Select(SelectedShapeReadModel? selectedShape)
     {
-        var selectedShape = SelectedShapeStore.Current;
         var hasSelectedShape = selectedShape is not null && selectedShape.Shape.Nodes.Count >= 2;
         var shapeOffsetM = hasSelectedShape ? selectedShape!.Shape.HorizontalOffsetM : 0;
         return new PdfDiagramSource(selectedShape, hasSelectedShape, shapeOffsetM);
