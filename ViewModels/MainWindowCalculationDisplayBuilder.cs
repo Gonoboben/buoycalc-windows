@@ -14,6 +14,7 @@ internal sealed record MainWindowSequenceDisplayItem(
 
 internal sealed record MainWindowCalculationDisplay(
     IReadOnlyList<ElementCalculationDisplayRow> ElementRows,
+    SelectedShapeReadModel? SelectedShape,
     string UserResultText,
     string TechnicalReportText,
     string SequenceSummary,
@@ -55,6 +56,7 @@ internal static class MainWindowCalculationDisplayBuilder
 
         return new MainWindowCalculationDisplay(
             elementRows,
+            snapshot.SelectedShape,
             reports.UserResultText,
             reports.TechnicalReportText,
             sequenceVisualization.SequenceSummary,
