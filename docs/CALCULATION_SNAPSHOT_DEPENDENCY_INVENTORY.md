@@ -2,23 +2,21 @@
 
 Date: 2026-08-08  
 Phase: Optimization Phase 1–2  
-Issues: #333, #335, #337
+Issues: #333, #335, #337, #339
 
 ## Purpose
 
-Track the migration from historical mutable shape/report state toward one immutable calculation snapshot and one selected engineering X/Z geometry for all user-facing renderers.
+Track migration from historical mutable shape/report state toward one immutable calculation snapshot and one selected engineering X/Z geometry for every user-facing renderer.
 
 ## Engineering rule
 
 The only user-facing geometry with engineering meaning is the selected calculated X/Z shape.
 
-The discrete/iterative path is the preferred physical direction because it includes discrete loads. `MooringShapeSolver` remains a fallback/initialization/diagnostic path until stronger equilibrium validation is implemented. Gate/fallback indicate numerical reliability; they do not make the fallback geometry a second independent product answer.
+The discrete/iterative path remains the preferred physical direction because it includes discrete loads. `MooringShapeSolver` is a fallback/initialization/diagnostic path until stronger equilibrium validation exists. Gate/fallback indicate numerical reliability; they do not create a second independent product geometry.
 
-2D and PDF are presentation layers. They must not invent coordinates or reconstruct engineering geometry from text or visualization helper values.
+2D and PDF are presentation layers. They must not invent coordinates or reconstruct engineering geometry from report text or visualization helper values.
 
 ## Current engineering pipeline
-
-`TechnicalReportMarkdownBuilder.Build(...)` currently initiates the following transitional path:
 
 ```text
 TechnicalReportMarkdownBuilder
@@ -37,126 +35,113 @@ TechnicalReportMarkdownBuilder
         -> EngineeringDiagnostics
         -> MooringVectorBalance
      -> TechnicalReportStorePublisher.Publish(data) [compatibility side effects]
-        -> MooringShapeStore.Set(data.Shape)
-        -> MooringIterativeSolverStore.Set(data.IterativeSolver)
-           -> MooringPrimaryShapeSelector.Select(...)
-           -> MooringPrimaryShapeSelectionStore.Set(...)
-           -> MooringShapeStore.Set(selection.Shape)
      -> SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver)
         -> MooringPrimaryShapeSelector.Select(...)
         -> SelectedShapeReadModel
      -> immutable CalculationSnapshot
 ```
 
-The snapshot does not read selected X/Z from a mutable store. It derives the same selection directly from immutable fallback-shape and iterative-solver data using existing selector/gate semantics.
+The snapshot derives selected X/Z directly from immutable pipeline data through the existing selector/gate semantics. Compatibility stores remain temporarily because renderer wiring has not yet been converted to explicit snapshot/read-model injection.
 
-The compatibility publisher remains temporarily because PDF and some historical consumers still read stores.
-
-## Current mutable shape state
+## Mutable state still present
 
 | State holder | Current role | Target direction |
 |---|---|---|
-| `MooringShapeStore` | stores fallback first, then selected shape may overwrite it | internal migration state only |
-| `MooringIterativeSolverStore` | stores iterative result and triggers selection as a side effect | solver result should remain immutable snapshot data |
-| `MooringPrimaryShapeSelectionStore` | stores gate/selector result for legacy consumers | retire after consumers move to snapshot/provider |
-| `SelectedShapeStore` | legacy selected-shape facade; still used by renderer adapters during migration | retire direct global reads after explicit snapshot/read-model wiring |
-| `MooringAlternativeShapeStore` | separate alternative display state | no longer a 2D source after Issue #337; PDF migration remains |
+| `MooringShapeStore` | compatibility fallback/selected state | retire after consumers migrate |
+| `MooringIterativeSolverStore` | compatibility iterative state and selection side effect | keep solver result in immutable snapshot |
+| `MooringPrimaryShapeSelectionStore` | compatibility selection state | retire after consumers migrate |
+| `SelectedShapeStore` | legacy selected-shape facade used by 2D/PDF adapters | replace with explicit snapshot/read-model input |
+| `MooringAlternativeShapeStore` | historical alternative display state | no longer a 2D or PDF engineering geometry source after Issues #337/#339 |
 
 ## Stateless selected X/Z boundary
 
-`ApplicationModel/SelectedMooringShapeProvider.cs` is the store-independent selected-shape boundary.
-
-Inputs:
+`ApplicationModel/SelectedMooringShapeProvider.cs` accepts:
 
 ```text
 MooringShapeResult fallbackShape
 MooringIterativeSolverResult iterativeSolver
 ```
 
-Selection:
+and calls:
 
 ```text
 MooringPrimaryShapeSelector.Select(fallbackShape, iterativeSolver)
 ```
 
-Output:
-
-```text
-SelectedShapeReadModel
-```
-
-The provider does not read or write `SelectedShapeStore`, `MooringShapeStore` or `MooringPrimaryShapeSelectionStore`. It does not alter gate criteria, candidate promotion, coordinates, forces or solver math.
+to produce `SelectedShapeReadModel` without reading or writing mutable stores.
 
 ## User-facing geometry consumers
 
 ### 2D — selected X/Z only after Issue #337
 
-`Mooring2DDiagramSourceSelector` now exposes only:
+`Mooring2DDiagramSourceSelector` exposes only `SelectedShapeStore.Current` as transitional wiring.
+
+Removed from 2D:
+
+- `MooringAlternativeShapeStore.Current`;
+- technical-report Markdown X/Z parsing;
+- `VisualizationOffsetM` synthesized geometry;
+- `SequenceDiagramLines` synthesized geometry;
+- main/alternative comparison drawing.
+
+`Mooring2DCanvas` draws only selected X/Z nodes, uses real `xScale = zScale`, displays `shape.HorizontalOffsetM`, and draws no engineering line when selected X/Z is unavailable.
+
+### PDF — selected X/Z only after Issue #339
+
+`PdfDiagramSourceSelector` now exposes only:
 
 ```text
 SelectedShapeStore.Current -> SelectedShapeReadModel
 ```
 
-This remaining global store read is transitional wiring; the 2D selector does not choose between engineering models.
-
-Removed from the 2D path:
+and uses only:
 
 ```text
-MooringAlternativeShapeStore.Current
-technical-report Markdown X/Z parsing
-VisualizationOffsetM-based synthesized mooring geometry
-SequenceDiagramLines-based synthesized element geometry
-main/alternative comparison drawing
+SelectedShapeReadModel.Shape.HorizontalOffsetM
 ```
 
-`Mooring2DCanvas` now:
+for the X/Z offset published into the user PDF.
 
-- draws only selected calculated X/Z nodes;
-- uses `xScale = zScale`;
-- uses `shape.HorizontalOffsetM` for the displayed calculated offset;
-- displays an explicit unavailable state when selected X/Z nodes do not exist;
-- does not draw an approximate engineering line when calculation geometry is unavailable.
+Removed from PDF source selection/rendering:
 
-This is an intentional presentation change, not a solver/physics change.
+- `MooringAlternativeShapeStore.Current`;
+- alternative-shape priority;
+- technical-report metric parsing;
+- `visualizationOffsetM` engineering fallback;
+- `AlternativeShapeDiagram(...)`;
+- approximate diagram generation when selected X/Z is unavailable.
 
-### PDF — still transitional
-
-`PdfDiagramSourceSelector` still reads:
-
-1. `MooringAlternativeShapeStore.Current`;
-2. `SelectedShapeStore.Current`;
-3. X/Z metrics parsed from technical report text;
-4. visualization offset fallback.
-
-Target: PDF consumes one selected X/Z read model. Report text and visualization offsets must not be engineering geometry sources.
+`PdfReportBuilder.SelectedShapeDiagram(...)` renders `SelectedShapeReadModel.Shape.Nodes` directly with a single uniform X/Z scale. When selected X/Z is unavailable, the PDF states that no engineering diagram is available and shows only non-geometric input context.
 
 ## Current report responsibility problem
 
-The Markdown renderer still causes `CalculationSnapshotBuilder` to execute. The renderer no longer directly executes the technical data builder or publisher, but calculation orchestration has not yet moved fully out of report generation.
+`TechnicalReportMarkdownBuilder` still causes `CalculationSnapshotBuilder` to execute. Calculation orchestration therefore has not yet fully moved out of report generation.
 
-Target: application orchestration creates one completed `CalculationSnapshot`; reports, PDF and 2D consume read models derived from that snapshot.
+Target:
+
+```text
+application orchestration
+  -> one completed CalculationSnapshot
+     -> technical report read model
+     -> user PDF read model
+     -> 2D read model
+```
 
 ## Completed optimization boundaries
 
-### Issue #333 — CalculationSnapshot
-
-Introduced `CalculationSnapshot` / `CalculationSnapshotBuilder` and moved direct technical-data build/store publication out of the Markdown renderer.
-
-### Issue #335 — stateless selected X/Z provider
-
-Introduced `SelectedMooringShapeProvider` and removed `SelectedShapeStore.Current` from `CalculationSnapshotBuilder`.
-
-### Issue #337 — 2D selected X/Z renderer
-
-Removes alternative/report/fallback geometry from the 2D path. 2D becomes a single selected-X/Z renderer and shows no engineering line when selected calculated nodes are unavailable.
+- **#333** — introduced `CalculationSnapshot` / `CalculationSnapshotBuilder`.
+- **#335** — introduced stateless `SelectedMooringShapeProvider`; snapshot no longer reads `SelectedShapeStore.Current`.
+- **#337** — removed alternative/report/fallback geometry from 2D.
+- **#339** — removes alternative/report/visualization geometry sources from PDF and renders selected X/Z directly.
 
 ## Next migrations
 
-1. Move PDF to one selected X/Z source and remove alternative-store/report-text/visualization geometry fallback.
-2. Move calculation snapshot creation out of the Markdown renderer into application orchestration.
-3. Replace renderer global store reads with explicit snapshot/read-model input.
-4. Prevent new direct consumers of historical shape stores.
-5. Retire mutable shape stores only after direct consumer counts reach zero.
+1. Move calculation snapshot creation out of the Markdown renderer into application orchestration.
+2. Pass explicit selected-shape/read-model data to PDF and 2D instead of letting renderer adapters read `SelectedShapeStore.Current`.
+3. Prevent new direct consumers of historical stores.
+4. Retire `MooringAlternativeShapeStore` when remaining non-renderer consumers are proven unnecessary.
+5. Retire selected/fallback stores only after consumer counts reach zero.
+6. Add deterministic calculation/selected-X/Z regression scenarios before intentional solver changes.
 
 ## Engineering invariant
 
