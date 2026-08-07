@@ -39,12 +39,16 @@ foreach ($scanTerm in $scanTerms) {
 
     if ($references.Count -eq 0) {
         Write-Host "  References: none"
-        continue
+    }
+    else {
+        Write-Host "  References:"
+        foreach ($item in $references) {
+            Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())
+        }
     }
 
-    Write-Host "  References:"
-    foreach ($item in $references) {
-        Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())
+    if ($scanTerm -eq "SelectedShapeStore" -and $references.Count -ne 0) {
+        throw "SelectedShapeStore was retired and must have zero C# references."
     }
 }
 
