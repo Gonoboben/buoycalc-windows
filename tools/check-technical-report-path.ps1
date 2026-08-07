@@ -41,8 +41,15 @@ function Assert-NotContains([string]$content, [string]$needle, [string]$label) {
 
 Assert-FileMissing "Services/ReportBuilder.cs"
 
+Assert-FileExists "ViewModels/MainWindowCalculationDisplayBuilder.cs"
+$displayBuilder = Read-RepoText "ViewModels/MainWindowCalculationDisplayBuilder.cs"
+Assert-Contains $displayBuilder "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "MainWindowCalculationDisplayBuilder"
+Assert-Contains $displayBuilder "ReportBuildBoundary.Build(projectName, environment, buoy, anchor, snapshot)" "MainWindowCalculationDisplayBuilder"
+
 $technicalReportBuilder = Read-RepoText "Services/TechnicalReportBuilder.cs"
-Assert-Contains $technicalReportBuilder "return TechnicalReportMarkdownBuilder.Build(projectName, environment, buoy, anchor, result);" "TechnicalReportBuilder"
+Assert-Contains $technicalReportBuilder "CalculationSnapshot snapshot" "TechnicalReportBuilder"
+Assert-Contains $technicalReportBuilder "return TechnicalReportMarkdownBuilder.Build(projectName, environment, buoy, anchor, snapshot);" "TechnicalReportBuilder"
+Assert-NotContains $technicalReportBuilder "CalculationResult result" "TechnicalReportBuilder"
 
 Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
 Assert-FileExists "ApplicationModel/SelectedMooringShapeProvider.cs"
@@ -72,11 +79,19 @@ Assert-NotContains $selectedShapeProvider "SelectedShapeStore" "SelectedMooringS
 Assert-NotContains $selectedShapeProvider "MooringShapeStore" "SelectedMooringShapeProvider"
 Assert-NotContains $selectedShapeProvider "MooringPrimaryShapeSelectionStore" "SelectedMooringShapeProvider"
 
+$reportBoundary = Read-RepoText "Services/ReportBuildBoundary.cs"
+Assert-Contains $reportBoundary "CalculationSnapshot snapshot" "ReportBuildBoundary"
+Assert-Contains $reportBoundary "UserReportBuilder.Build(environment, snapshot.Result)" "ReportBuildBoundary"
+Assert-Contains $reportBoundary "TechnicalReportBuilder.Build(projectName, environment, buoy, anchor, snapshot)" "ReportBuildBoundary"
+Assert-NotContains $reportBoundary "CalculationSnapshotBuilder.Build" "ReportBuildBoundary"
+
 $markdownBuilder = Read-RepoText "Services/TechnicalReportMarkdownBuilder.cs"
-Assert-Contains $markdownBuilder "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "CalculationSnapshot snapshot" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "var result = snapshot.Result;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var data = snapshot.TechnicalReportData;" "TechnicalReportMarkdownBuilder"
-Assert-NotContains $markdownBuilder "TechnicalReportDataBuilder.Build(environment, result)" "TechnicalReportMarkdownBuilder"
-Assert-NotContains $markdownBuilder "TechnicalReportStorePublisher.Publish(data);" "TechnicalReportMarkdownBuilder"
+Assert-NotContains $markdownBuilder "CalculationSnapshotBuilder.Build" "TechnicalReportMarkdownBuilder"
+Assert-NotContains $markdownBuilder "TechnicalReportDataBuilder.Build" "TechnicalReportMarkdownBuilder"
+Assert-NotContains $markdownBuilder "TechnicalReportStorePublisher.Publish" "TechnicalReportMarkdownBuilder"
 
 $bridgeCalls = @(
     "AppendVectorBalanceRows",
