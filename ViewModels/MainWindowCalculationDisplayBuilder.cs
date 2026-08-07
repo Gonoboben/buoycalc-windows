@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
 using BuoyCalc.Windows.Services;
 
@@ -38,9 +39,10 @@ internal static class MainWindowCalculationDisplayBuilder
         string buoyName,
         string anchorName,
         string anchorType,
-        CalculationResult result)
+        CalculationSnapshot snapshot)
     {
-        var reports = ReportBuildBoundary.Build(projectName, environment, buoy, anchor, result);
+        var result = snapshot.Result;
+        var reports = ReportBuildBoundary.Build(projectName, environment, buoy, anchor, snapshot);
         var elementRows = result.ElementRows.Select(ElementCalculationDisplayRow.From).ToList();
         var sequenceVisualization = MainWindowSequenceVisualizationDisplayBuilder.Build(
             environment.DepthM,
