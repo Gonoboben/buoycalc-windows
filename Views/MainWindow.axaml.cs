@@ -130,7 +130,8 @@ public partial class MainWindow : Window
                 pdfReportText,
                 viewModel.VisualizationDepthM,
                 viewModel.VisualizationLineLengthM,
-                viewModel.VisualizationOffsetM);
+                viewModel.VisualizationOffsetM,
+                viewModel.SelectedShape);
 
             viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildSuccessStatus(path);
         }
