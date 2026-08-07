@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
 
 namespace BuoyCalc.Windows.Services;
@@ -17,7 +18,8 @@ public static class TechnicalReportMarkdownBuilder
     public static string Build(string projectName, EnvironmentInput environment, BuoyInput buoy, AnchorInput anchor, CalculationResult result)
     {
         var sb = new StringBuilder();
-        var data = TechnicalReportDataBuilder.Build(environment, result);
+        var snapshot = CalculationSnapshotBuilder.Build(environment, result);
+        var data = snapshot.TechnicalReportData;
         var tensionRows = data.TensionRows;
         var shape = data.Shape;
         var shapeProjection = data.ShapeProjection;
@@ -30,7 +32,6 @@ public static class TechnicalReportMarkdownBuilder
         var iterativeSolver = data.IterativeSolver;
         var diagnostics = data.Diagnostics;
         var vectorBalance = data.VectorBalance;
-        TechnicalReportStorePublisher.Publish(data);
 
         sb.AppendLine("# BuoyCalc Windows — предварительный отчёт");
         sb.AppendLine();

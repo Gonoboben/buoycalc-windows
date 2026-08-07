@@ -44,8 +44,28 @@ Assert-FileMissing "Services/ReportBuilder.cs"
 $technicalReportBuilder = Read-RepoText "Services/TechnicalReportBuilder.cs"
 Assert-Contains $technicalReportBuilder "return TechnicalReportMarkdownBuilder.Build(projectName, environment, buoy, anchor, result);" "TechnicalReportBuilder"
 
+Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
+$snapshotBoundary = Read-RepoText "ApplicationModel/CalculationSnapshot.cs"
+Assert-Contains $snapshotBoundary "public sealed record CalculationSnapshot(" "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "CalculationResult Result," "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "TechnicalReportData TechnicalReportData," "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "SelectedShapeReadModel? SelectedShape);" "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
+Assert-Contains $snapshotBoundary "TechnicalReportStorePublisher.Publish(data);" "CalculationSnapshotBuilder"
+Assert-Contains $snapshotBoundary "var selectedShape = SelectedShapeStore.Current;" "CalculationSnapshotBuilder"
+
+$dataBuildIndex = $snapshotBoundary.IndexOf("var data = TechnicalReportDataBuilder.Build(environment, result);")
+$publishIndex = $snapshotBoundary.IndexOf("TechnicalReportStorePublisher.Publish(data);")
+$selectedShapeIndex = $snapshotBoundary.IndexOf("var selectedShape = SelectedShapeStore.Current;")
+if ($dataBuildIndex -lt 0 -or $publishIndex -le $dataBuildIndex -or $selectedShapeIndex -le $publishIndex) {
+    throw "CalculationSnapshotBuilder must preserve Build -> Publish -> SelectedShape order."
+}
+
 $markdownBuilder = Read-RepoText "Services/TechnicalReportMarkdownBuilder.cs"
-Assert-Contains $markdownBuilder "TechnicalReportStorePublisher.Publish(data);" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "var data = snapshot.TechnicalReportData;" "TechnicalReportMarkdownBuilder"
+Assert-NotContains $markdownBuilder "TechnicalReportDataBuilder.Build(environment, result)" "TechnicalReportMarkdownBuilder"
+Assert-NotContains $markdownBuilder "TechnicalReportStorePublisher.Publish(data);" "TechnicalReportMarkdownBuilder"
 
 $bridgeCalls = @(
     "AppendVectorBalanceRows",
