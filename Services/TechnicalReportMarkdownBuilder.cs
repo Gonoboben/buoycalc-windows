@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using BuoyCalc.Windows.Application;
+using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
 
 namespace BuoyCalc.Windows.Services;
