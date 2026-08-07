@@ -1,0 +1,69 @@
+name: Behavior-preserving optimization
+description: Architecture, dependency, CI, repository or presentation cleanup without intended engineering-number changes.
+title: "Optimization: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read `AGENTS.md` and `docs/OPTIMIZATION_PLAN.md` first. Default contract: **1 Issue -> 1 branch -> 1 PR**.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What concrete architecture/repository problem should this work package solve?
+      placeholder: Describe the current coupling, duplication, ambiguity or maintenance cost.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Coherent scope
+      description: List the boundaries/files expected to change. Keep this one finished work package.
+    validations:
+      required: true
+  - type: dropdown
+    id: numerical-impact
+    attributes:
+      label: Intended engineering/numerical impact
+      options:
+        - None — behavior-preserving
+        - Presentation-only — calculated values unchanged
+        - Unknown — investigate before implementation
+    validations:
+      required: true
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Engineering invariants to preserve
+      description: Include selected X/Z, solver/formulas, segmentation, signed line weight and other relevant contracts.
+      placeholder: |
+        - selected calculated X/Z remains the only user-facing engineering geometry
+        - no solver/formula changes
+        - 0.20 m segmentation target, no segment-count cap
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation / architecture guards
+      description: What CI scan, regression check or dependency guard proves this boundary cannot regress?
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Explicitly out of scope
+      description: Name adjacent changes that must not enter this PR.
+    validations:
+      required: true
+  - type: checkboxes
+    id: contract
+    attributes:
+      label: Work-package contract
+      options:
+        - label: I will not change solver/physics as a side effect of this optimization.
+          required: true
+        - label: I will not add 3D.
+          required: true
+        - label: I will merge only after all three required CI checks succeed on the exact PR head.
+          required: true

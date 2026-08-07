@@ -1,0 +1,44 @@
+name: Branch Hygiene Dry Run
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  inventory:
+    name: Branch Hygiene Dry Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build branch cleanup inventory
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          pwsh -NoProfile -File tools/branch-hygiene.ps1 `
+            -Repository "${{ github.repository }}" `
+            -OutputDirectory "artifacts/branch-hygiene"
+
+      - name: Add inventory to job summary
+        if: always()
+        shell: pwsh
+        run: |
+          $path = "artifacts/branch-hygiene/branch-hygiene.md"
+          if (Test-Path -LiteralPath $path) {
+            Get-Content -LiteralPath $path -Raw | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          }
+
+      - name: Upload branch hygiene inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-hygiene-dry-run
+          path: artifacts/branch-hygiene/
+          if-no-files-found: error

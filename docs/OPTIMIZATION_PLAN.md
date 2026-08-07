@@ -1,6 +1,6 @@
 # BuoyCalc Windows — Optimization Plan
 
-Date: 2026-08-07  
+Date: 2026-08-08  
 Repository: `Gonoboben/buoycalc-windows`  
 Status: governing roadmap for architecture, physics/model maturity and GitHub process optimization.
 
@@ -139,7 +139,7 @@ Separate preliminary RFC/control documentation is required only when the work pa
 - `main` is the only long-lived development branch.
 - Prefer one active implementation branch at a time; at most a small bounded number of intentional parallel branches.
 - Use names such as `opt/<issue>-<topic>`, `physics/<issue>-<topic>`, `fix/<issue>-<topic>`.
-- Delete merged/superseded branches automatically where permissions allow.
+- Delete merged/superseded branches automatically where permissions allow, but only after a reviewed dry-run inventory demonstrates safe candidates.
 - Do not create marker/live/result/diagnostic branches for one logical task.
 - Do not create no-op commits merely to trigger CI; fix workflow reliability instead.
 
@@ -169,24 +169,31 @@ Quality gate should run:
 
 Root `AGENTS.md` is mandatory. Agents must read it before changing code.
 
-Add later:
+Implemented in the governance work package for Issue #345:
 
-- `.github/pull_request_template.md`;
-- Issue form for optimization tasks;
-- Issue form for physics/RFC changes;
-- labels: `architecture`, `physics`, `behavior-preserving`, `validation`, `agent-ready`, `blocked-ci`;
-- workflow that comments when a PR violates branch/PR conventions;
-- workflow/manual job for stale merged branch cleanup.
+- `.github/pull_request_template.md` encodes the one-Issue/one-branch/one-PR contract, numerical-impact statement, invariants, validation, required CI and explicit out-of-scope section;
+- `.github/ISSUE_TEMPLATE/optimization.yml` separates behavior-preserving optimization from physics work;
+- `.github/ISSUE_TEMPLATE/physics-rfc.yml` requires equations, assumptions, units/sign conventions, affected modes, tolerances, limiting behavior, historical impact and validation evidence before solver/physics implementation;
+- `tools/check-repository-governance.ps1` is executed inside the existing required `.NET Build` and prevents silent weakening of these contracts or conversion of branch hygiene from read-only dry-run behavior.
+
+Still planned:
+
+- repository labels such as `architecture`, `physics`, `behavior-preserving`, `validation`, `agent-ready`, `blocked-ci`;
+- optional convention checks for branch naming / missing Issue links;
+- reviewed branch-deletion mode only after dry-run evidence has been inspected.
 
 ### C. Branch hygiene
 
-Create a safe cleanup tool that:
+The first safe branch-hygiene stage is implemented as **inventory only**:
 
-- never deletes `main`;
-- never deletes a branch belonging to an open PR;
-- deletes only merged or explicitly superseded branches;
-- supports dry-run first;
-- records a cleanup artifact/list before deletion.
+- `tools/branch-hygiene.ps1` calls only GitHub read APIs;
+- `.github/workflows/branch-hygiene.yml` is manual `workflow_dispatch` and uses read-only `contents` / `pull-requests` permissions;
+- the workflow uploads JSON and Markdown artifacts instead of deleting branches;
+- the default branch, protected branches and branches of open PRs are never cleanup candidates;
+- because optimization PRs use squash merge, ancestry is not treated as sufficient evidence;
+- a candidate is reported only when the branch current head SHA exactly matches the head SHA of a merged PR, or of a closed unmerged PR explicitly marked superseded/duplicate.
+
+A future deletion work package may be considered only after the dry-run artifact is reviewed. It must remain conservative, reviewable and separate from physics/application changes.
 
 ## 8. Physics and model maturity roadmap
 
@@ -244,13 +251,16 @@ No solver promotion to production-grade status without validation evidence.
 
 ### Phase 0 — governance baseline
 
-Deliverables:
+Delivered:
 
 - `docs/OPTIMIZATION_PLAN.md`;
 - root `AGENTS.md`;
-- new one-Issue/one-PR work-package policy.
+- one-Issue/one-PR work-package policy;
+- PR and Issue templates for optimization vs physics/RFC work;
+- repository-governance CI guard;
+- read-only branch-hygiene dry-run workflow.
 
-Done when merged with all required CI green.
+Branch deletion is deliberately not enabled in Phase 0/7 dry-run work.
 
 ### Phase 1 — dependency inventory and calculation snapshot boundary
 
@@ -265,6 +275,8 @@ Work packages:
 
 No numerical changes.
 
+Status on 2026-08-08: the immutable `CalculationSnapshot` exists, selected X/Z is derived through a stateless provider, and technical/user report rendering consumes a snapshot built before report assembly. Compatibility stores remain for transitional 2D/PDF wiring.
+
 ### Phase 2 — single selected X/Z source
 
 Goal: remove competing user-facing geometry sources.
@@ -278,6 +290,8 @@ Work packages:
 5. retire obsolete stores once consumer count reaches zero.
 
 No physics change; output differences require explicit review.
+
+Status on 2026-08-08: 2D and PDF render selected X/Z only; alternative-shape, report-parsed and synthesized visualization geometry have been removed from their user-facing engineering paths. The remaining migration debt is explicit handoff of selected shape/snapshot instead of `SelectedShapeStore.Current` adapter reads.
 
 ### Phase 3 — calculation pipeline decomposition
 
@@ -326,35 +340,35 @@ Each physical change requires its own RFC/validation work package.
 
 Goal: presentation is a pure projection of engineering results.
 
-- 2D becomes a selected-X/Z renderer only;
-- remove alternative/fallback comparison from normal user UI;
+- 2D is a selected-X/Z renderer only;
+- alternative/fallback comparison has been removed from normal 2D user rendering;
 - PDF uses one selected engineering geometry;
 - full technical report may retain solver history and fallback diagnostics;
 - user-facing statuses are derived from engineering diagnostics/read models.
 
 ### Phase 7 — repository hygiene and release discipline
 
-- clean historical merged/superseded branches with a dry-run cleanup workflow;
+- read-only merged/superseded branch inventory is implemented as a manual dry-run workflow;
+- actual deletion remains disabled until the artifact is reviewed and a separate safe deletion work package is approved;
 - keep `main` as the only permanent development branch;
 - create checkpoint tags/releases for verified milestones;
 - keep architecture and physics readiness statuses separate from marketing/app version numbers.
 
 ## 10. Work-package priority order
 
-After Phase 0, execute in this order unless a blocking defect requires otherwise:
+After the current governance/architecture stabilization, execute in this order unless a blocking defect requires otherwise:
 
 ```text
-1. CalculationSnapshot / dependency inventory
-2. single selected X/Z provider boundary
-3. remove 2D/PDF/report direct store fallbacks
-4. report/calculation orchestration separation
-5. regression harness
-6. physical residuals and solver validation
-7. seabed/anchor and mode-aware wave physics
-8. branch-hygiene automation and long-term release cleanup
+1. eliminate remaining explicit selected-shape global-store reads from renderer wiring
+2. deterministic calculation + selected-X/Z regression harness
+3. move core calculation/snapshot orchestration into a dedicated application use case
+4. retire obsolete shape/report stores after consumer count reaches zero
+5. physical residuals and solver validation
+6. seabed/anchor and mode-aware wave physics
+7. reviewed branch cleanup / release discipline
 ```
 
-Repository hygiene automation can be developed in parallel only when it does not compete with calculation work.
+Repository hygiene automation may continue in parallel only when it is read-only or otherwise proven not to compete with calculation work.
 
 ## 11. Definition of done for optimization work
 
@@ -369,16 +383,11 @@ A work package is complete only when:
 - agent instructions remain satisfied;
 - the PR is merged and its branch can be retired.
 
-## 12. Immediate next work package after this baseline
+## 12. Immediate next work packages
 
-Create a read-only dependency inventory of:
+After the governance dry-run package is merged:
 
-- `CalculationResult` producers/consumers;
-- `MooringShapeStore`;
-- `MooringAlternativeShapeStore`;
-- `MooringIterativeSolverStore`;
-- `MooringPrimaryShapeSelectionStore`;
-- selected-shape/read-model consumers;
-- PDF/2D/report geometry consumers.
-
-From that inventory define the minimal `CalculationSnapshot` boundary. The first implementation must be behavior-preserving and must not change the solver or selected X/Z coordinates.
+1. inspect the branch-hygiene artifact before authorizing any deletion capability;
+2. continue architecture migration by passing selected X/Z / calculation snapshot explicitly to 2D and PDF without introducing another global static store;
+3. build deterministic engineering regression scenarios for important scalar results, segment rows and selected X/Z nodes;
+4. only after that regression foundation begin intentional solver/physics work through the dedicated Physics/RFC process.
