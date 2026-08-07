@@ -1,3 +1,4 @@
+using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
 
 namespace BuoyCalc.Windows.Services;
@@ -13,10 +14,10 @@ public static class ReportBuildBoundary
         EnvironmentInput environment,
         BuoyInput buoy,
         AnchorInput anchor,
-        CalculationResult result)
+        CalculationSnapshot snapshot)
     {
         return new ReportBuildResult(
-            UserReportBuilder.Build(environment, result),
-            TechnicalReportBuilder.Build(projectName, environment, buoy, anchor, result));
+            UserReportBuilder.Build(environment, snapshot.Result),
+            TechnicalReportBuilder.Build(projectName, environment, buoy, anchor, snapshot));
     }
 }
