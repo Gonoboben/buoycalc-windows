@@ -39,9 +39,9 @@ internal static class MainWindowCalculationDisplayBuilder
         string buoyName,
         string anchorName,
         string anchorType,
-        CalculationSnapshot snapshot)
+        CalculationResult result)
     {
-        var result = snapshot.Result;
+        var snapshot = CalculationSnapshotBuilder.Build(environment, result);
         var reports = ReportBuildBoundary.Build(projectName, environment, buoy, anchor, snapshot);
         var elementRows = result.ElementRows.Select(ElementCalculationDisplayRow.From).ToList();
         var sequenceVisualization = MainWindowSequenceVisualizationDisplayBuilder.Build(
