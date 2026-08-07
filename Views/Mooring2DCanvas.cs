@@ -38,7 +38,7 @@ public sealed class Mooring2DCanvas : Control
         }
 
         var vm = DataContext as MainWindowViewModel;
-        var diagramSource = Mooring2DDiagramSourceSelector.Select();
+        var diagramSource = Mooring2DDiagramSourceSelector.Select(vm?.SelectedShape);
         var selectedShape = diagramSource.HasSelectedShape ? diagramSource.SelectedShape : null;
         var depth = Math.Max(0, selectedShape?.Shape.DepthM ?? vm?.VisualizationDepthM ?? 0);
         var lineLength = Math.Max(0, selectedShape?.Shape.LineLengthM ?? vm?.VisualizationLineLengthM ?? 0);
