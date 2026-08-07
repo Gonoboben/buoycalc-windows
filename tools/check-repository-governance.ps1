@@ -47,6 +47,7 @@ Assert-Contains $physicsForm "Acceptance tolerances" "Physics RFC issue form"
 Assert-Contains $physicsForm "Validation evidence plan" "Physics RFC issue form"
 Assert-Contains $physicsForm "Visual agreement alone will not be treated as validation" "Physics RFC issue form"
 
+$branchScriptPath = Join-Path $repoRoot "tools/branch-hygiene.ps1"
 $branchScript = Read-RepoText "tools/branch-hygiene.ps1"
 Assert-Contains $branchScript "DRY RUN ONLY" "Branch hygiene script"
 Assert-Contains $branchScript '$defaultBranch' "Branch hygiene script"
@@ -60,6 +61,17 @@ Assert-NotContains $branchScript "-Method Delete" "Branch hygiene script"
 Assert-NotContains $branchScript "git push --delete" "Branch hygiene script"
 Assert-NotContains $branchScript "git branch -D" "Branch hygiene script"
 Assert-NotContains $branchScript "Remove-Git" "Branch hygiene script"
+
+$tokens = $null
+$parseErrors = $null
+[void][System.Management.Automation.Language.Parser]::ParseFile(
+    $branchScriptPath,
+    [ref]$tokens,
+    [ref]$parseErrors)
+if (@($parseErrors).Count -gt 0) {
+    $details = ($parseErrors | ForEach-Object { $_.Message }) -join "; "
+    throw "Branch hygiene PowerShell parse failed: $details"
+}
 
 $workflow = Read-RepoText ".github/workflows/branch-hygiene.yml"
 Assert-Contains $workflow "workflow_dispatch:" "Branch hygiene workflow"
