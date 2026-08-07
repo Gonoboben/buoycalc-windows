@@ -45,6 +45,7 @@ $technicalReportBuilder = Read-RepoText "Services/TechnicalReportBuilder.cs"
 Assert-Contains $technicalReportBuilder "return TechnicalReportMarkdownBuilder.Build(projectName, environment, buoy, anchor, result);" "TechnicalReportBuilder"
 
 Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
+Assert-FileExists "ApplicationModel/SelectedMooringShapeProvider.cs"
 $snapshotBoundary = Read-RepoText "ApplicationModel/CalculationSnapshot.cs"
 Assert-Contains $snapshotBoundary "public sealed record CalculationSnapshot(" "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "CalculationResult Result," "CalculationSnapshot"
@@ -52,14 +53,24 @@ Assert-Contains $snapshotBoundary "TechnicalReportData TechnicalReportData," "Ca
 Assert-Contains $snapshotBoundary "SelectedShapeReadModel? SelectedShape);" "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
 Assert-Contains $snapshotBoundary "TechnicalReportStorePublisher.Publish(data);" "CalculationSnapshotBuilder"
-Assert-Contains $snapshotBoundary "var selectedShape = SelectedShapeStore.Current;" "CalculationSnapshotBuilder"
+Assert-Contains $snapshotBoundary "var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);" "CalculationSnapshotBuilder"
+Assert-NotContains $snapshotBoundary "SelectedShapeStore.Current" "CalculationSnapshotBuilder"
 
 $dataBuildIndex = $snapshotBoundary.IndexOf("var data = TechnicalReportDataBuilder.Build(environment, result);")
 $publishIndex = $snapshotBoundary.IndexOf("TechnicalReportStorePublisher.Publish(data);")
-$selectedShapeIndex = $snapshotBoundary.IndexOf("var selectedShape = SelectedShapeStore.Current;")
+$selectedShapeIndex = $snapshotBoundary.IndexOf("var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);")
 if ($dataBuildIndex -lt 0 -or $publishIndex -le $dataBuildIndex -or $selectedShapeIndex -le $publishIndex) {
-    throw "CalculationSnapshotBuilder must preserve Build -> Publish -> SelectedShape order."
+    throw "CalculationSnapshotBuilder must preserve Build -> Publish -> stateless selected X/Z order."
 }
+
+$selectedShapeProvider = Read-RepoText "ApplicationModel/SelectedMooringShapeProvider.cs"
+Assert-Contains $selectedShapeProvider "MooringPrimaryShapeSelector.Select(fallbackShape, iterativeSolver)" "SelectedMooringShapeProvider"
+Assert-Contains $selectedShapeProvider "selection.Shape" "SelectedMooringShapeProvider"
+Assert-Contains $selectedShapeProvider "selection.UsesDiscreteLoads" "SelectedMooringShapeProvider"
+Assert-Contains $selectedShapeProvider "selection.Gate.Decision" "SelectedMooringShapeProvider"
+Assert-NotContains $selectedShapeProvider "SelectedShapeStore" "SelectedMooringShapeProvider"
+Assert-NotContains $selectedShapeProvider "MooringShapeStore" "SelectedMooringShapeProvider"
+Assert-NotContains $selectedShapeProvider "MooringPrimaryShapeSelectionStore" "SelectedMooringShapeProvider"
 
 $markdownBuilder = Read-RepoText "Services/TechnicalReportMarkdownBuilder.cs"
 Assert-Contains $markdownBuilder "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "TechnicalReportMarkdownBuilder"
