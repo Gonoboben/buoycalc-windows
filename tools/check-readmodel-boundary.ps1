@@ -27,6 +27,12 @@ function Assert-Contains([string]$content, [string]$needle, [string]$label) {
     }
 }
 
+function Assert-NotContains([string]$content, [string]$needle, [string]$label) {
+    if ($content.Contains($needle)) {
+        throw "$label contains forbidden text: $needle"
+    }
+}
+
 $markerPath = "docs/CONTROL_MARK_CALCULATION_RESULT_READ_MODEL_BOUNDARY_2026-07-02.md"
 Assert-FileExists $markerPath
 
@@ -44,17 +50,29 @@ Assert-FileExists "Services/TechnicalReportMarkdownBuilder.cs"
 Assert-FileExists "Services/TechnicalReportDataBuilder.cs"
 Assert-FileExists "Services/TechnicalReportData.cs"
 Assert-FileExists "Services/TechnicalReportStorePublisher.cs"
+Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
 
 $entryBuilder = Read-RepoText "Services/TechnicalReportBuilder.cs"
 Assert-Contains $entryBuilder "CalculationResult result" "TechnicalReportBuilder"
 Assert-Contains $entryBuilder "return TechnicalReportMarkdownBuilder.Build(projectName, environment, buoy, anchor, result);" "TechnicalReportBuilder"
 
 $markdownBuilder = Read-RepoText "Services/TechnicalReportMarkdownBuilder.cs"
-Assert-Contains $markdownBuilder "TechnicalReportDataBuilder.Build(environment, result)" "TechnicalReportMarkdownBuilder"
-Assert-Contains $markdownBuilder "TechnicalReportStorePublisher.Publish(data);" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "CalculationSnapshotBuilder.Build(environment, result)" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "var data = snapshot.TechnicalReportData;" "TechnicalReportMarkdownBuilder"
+Assert-NotContains $markdownBuilder "TechnicalReportDataBuilder.Build(environment, result)" "TechnicalReportMarkdownBuilder"
+Assert-NotContains $markdownBuilder "TechnicalReportStorePublisher.Publish(data);" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var tensionRows = data.TensionRows;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var shape = data.Shape;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var diagnostics = data.Diagnostics;" "TechnicalReportMarkdownBuilder"
+
+$snapshotBoundary = Read-RepoText "ApplicationModel/CalculationSnapshot.cs"
+Assert-Contains $snapshotBoundary "public sealed record CalculationSnapshot(" "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "CalculationResult Result," "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "TechnicalReportData TechnicalReportData," "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "SelectedShapeReadModel? SelectedShape);" "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
+Assert-Contains $snapshotBoundary "TechnicalReportStorePublisher.Publish(data);" "CalculationSnapshotBuilder"
+Assert-Contains $snapshotBoundary "var selectedShape = SelectedShapeStore.Current;" "CalculationSnapshotBuilder"
 
 $dataBuilder = Read-RepoText "Services/TechnicalReportDataBuilder.cs"
 Assert-Contains $dataBuilder "public static TechnicalReportData Build(EnvironmentInput environment, CalculationResult result)" "TechnicalReportDataBuilder"
