@@ -1,9 +1,7 @@
 namespace BuoyCalc.Windows.Services;
 
 internal sealed record PdfDiagramSource(
-    MooringAlternativeShapeDisplayData? AlternativeShape,
     SelectedShapeReadModel? SelectedShape,
-    bool HasAlternativeShape,
     bool HasSelectedShape,
     double ShapeOffsetM);
 
@@ -17,6 +15,6 @@ internal static class PdfDiagramSourceSelector
             ? selectedShape!.Shape.HorizontalOffsetM
             : 0;
 
-        return new PdfDiagramSource(null, selectedShape, false, hasSelectedShape, shapeOffsetM);
+        return new PdfDiagramSource(selectedShape, hasSelectedShape, shapeOffsetM);
     }
 }
