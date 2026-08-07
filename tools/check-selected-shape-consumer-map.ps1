@@ -27,27 +27,20 @@ function Assert-Contains([string]$content, [string]$needle, [string]$label) {
     }
 }
 
+function Assert-NotContains([string]$content, [string]$needle, [string]$label) {
+    if ($content.Contains($needle)) {
+        throw "$label contains forbidden text: $needle"
+    }
+}
+
 $markerPath = "docs/CONTROL_MARK_SELECTED_SHAPE_CONSUMERS_2026-07-03.md"
 Assert-FileExists $markerPath
 
 $marker = Read-RepoText $markerPath
-Assert-Contains $marker "# Control mark: selected shape consumers" "Selected shape consumer map"
-Assert-Contains $marker "selected-shape-consumer-scan" "Selected shape consumer map"
-Assert-Contains $marker "selected-shape-consumers.txt" "Selected shape consumer map"
-Assert-Contains $marker "SelectedShapeStore" "Selected shape consumer map"
-Assert-Contains $marker "Reference count: 4" "Selected shape consumer map"
-Assert-Contains $marker "MooringPrimaryShapeSelectionStore" "Selected shape consumer map"
-Assert-Contains $marker "Reference count: 5" "Selected shape consumer map"
-Assert-Contains $marker "MooringShapeStore.Current" "Selected shape consumer map"
-Assert-Contains $marker "Reference count: 3" "Selected shape consumer map"
-Assert-Contains $marker "PdfReportBuilder.cs:92: var selectedShape = SelectedShapeStore.Current;" "Selected shape consumer map"
-Assert-Contains $marker "Mooring2DCanvas.cs:67: var selectedShape = SelectedShapeStore.Current;" "Selected shape consumer map"
-Assert-Contains $marker "PDF renderer / PDF diagram source selection" "Selected shape consumer map"
-Assert-Contains $marker "2D renderer / engineering shape drawing" "Selected shape consumer map"
-Assert-Contains $marker "MooringPrimaryShapeSelectionStore.Current" "Selected shape consumer map"
-Assert-Contains $marker "fallback MooringShapeStore.Current" "Selected shape consumer map"
-Assert-Contains $marker "PDF and 2D are already the first consumers using" "Selected shape consumer map"
-Assert-Contains $marker "No solver physics changes are allowed in this architecture-stabilization phase." "Selected shape consumer map"
+Assert-Contains $marker "# Control mark: selected shape consumers" "Selected shape consumer historical marker"
+Assert-Contains $marker "selected-shape-consumer-scan" "Selected shape consumer historical marker"
+Assert-Contains $marker "selected-shape-consumers.txt" "Selected shape consumer historical marker"
+Assert-Contains $marker "No solver physics changes are allowed in this architecture-stabilization phase." "Selected shape consumer historical marker"
 
 Assert-FileExists "Services/PdfReportBuilder.cs"
 Assert-FileExists "Services/PdfDiagramSourceSelector.cs"
@@ -56,6 +49,7 @@ Assert-FileExists "Views/Mooring2DCanvas.cs"
 Assert-FileExists "Services/SelectedShapeStore.cs"
 Assert-FileExists "Services/MooringIterativeSolver.cs"
 Assert-FileExists "Services/MooringPrimaryShapeGate.cs"
+Assert-FileExists "ApplicationModel/SelectedMooringShapeProvider.cs"
 
 $pdfReportBuilder = Read-RepoText "Services/PdfReportBuilder.cs"
 Assert-Contains $pdfReportBuilder "var diagramSource = PdfDiagramSourceSelector.Select(reportText, visualizationOffsetM);" "PdfReportBuilder"
@@ -66,25 +60,34 @@ Assert-Contains $pdfDiagramSourceSelector "new PdfDiagramSource(alternativeShape
 Assert-Contains $pdfDiagramSourceSelector "TryReadReportMetric(reportText" "PdfDiagramSourceSelector"
 
 $canvas = Read-RepoText "Views/Mooring2DCanvas.cs"
-Assert-Contains $canvas "var diagramSource = Mooring2DDiagramSourceSelector.Select(vm?.ReportText);" "Mooring2DCanvas"
-Assert-Contains $canvas "if (diagramSource.HasSelectedShape)" "Mooring2DCanvas"
-Assert-Contains $canvas "DrawEngineeringComparison(context, diagramSource.SelectedShape!" "Mooring2DCanvas"
-Assert-Contains $canvas "if (diagramSource.ParsedNodes.Count >= 2)" "Mooring2DCanvas"
+Assert-Contains $canvas "var diagramSource = Mooring2DDiagramSourceSelector.Select();" "Mooring2DCanvas"
+Assert-Contains $canvas "DrawSelectedShape(context, selectedShape" "Mooring2DCanvas"
+Assert-Contains $canvas "DrawUnavailableState(context" "Mooring2DCanvas"
+Assert-Contains $canvas "var xScale = zScale;" "Mooring2DCanvas"
+Assert-Contains $canvas "shape.HorizontalOffsetM" "Mooring2DCanvas"
+Assert-NotContains $canvas "MooringAlternativeShape" "Mooring2DCanvas"
+Assert-NotContains $canvas "DrawEngineeringComparison" "Mooring2DCanvas"
+Assert-NotContains $canvas "DrawFallbackLine" "Mooring2DCanvas"
+Assert-NotContains $canvas "ParsedNodes" "Mooring2DCanvas"
+Assert-NotContains $canvas "ReportText" "Mooring2DCanvas"
+Assert-NotContains $canvas "VisualizationOffsetM" "Mooring2DCanvas"
+Assert-NotContains $canvas "SequenceDiagramLines" "Mooring2DCanvas"
 
 $diagramSourceSelector = Read-RepoText "Services/Mooring2DDiagramSourceSelector.cs"
 Assert-Contains $diagramSourceSelector "var selectedShape = SelectedShapeStore.Current;" "Mooring2DDiagramSourceSelector"
-Assert-Contains $diagramSourceSelector "var alternativeShape = MooringAlternativeShapeStore.Current;" "Mooring2DDiagramSourceSelector"
 Assert-Contains $diagramSourceSelector "selectedShape is not null && selectedShape.Shape.Nodes.Count >= 2" "Mooring2DDiagramSourceSelector"
-Assert-Contains $diagramSourceSelector "ParseCalculatedNodes(reportText)" "Mooring2DDiagramSourceSelector"
-Assert-Contains $diagramSourceSelector "## Расчётная форма постановки X/Z" "Mooring2DDiagramSourceSelector"
-Assert-Contains $diagramSourceSelector "## Расчётные узлы линии X/Z" "Mooring2DDiagramSourceSelector"
+Assert-Contains $diagramSourceSelector "new Mooring2DDiagramSource(selectedShape, hasSelectedShape)" "Mooring2DDiagramSourceSelector"
+Assert-NotContains $diagramSourceSelector "MooringAlternativeShapeStore" "Mooring2DDiagramSourceSelector"
+Assert-NotContains $diagramSourceSelector "ParseCalculatedNodes" "Mooring2DDiagramSourceSelector"
+Assert-NotContains $diagramSourceSelector "reportText" "Mooring2DDiagramSourceSelector"
+Assert-NotContains $diagramSourceSelector "Расчётная форма постановки X/Z" "Mooring2DDiagramSourceSelector"
+Assert-NotContains $diagramSourceSelector "Расчётные узлы линии X/Z" "Mooring2DDiagramSourceSelector"
 
 $selectedShapeStore = Read-RepoText "Services/SelectedShapeStore.cs"
 Assert-Contains $selectedShapeStore "public static class SelectedShapeStore" "SelectedShapeStore"
 Assert-Contains $selectedShapeStore "public static SelectedShapeReadModel? Current => BuildCurrent();" "SelectedShapeStore"
 Assert-Contains $selectedShapeStore "var selection = MooringPrimaryShapeSelectionStore.Current;" "SelectedShapeStore"
 Assert-Contains $selectedShapeStore "var fallbackShape = MooringShapeStore.Current;" "SelectedShapeStore"
-Assert-Contains $selectedShapeStore "Форма выбрана без gate selection" "SelectedShapeStore"
 
 $iterativeSolver = Read-RepoText "Services/MooringIterativeSolver.cs"
 Assert-Contains $iterativeSolver "MooringPrimaryShapeSelectionStore.Set(selection);" "MooringIterativeSolver"
@@ -93,5 +96,9 @@ Assert-Contains $iterativeSolver "MooringShapeStore.Set(selection.Shape);" "Moor
 $primaryShapeGate = Read-RepoText "Services/MooringPrimaryShapeGate.cs"
 Assert-Contains $primaryShapeGate "public static class MooringPrimaryShapeSelectionStore" "MooringPrimaryShapeGate"
 Assert-Contains $primaryShapeGate "public static MooringPrimaryShapeSelectionResult? Current { get; private set; }" "MooringPrimaryShapeGate"
+
+$selectedShapeProvider = Read-RepoText "ApplicationModel/SelectedMooringShapeProvider.cs"
+Assert-Contains $selectedShapeProvider "MooringPrimaryShapeSelector.Select(fallbackShape, iterativeSolver)" "SelectedMooringShapeProvider"
+Assert-NotContains $selectedShapeProvider "SelectedShapeStore" "SelectedMooringShapeProvider"
 
 Write-Host "Selected shape consumer map smoke check passed."
