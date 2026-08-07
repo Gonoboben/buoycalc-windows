@@ -20,7 +20,7 @@ public static class CalculationSnapshotBuilder
     {
         var data = TechnicalReportDataBuilder.Build(environment, result);
         TechnicalReportStorePublisher.Publish(data);
-        var selectedShape = SelectedShapeStore.Current;
+        var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);
 
         return new CalculationSnapshot(
             result,
