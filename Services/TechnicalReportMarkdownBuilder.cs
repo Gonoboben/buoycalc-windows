@@ -15,10 +15,10 @@ namespace BuoyCalc.Windows.Services;
 /// </summary>
 public static class TechnicalReportMarkdownBuilder
 {
-    public static string Build(string projectName, EnvironmentInput environment, BuoyInput buoy, AnchorInput anchor, CalculationResult result)
+    public static string Build(string projectName, EnvironmentInput environment, BuoyInput buoy, AnchorInput anchor, CalculationSnapshot snapshot)
     {
         var sb = new StringBuilder();
-        var snapshot = CalculationSnapshotBuilder.Build(environment, result);
+        var result = snapshot.Result;
         var data = snapshot.TechnicalReportData;
         var tensionRows = data.TensionRows;
         var shape = data.Shape;
