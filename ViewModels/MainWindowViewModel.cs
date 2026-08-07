@@ -41,6 +41,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _safetyFactor = "5";
     private string _resultText = "Нажмите «Рассчитать».";
     private string _reportText = "";
+    private SelectedShapeReadModel? _selectedShape;
     private string _sequenceSummary = "";
     private string _projectStatusText = "Проект ещё не сохранён.";
     private string _buoyLibraryStatusText = "Библиотека готова.";
@@ -173,6 +174,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string SafetyFactor { get => _safetyFactor; set => SetProperty(ref _safetyFactor, value); }
     public string ResultText { get => _resultText; set => SetProperty(ref _resultText, value); }
     public string ReportText { get => _reportText; set => SetProperty(ref _reportText, value); }
+    public SelectedShapeReadModel? SelectedShape { get => _selectedShape; private set => SetProperty(ref _selectedShape, value); }
     public string SequenceSummary { get => _sequenceSummary; set => SetProperty(ref _sequenceSummary, value); }
     public string ProjectStatusText { get => _projectStatusText; set => SetProperty(ref _projectStatusText, value); }
     public string BuoyLibraryStatusText { get => _buoyLibraryStatusText; set => SetProperty(ref _buoyLibraryStatusText, value); }
@@ -501,6 +503,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         SafetyFactor = template.SafetyFactor;
         ResultText = template.ResultText;
         ReportText = template.ReportText;
+        SelectedShape = null;
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
 
@@ -686,6 +689,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         SafetyFactor = restore.SafetyFactor;
         ResultText = "Проект загружен. Нажмите «Рассчитать».";
         ReportText = "";
+        SelectedShape = null;
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
 
@@ -831,6 +835,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             ElementRows.Add(row);
         }
 
+        SelectedShape = display.SelectedShape;
         ResultText = display.UserResultText;
         ReportText = display.TechnicalReportText;
         SequenceSummary = display.SequenceSummary;

@@ -6,9 +6,8 @@ internal sealed record Mooring2DDiagramSource(
 
 internal static class Mooring2DDiagramSourceSelector
 {
-    public static Mooring2DDiagramSource Select()
+    public static Mooring2DDiagramSource Select(SelectedShapeReadModel? selectedShape)
     {
-        var selectedShape = SelectedShapeStore.Current;
         var hasSelectedShape = selectedShape is not null && selectedShape.Shape.Nodes.Count >= 2;
         return new Mooring2DDiagramSource(selectedShape, hasSelectedShape);
     }

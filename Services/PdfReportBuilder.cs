@@ -25,7 +25,8 @@ public static class PdfReportBuilder
         string reportText,
         double visualizationDepthM,
         double visualizationLineLengthM,
-        double visualizationOffsetM)
+        double visualizationOffsetM,
+        SelectedShapeReadModel? selectedShape)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? ".");
 
@@ -36,7 +37,7 @@ public static class PdfReportBuilder
 
         var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
         var sequence = sequenceLines.ToList();
-        var diagramSource = PdfDiagramSourceSelector.Select();
+        var diagramSource = PdfDiagramSourceSelector.Select(selectedShape);
         var clarifiedResultText = NormalizeResultText(resultText, diagramSource.ShapeOffsetM);
 
         writer.BeginPage();
