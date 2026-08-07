@@ -53,18 +53,16 @@ public static class PdfReportBuilder
 
         writer.BeginPage();
         writer.Title("Схема постановки");
-        if (diagramSource.HasAlternativeShape)
+        if (diagramSource.HasSelectedShape)
         {
-            writer.Text("Расчётная 2D-схема PDF построена по форме с дискретными элементами. Эта форма ближе к натурной цепочке: учитывает приборы, соединители и локальные нагрузки. Техническая fallback-форма в пользовательский PDF не выводится.", 10);
+            writer.Text("PDF построен по выбранной расчётной форме X/Z. Это та же инженерная геометрия, которая выбрана расчётным gate/selector; PDF не строит собственную или альтернативную форму.", 10);
             writer.Space(10);
-            writer.AlternativeShapeDiagram(diagramSource.AlternativeShape!);
+            writer.SelectedShapeDiagram(diagramSource.SelectedShape!);
         }
         else
         {
-            writer.Text(diagramSource.HasSelectedShape
-                ? "Форма с дискретными элементами пока недоступна. PDF использует выбранную форму для краткой оценки сноса, но техническую fallback-схему не выводит."
-                : "Форма с дискретными элементами пока недоступна. Пользовательский PDF не выводит техническую fallback-форму.", 10);
-            writer.Text($"Глубина: {visualizationDepthM:0.##} м; длина линии: {visualizationLineLengthM:0.##} м; расчётный снос: {diagramSource.ShapeOffsetM:0.##} м.", 10);
+            writer.Text("Выбранная расчётная форма X/Z недоступна. Пользовательский PDF не строит приблизительную или fallback-геометрию вместо расчётных координат.", 10);
+            writer.Text($"Глубина проекта: {visualizationDepthM:0.##} м; длина линии: {visualizationLineLengthM:0.##} м. Эти значения приведены только как исходные параметры, схема X/Z не построена.", 10);
         }
 
         writer.Space(12);
@@ -170,7 +168,7 @@ public static class PdfReportBuilder
             }
         }
 
-        public void AlternativeShapeDiagram(MooringAlternativeShapeDisplayData alternative)
+        public void SelectedShapeDiagram(SelectedShapeReadModel selected)
         {
             const float diagramHeight = 430;
             EnsureSpace(diagramHeight + 20);
@@ -203,11 +201,12 @@ public static class PdfReportBuilder
             _canvas.DrawRect(new SKRect(x, plotBottomY, x + width, plotBottomY + 28), bottomPaint);
             _canvas.DrawRect(new SKRect(x, plotBottomY, x + width, plotBottomY + 28), borderPaint);
 
-            var nodes = alternative.Shape.Rows.Select(v => new PlotNode(v.XOffsetM, v.ZDepthM, v.SourceElement)).ToList();
+            var shape = selected.Shape;
+            var nodes = shape.Nodes.Select(v => new PlotNode(v.XOffsetM, v.ZDepthM, v.Label)).ToList();
             var minX = nodes.Min(v => v.X);
             var maxX = nodes.Max(v => v.X);
             var maxZ = Math.Max(0.0001, nodes.Max(v => v.Z));
-            var drawingDepth = Math.Max(1, Math.Max(alternative.Shape.AnchorDepthM, maxZ));
+            var drawingDepth = Math.Max(1, Math.Max(shape.DepthM, maxZ));
             var horizontalSpan = Math.Max(0.0001, maxX - minX);
             var scale = Math.Min((width - 110) / horizontalSpan, plotHeight / drawingDepth);
             var spanX = horizontalSpan * scale;
@@ -229,18 +228,11 @@ public static class PdfReportBuilder
                 _canvas.DrawCircle(points[i], 3.8f, nodeBorderPaint);
             }
 
-            foreach (var discrete in alternative.DiscreteNodes.Rows.Where(v => v.Kind != "Буй" && v.Kind != "Якорь").Take(14))
-            {
-                var point = Map(discrete.AlternativeXOffsetM, discrete.AlternativeZDepthM);
-                _canvas.DrawCircle(point, 5.5f, nodePaint);
-                _canvas.DrawCircle(point, 5.5f, nodeBorderPaint);
-            }
-
             var buoyPoint = points[0];
             var anchorPoint = points[^1];
-            var userShapeStatus = alternative.Shape.Converged ? "форма: ОК" : "форма: требует проверки";
+            var userShapeStatus = shape.Converged ? "форма: ОК" : "форма: требует проверки";
             _canvas.DrawCircle(buoyPoint, 12, buoyPaint);
-            _canvas.DrawCircle(buoyPoint, 12, alternative.Shape.Converged ? nodeBorderPaint : warningPaint);
+            _canvas.DrawCircle(buoyPoint, 12, shape.Converged ? nodeBorderPaint : warningPaint);
             _canvas.DrawRect(new SKRect(anchorPoint.X - 15, anchorPoint.Y - 8, anchorPoint.X + 15, anchorPoint.Y + 8), anchorPaint);
 
             DrawTextAt("поверхность воды", x + 14, surfaceY - 24, 10, true, SKColors.Black);
@@ -248,11 +240,11 @@ public static class PdfReportBuilder
             DrawTextAt("дно / грунт", x + 14, bottomLineY + 18, 10, true, new SKColor(92, 70, 52));
             DrawTextAt(Shorten(CleanLabel(nodes[0].Label, "Буй"), 28), buoyPoint.X + 16, buoyPoint.Y + 4, 9.2f, true, SKColors.Black);
             DrawTextAt(Shorten(CleanLabel(nodes[^1].Label, "Якорь"), 28), anchorPoint.X + 20, anchorPoint.Y + 4, 9.2f, true, SKColors.Black);
-            DrawLegendLine(x + 14, y + 18, linePaint, "форма с дискретными элементами", new SKColor(212, 107, 8));
-            DrawTextAt(userShapeStatus, x + 245, y + 23, 9.2f, false, alternative.Shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
-            DrawTextAt($"снос X/Z {alternative.Shape.DiscreteHorizontalOffsetM:0.##} м", x + 390, y + 23, 9.2f, false, new SKColor(80, 92, 112));
-            DrawTextAt($"дискретных X/Z точек {alternative.DiscreteNodes.DiscreteNodeCount}", x + 14, plotBottomY + 52, 9, false, new SKColor(80, 92, 112));
-            DrawTextAt("масштаб X=Z; координаты взяты из расчётного слоя дискретных нагрузок", x + 14, plotBottomY + 72, 8.5f, false, new SKColor(80, 92, 112));
+            DrawLegendLine(x + 14, y + 18, linePaint, "выбранная расчётная форма X/Z", new SKColor(212, 107, 8));
+            DrawTextAt(userShapeStatus, x + 260, y + 23, 9.2f, false, shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
+            DrawTextAt($"снос X/Z {shape.HorizontalOffsetM:0.##} м", x + 390, y + 23, 9.2f, false, new SKColor(80, 92, 112));
+            DrawTextAt($"узлов X/Z {shape.Nodes.Count}; источник: {Shorten(selected.Source, 36)}", x + 14, plotBottomY + 52, 9, false, new SKColor(80, 92, 112));
+            DrawTextAt("масштаб X=Z; координаты взяты из выбранного расчётного X/Z read model", x + 14, plotBottomY + 72, 8.5f, false, new SKColor(80, 92, 112));
 
             _y += diagramHeight + 10;
         }
