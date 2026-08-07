@@ -1,0 +1,87 @@
+name: Physics / solver RFC
+description: Required before changing equations, solver semantics, environmental loads, seabed/anchor physics, safety factors or engineering acceptance criteria.
+title: "Physics RFC: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Physics changes are not ordinary refactors. Read `AGENTS.md` and `docs/OPTIMIZATION_PLAN.md`. Do not implement until the physical assumptions and validation plan are explicit.
+  - type: textarea
+    id: question
+    attributes:
+      label: Physical question
+      description: What engineering problem or deficiency is being solved?
+    validations:
+      required: true
+  - type: textarea
+    id: equations
+    attributes:
+      label: Proposed equations and assumptions
+      description: State equations, model assumptions and approximations. Cite source material where applicable.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: units-signs
+    attributes:
+      label: Units and sign conventions
+      description: Define all quantities, coordinate directions, signs and unit conversions that matter.
+    validations:
+      required: true
+  - type: checkboxes
+    id: modes
+    attributes:
+      label: Affected deployment modes
+      options:
+        - label: Surface buoy
+        - label: Submerged buoy
+        - label: Short-line / L < Depth
+        - label: Excess-line / slack-line
+        - label: Seabed / touchdown / anchor contact
+        - label: Other / cross-mode
+  - type: textarea
+    id: limiting-behavior
+    attributes:
+      label: Expected limiting behavior
+      description: Describe simple limits the model must reproduce, such as zero current, vertical line or vanishing discrete load.
+    validations:
+      required: true
+  - type: textarea
+    id: tolerances
+    attributes:
+      label: Acceptance tolerances
+      description: Define residual/error thresholds and their engineering meaning. Do not choose tolerances only to silence failures.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation evidence plan
+      description: List analytical cases, regression scenarios, reference solver comparisons, experimental or field evidence.
+    validations:
+      required: true
+  - type: textarea
+    id: historical-impact
+    attributes:
+      label: Expected effect on historical results
+      description: Which existing calculations may change, and why is that change physically justified?
+    validations:
+      required: true
+  - type: textarea
+    id: migration
+    attributes:
+      label: Fallback / migration behavior
+      description: Explain how old projects/results are interpreted and what happens when the new solver/model does not converge.
+    validations:
+      required: true
+  - type: checkboxes
+    id: approval
+    attributes:
+      label: RFC contract
+      options:
+        - label: The implementation PR will be separate from unrelated architecture/UI cleanup.
+          required: true
+        - label: Visual agreement alone will not be treated as validation.
+          required: true
+        - label: The implementation will merge only after all required CI and stated validation evidence are complete.
+          required: true
