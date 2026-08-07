@@ -78,7 +78,7 @@ internal static class Program
             {
                 var path = Path.GetFullPath(args[1]);
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.WriteAllText(path, JsonSerializer.Serialize(baseline, options) + Environment.NewLine);
+                File.WriteAllText(path, JsonSerializer.Serialize(baseline, options) + System.Environment.NewLine);
                 Console.WriteLine($"Engineering regression baseline written: {path}");
                 return 0;
             }
