@@ -238,6 +238,8 @@ public static class EngineeringDiagnostics
         var invalidSourceUnitVolumeCount = discreteElementRows.Count(x => !double.IsFinite(x.SourceUnitVolumeM3) || x.SourceUnitVolumeM3 < 0);
         var minimumSourceUnitWeightAirKg = discreteElementRows.Count > 0 ? discreteElementRows.Min(x => x.SourceUnitWeightAirKg) : double.NaN;
         var minimumSourceUnitVolumeM3 = discreteElementRows.Count > 0 ? discreteElementRows.Min(x => x.SourceUnitVolumeM3) : double.NaN;
+        var invalidSourceUnitProjectedAreaCount = discreteElementRows.Count(x => !double.IsFinite(x.SourceUnitProjectedAreaM2) || x.SourceUnitProjectedAreaM2 < 0);
+        var minimumSourceUnitProjectedAreaM2 = discreteElementRows.Count > 0 ? discreteElementRows.Min(x => x.SourceUnitProjectedAreaM2) : double.NaN;
         var buoyElementRows = result.ElementRows.Where(x => x.Kind == "Буй").ToList();
         var minimumBuoySourceVolumeM3 = buoyElementRows.Count > 0 ? buoyElementRows.Min(x => x.SourceUnitVolumeM3) : double.NaN;
         var buoySourceVolumeIsValid = buoyElementRows.Count == 1 &&
@@ -269,6 +271,34 @@ public static class EngineeringDiagnostics
             .DefaultIfEmpty(double.NaN)
             .Max();
         var maximumDiscreteSubmergedWeightRelativeResidual = discreteSubmergedWeightResiduals
+            .Where(x => double.IsFinite(x.RelativeResidual))
+            .Select(x => x.RelativeResidual)
+            .DefaultIfEmpty(double.NaN)
+            .Max();
+        var discreteProjectedAreaResiduals = discreteElementRows
+            .Select(x =>
+            {
+                var expectedProjectedAreaM2 = x.Count * x.SourceUnitProjectedAreaM2;
+                var absoluteResidualM2 = Math.Abs(x.ProjectedAreaM2 - expectedProjectedAreaM2);
+                var relativeResidual = absoluteResidualM2 / Math.Max(1.0, Math.Abs(expectedProjectedAreaM2));
+                var isValid =
+                    x.Count >= 0 &&
+                    double.IsFinite(x.SourceUnitProjectedAreaM2) &&
+                    double.IsFinite(x.ProjectedAreaM2) &&
+                    double.IsFinite(expectedProjectedAreaM2) &&
+                    double.IsFinite(absoluteResidualM2) &&
+                    double.IsFinite(relativeResidual) &&
+                    relativeResidual <= 1e-6;
+                return (AbsoluteResidualM2: absoluteResidualM2, RelativeResidual: relativeResidual, IsValid: isValid);
+            })
+            .ToList();
+        var invalidDiscreteProjectedAreaCount = discreteProjectedAreaResiduals.Count(x => !x.IsValid);
+        var maximumDiscreteProjectedAreaResidualM2 = discreteProjectedAreaResiduals
+            .Where(x => double.IsFinite(x.AbsoluteResidualM2))
+            .Select(x => x.AbsoluteResidualM2)
+            .DefaultIfEmpty(double.NaN)
+            .Max();
+        var maximumDiscreteProjectedAreaRelativeResidual = discreteProjectedAreaResiduals
             .Where(x => double.IsFinite(x.RelativeResidual))
             .Select(x => x.RelativeResidual)
             .DefaultIfEmpty(double.NaN)
@@ -435,6 +465,17 @@ public static class EngineeringDiagnostics
             "Проверяются per-unit исходные значения буя, соединителей, приборов и якоря; подписанный погонный вес линии исключён."));
 
         rows.Add(new EngineeringDiagnosticRow(
+            "Неотрицательные исходные площади дискретных элементов",
+            discreteElementRows.Count == 0
+                ? "строк нет; нарушений 0"
+                : $"min Aисх={minimumSourceUnitProjectedAreaM2:0.########} м²; нарушений {invalidSourceUnitProjectedAreaCount}; строк {discreteElementRows.Count}",
+            "каждая Aисх ≥ 0 и конечна",
+            invalidSourceUnitProjectedAreaCount == 0
+                ? EngineeringCheckSeverity.Ok
+                : EngineeringCheckSeverity.Error,
+            "Проверяются per-unit исходные площади буя, соединителей, приборов и якоря; распределённая линия исключена."));
+
+        rows.Add(new EngineeringDiagnosticRow(
             "Положительный исходный объём буя",
             buoyElementRows.Count == 0
                 ? "строка буя отсутствует"
@@ -463,6 +504,21 @@ public static class EngineeringDiagnostics
             discreteElementRows.Count == 0
                 ? "Расчётный read model не содержит дискретные строки ожидаемой границы буя/якоря."
                 : "Ожидаемый вес вычисляется только для проверки тождества; опубликованные Count, источники, плотность и WeightWaterKg не изменяются."));
+
+        rows.Add(new EngineeringDiagnosticRow(
+            "Согласованность исходной и расчётной площади дискретных элементов",
+            discreteElementRows.Count == 0
+                ? "дискретных строк нет; локальный инвариант не применяется"
+                : $"max ΔA={maximumDiscreteProjectedAreaResidualM2:0.########} м²; max relative={maximumDiscreteProjectedAreaRelativeResidual:0.########}; нарушений {invalidDiscreteProjectedAreaCount}; строк {discreteElementRows.Count}",
+            "relative ≤ 1e-6; используется опубликованный Count",
+            invalidDiscreteProjectedAreaCount > 0
+                ? EngineeringCheckSeverity.Error
+                : discreteElementRows.Count == 0
+                    ? EngineeringCheckSeverity.Warning
+                    : EngineeringCheckSeverity.Ok,
+            discreteElementRows.Count == 0
+                ? "Расчётный read model не содержит дискретные строки ожидаемой границы буя/якоря."
+                : "Ожидаемая площадь вычисляется только для проверки тождества; опубликованные Count, исходная площадь и ProjectedAreaM2 не изменяются."));
 
         rows.Add(new EngineeringDiagnosticRow(
             "Неотрицательные глубины активного профиля течения",
