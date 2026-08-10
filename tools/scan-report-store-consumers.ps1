@@ -18,69 +18,29 @@ if ($sourceFiles.Count -eq 0) {
     throw "No C# source files found."
 }
 
-$storeSymbols = @(
+$retiredStoreSymbols = @(
     "MooringShapeStore",
     "MooringIterativeSolverStore"
 )
 
-foreach ($storeSymbol in $storeSymbols) {
+foreach ($storeSymbol in $retiredStoreSymbols) {
     $references = @(
         Select-String -Path $sourceFiles.FullName -SimpleMatch $storeSymbol
     )
 
     Write-Host ""
-    Write-Host ("Report store symbol: " + $storeSymbol)
+    Write-Host ("Retired report store symbol: " + $storeSymbol)
     Write-Host ("  Total references: " + $references.Count)
 
-    if ($storeSymbol -eq "MooringIterativeSolverStore") {
-        if ($references.Count -ne 0) {
-            foreach ($item in $references) {
-                Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())
-            }
-            throw "MooringIterativeSolverStore was retired and must have zero C# references."
+    if ($references.Count -ne 0) {
+        foreach ($item in $references) {
+            Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())
         }
-
-        Write-Host "  References: none"
-        continue
+        throw "$storeSymbol was retired and must have zero C# references."
     }
 
-    if ($references.Count -eq 0) {
-        throw "No references found for $storeSymbol. The MooringShapeStore retirement is a later micro-package."
-    }
-
-    $escapedSymbol = [regex]::Escape($storeSymbol)
-    $declarationPattern = "\b(class|record)\s+" + $escapedSymbol + "\b"
-    $setPattern = $escapedSymbol + "\.Set\s*\("
-    $readPattern = $escapedSymbol + "\.(Get|TryGet|Current)\b"
-
-    $declarations = @(
-        $references | Where-Object { $_.Line -match $declarationPattern }
-    )
-
-    $writeReferences = @(
-        $references | Where-Object { $_.Line -match $setPattern }
-    )
-
-    $readCandidates = @(
-        $references | Where-Object {
-            $_.Line -notmatch $declarationPattern -and
-            $_.Line -notmatch $setPattern
-        }
-    )
-
-    $explicitReads = @(
-        $references | Where-Object { $_.Line -match $readPattern }
-    )
-
-    Write-Host ("  Declarations: " + $declarations.Count)
-    Write-Host ("  Write references: " + $writeReferences.Count)
-    Write-Host ("  Read candidates: " + $readCandidates.Count)
-    Write-Host ("  Explicit reads: " + $explicitReads.Count)
-    Write-Host "  References:"
-    foreach ($item in $references) {
-        Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())
-    }
+    Write-Host "  References: none"
 }
 
 Write-Host ""
-Write-Host "Report store consumer scan completed."
+Write-Host "Report store consumer scan completed: retired mutable report/shape stores have zero C# references."
