@@ -40,6 +40,7 @@ function Assert-NotContains([string]$content, [string]$needle, [string]$label) {
 }
 
 Assert-FileMissing "Services/ReportBuilder.cs"
+Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
 
 Assert-FileExists "ViewModels/MainWindowCalculationDisplayBuilder.cs"
 $displayBuilder = Read-RepoText "ViewModels/MainWindowCalculationDisplayBuilder.cs"
@@ -59,15 +60,14 @@ Assert-Contains $snapshotBoundary "CalculationResult Result," "CalculationSnapsh
 Assert-Contains $snapshotBoundary "TechnicalReportData TechnicalReportData," "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "SelectedShapeReadModel? SelectedShape);" "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
-Assert-Contains $snapshotBoundary "TechnicalReportStorePublisher.Publish(data);" "CalculationSnapshotBuilder"
 Assert-Contains $snapshotBoundary "var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);" "CalculationSnapshotBuilder"
+Assert-NotContains $snapshotBoundary "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
 Assert-NotContains $snapshotBoundary "SelectedShapeStore.Current" "CalculationSnapshotBuilder"
 
 $dataBuildIndex = $snapshotBoundary.IndexOf("var data = TechnicalReportDataBuilder.Build(environment, result);")
-$publishIndex = $snapshotBoundary.IndexOf("TechnicalReportStorePublisher.Publish(data);")
 $selectedShapeIndex = $snapshotBoundary.IndexOf("var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);")
-if ($dataBuildIndex -lt 0 -or $publishIndex -le $dataBuildIndex -or $selectedShapeIndex -le $publishIndex) {
-    throw "CalculationSnapshotBuilder must preserve Build -> Publish -> stateless selected X/Z order."
+if ($dataBuildIndex -lt 0 -or $selectedShapeIndex -le $dataBuildIndex) {
+    throw "CalculationSnapshotBuilder must preserve Build -> stateless selected X/Z order."
 }
 
 $selectedShapeProvider = Read-RepoText "ApplicationModel/SelectedMooringShapeProvider.cs"

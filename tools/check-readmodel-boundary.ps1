@@ -21,6 +21,12 @@ function Assert-FileExists([string]$relativePath) {
     }
 }
 
+function Assert-FileMissing([string]$relativePath) {
+    if (Test-Path -LiteralPath (Get-RepoPath $relativePath)) {
+        throw "Retired file must remain absent: $relativePath"
+    }
+}
+
 function Assert-Contains([string]$content, [string]$needle, [string]$label) {
     if (-not $content.Contains($needle)) {
         throw "$label does not contain required text: $needle"
@@ -50,7 +56,7 @@ Assert-FileExists "Services/TechnicalReportBuilder.cs"
 Assert-FileExists "Services/TechnicalReportMarkdownBuilder.cs"
 Assert-FileExists "Services/TechnicalReportDataBuilder.cs"
 Assert-FileExists "Services/TechnicalReportData.cs"
-Assert-FileExists "Services/TechnicalReportStorePublisher.cs"
+Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
 Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
 Assert-FileExists "ApplicationModel/SelectedMooringShapeProvider.cs"
 
@@ -81,8 +87,8 @@ Assert-Contains $snapshotBoundary "CalculationResult Result," "CalculationSnapsh
 Assert-Contains $snapshotBoundary "TechnicalReportData TechnicalReportData," "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "SelectedShapeReadModel? SelectedShape);" "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
-Assert-Contains $snapshotBoundary "TechnicalReportStorePublisher.Publish(data);" "CalculationSnapshotBuilder"
 Assert-Contains $snapshotBoundary "var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);" "CalculationSnapshotBuilder"
+Assert-NotContains $snapshotBoundary "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
 Assert-NotContains $snapshotBoundary "SelectedShapeStore.Current" "CalculationSnapshotBuilder"
 
 $selectedShapeProvider = Read-RepoText "ApplicationModel/SelectedMooringShapeProvider.cs"
@@ -104,10 +110,6 @@ Assert-NotContains $reportBoundary "CalculationSnapshotBuilder.Build" "ReportBui
 $dataBuilder = Read-RepoText "Services/TechnicalReportDataBuilder.cs"
 Assert-Contains $dataBuilder "public static TechnicalReportData Build(EnvironmentInput environment, CalculationResult result)" "TechnicalReportDataBuilder"
 Assert-Contains $dataBuilder "return new TechnicalReportData(" "TechnicalReportDataBuilder"
-
-$storePublisher = Read-RepoText "Services/TechnicalReportStorePublisher.cs"
-Assert-Contains $storePublisher "public static void Publish(TechnicalReportData data)" "TechnicalReportStorePublisher"
-Assert-Contains $storePublisher "MooringShapeStore.Set(data.Shape);" "TechnicalReportStorePublisher"
-Assert-Contains $storePublisher "MooringIterativeSolverStore.Set(data.IterativeSolver);" "TechnicalReportStorePublisher"
+Assert-NotContains $dataBuilder "TechnicalReportStorePublisher" "TechnicalReportDataBuilder"
 
 Write-Host "Read-model boundary smoke check passed."
