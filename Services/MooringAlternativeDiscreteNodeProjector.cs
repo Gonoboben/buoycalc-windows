@@ -40,9 +40,7 @@ public static class MooringAlternativeDiscreteNodeProjector
     {
         if (positions.Rows.Count == 0 || alternativeShape.Rows.Count == 0)
         {
-            var empty = Empty("Нет позиционной модели или альтернативной формы для проекции дискретных X/Z-узлов.");
-            MooringAlternativeShapeStore.Clear();
-            return empty;
+            return Empty("Нет позиционной модели или альтернативной формы для проекции дискретных X/Z-узлов.");
         }
 
         var candidateRows = positions.Rows
@@ -85,16 +83,13 @@ public static class MooringAlternativeDiscreteNodeProjector
         }
 
         var internalRows = rows.Where(x => x.Kind != "Буй" && x.Kind != "Якорь").ToList();
-        var result = new MooringAlternativeDiscreteNodeResult(
+        return new MooringAlternativeDiscreteNodeResult(
             rows,
             internalRows.Count,
             internalRows.Sum(x => x.WeightWaterKg),
             internalRows.Sum(x => x.CurrentForceN),
             rows.Count > 0 ? rows.Max(x => Math.Sqrt(x.DeltaXM * x.DeltaXM + x.DeltaZM * x.DeltaZM)) : 0,
             "Дискретные элементы спроецированы на альтернативную X/Z-форму как отдельные отчётно-визуальные точки и переданы в хранилище для 2D-сравнения. Этот слой не рассчитывает новую физику и не выбирает основную форму.");
-
-        MooringAlternativeShapeStore.Set(alternativeShape, result);
-        return result;
     }
 
     private static MooringAlternativeDiscreteNodeResult Empty(string note)

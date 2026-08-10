@@ -24,7 +24,7 @@ public static class PdfReportStructureGuide
         sb.AppendLine("| № | Раздел | Источник данных |");
         sb.AppendLine("|---:|---|---|");
         sb.AppendLine("| 1 | Краткий итог расчёта | CalculationResult и инженерная диагностика |");
-        sb.AppendLine("| 2 | Расчётная 2D-схема с дискретными элементами | MooringAlternativeShapeStore |");
+        sb.AppendLine("| 2 | Расчётная 2D-схема selected X/Z | CalculationSnapshot.SelectedShape / SelectedShapeReadModel.Shape.Nodes |");
         sb.AppendLine("| 3 | Текстовая цепочка постановки | ViewModel sequence lines |");
         sb.AppendLine("| 4 | Таблица элементов | CalculationResult.ElementRows |");
         sb.AppendLine("| 5 | Очищенный полный инженерный отчёт | ReportBuilder + PdfReportTextCleanup |");
