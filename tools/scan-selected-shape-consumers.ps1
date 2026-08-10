@@ -21,11 +21,18 @@ if ($sourceFiles.Count -eq 0) {
 $scanTerms = @(
     "SelectedShapeStore",
     "MooringPrimaryShapeSelectionStore",
-    "MooringShapeStore.Current",
-    "MooringShapeStore.Set(",
+    "MooringIterativeSolverStore",
+    "MooringShapeStore",
     "MooringShapeResult",
     "MooringShapePoint",
     "MooringShapeSegment"
+)
+
+$retiredStoreTerms = @(
+    "SelectedShapeStore",
+    "MooringPrimaryShapeSelectionStore",
+    "MooringIterativeSolverStore",
+    "MooringShapeStore"
 )
 
 foreach ($scanTerm in $scanTerms) {
@@ -47,8 +54,8 @@ foreach ($scanTerm in $scanTerms) {
         }
     }
 
-    if ($scanTerm -eq "SelectedShapeStore" -and $references.Count -ne 0) {
-        throw "SelectedShapeStore was retired and must have zero C# references."
+    if ($retiredStoreTerms -contains $scanTerm -and $references.Count -ne 0) {
+        throw "$scanTerm was retired and must have zero C# references."
     }
 }
 
