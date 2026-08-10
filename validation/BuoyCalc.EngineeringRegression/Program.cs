@@ -534,7 +534,6 @@ internal static class Program
 
     private static void ClearCompatibilityStores()
     {
-        MooringAlternativeShapeStore.Clear();
     }
 
     private static EnvironmentInput Environment(
