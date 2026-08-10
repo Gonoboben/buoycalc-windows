@@ -33,55 +33,49 @@ function Assert-Contains([string]$content, [string]$needle, [string]$label) {
     }
 }
 
-$markerPath = "docs/CONTROL_MARK_REPORT_STORE_CONSUMERS_2026-07-03.md"
-Assert-FileExists $markerPath
+function Assert-NotContains([string]$content, [string]$needle, [string]$label) {
+    if ($content.Contains($needle)) {
+        throw "$label contains forbidden text: $needle"
+    }
+}
 
-$marker = Read-RepoText $markerPath
-Assert-Contains $marker "# Control mark: report store consumers" "Report store consumer map"
-Assert-Contains $marker "report-store-consumer-scan" "Report store consumer map"
-Assert-Contains $marker "report-store-consumers.txt" "Report store consumer map"
-Assert-Contains $marker "MooringShapeStore" "Report store consumer map"
-Assert-Contains $marker "MooringIterativeSolverStore" "Report store consumer map"
-Assert-Contains $marker "Total references: 8" "Report store consumer map"
-Assert-Contains $marker "Write references: 2" "Report store consumer map"
-Assert-Contains $marker "Explicit reads: 3" "Report store consumer map"
-Assert-Contains $marker "Total references: 2" "Report store consumer map"
-Assert-Contains $marker "Write references: 1" "Report store consumer map"
-Assert-Contains $marker "Explicit reads: 0" "Report store consumer map"
-Assert-Contains $marker "TechnicalReportData -> TechnicalReportStorePublisher -> MooringShapeStore" "Report store consumer map"
-Assert-Contains $marker "TechnicalReportData -> TechnicalReportStorePublisher -> MooringIterativeSolverStore" "Report store consumer map"
-Assert-Contains $marker "MooringPrimaryShapeSelectionStore.Set(selection)" "Report store consumer map"
-Assert-Contains $marker "MooringShapeStore.Set(selection.Shape)" "Report store consumer map"
-Assert-Contains $marker "SelectedShapeStore" "Report store consumer map"
-Assert-Contains $marker "parse Markdown to recover engineering state" "Report store consumer map"
-Assert-Contains $marker "No solver physics changes are allowed in this architecture-stabilization phase." "Report store consumer map"
+$historicalMarkerPath = "docs/CONTROL_MARK_REPORT_STORE_CONSUMERS_2026-07-03.md"
+$retirementMarkerPath = "docs/CONTROL_MARK_MUTABLE_SHAPE_STORE_RETIREMENT_BOUNDARY_2026-08-10.md"
+Assert-FileExists $historicalMarkerPath
+Assert-FileExists $retirementMarkerPath
 
-Assert-FileExists "Services/TechnicalReportStorePublisher.cs"
+$historicalMarker = Read-RepoText $historicalMarkerPath
+Assert-Contains $historicalMarker "# Control mark: report store consumers" "Historical report store consumer map"
+Assert-Contains $historicalMarker "TechnicalReportStorePublisher" "Historical report store consumer map"
+
+$retirementMarker = Read-RepoText $retirementMarkerPath
+Assert-Contains $retirementMarker "# Control mark: mutable shape-store retirement boundary" "Shape-store retirement marker"
+Assert-Contains $retirementMarker "TechnicalReportStorePublisher.Publish(data)" "Shape-store retirement marker"
+Assert-Contains $retirementMarker "SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver)" "Shape-store retirement marker"
+
+Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
+Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
 Assert-FileExists "Services/MooringShapeSolver.cs"
 Assert-FileExists "Services/MooringIterativeSolver.cs"
-Assert-FileExists "Services/SelectedShapeReadModel.cs"
-Assert-FileMissing "Services/SelectedShapeStore.cs"
+Assert-FileExists "Services/MooringPrimaryShapeGate.cs"
 
-$storePublisher = Read-RepoText "Services/TechnicalReportStorePublisher.cs"
-Assert-Contains $storePublisher "public static void Publish(TechnicalReportData data)" "TechnicalReportStorePublisher"
-Assert-Contains $storePublisher "MooringShapeStore.Set(data.Shape);" "TechnicalReportStorePublisher"
-Assert-Contains $storePublisher "MooringIterativeSolverStore.Set(data.IterativeSolver);" "TechnicalReportStorePublisher"
+$calculationSnapshot = Read-RepoText "ApplicationModel/CalculationSnapshot.cs"
+Assert-Contains $calculationSnapshot "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
+Assert-Contains $calculationSnapshot "var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);" "CalculationSnapshotBuilder"
+Assert-NotContains $calculationSnapshot "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
+Assert-NotContains $calculationSnapshot "Publish(data)" "CalculationSnapshotBuilder"
 
+# Remaining compatibility store classes are intentionally retained for the next small PR.
+# This guard proves only that new calculation snapshots no longer publish into them.
 $shapeSolver = Read-RepoText "Services/MooringShapeSolver.cs"
 Assert-Contains $shapeSolver "public static class MooringShapeStore" "MooringShapeSolver"
-Assert-Contains $shapeSolver "public static MooringShapeResult? Current { get; private set; }" "MooringShapeSolver"
-Assert-Contains $shapeSolver "public static void Set(MooringShapeResult shape)" "MooringShapeSolver"
 
 $iterativeSolver = Read-RepoText "Services/MooringIterativeSolver.cs"
 Assert-Contains $iterativeSolver "public static class MooringIterativeSolverStore" "MooringIterativeSolver"
-Assert-Contains $iterativeSolver "public static MooringIterativeSolverResult? Current { get; private set; }" "MooringIterativeSolver"
-Assert-Contains $iterativeSolver "var fallbackShape = MooringShapeStore.Current;" "MooringIterativeSolver"
-Assert-Contains $iterativeSolver "MooringPrimaryShapeSelector.Select(fallbackShape, result)" "MooringIterativeSolver"
 Assert-Contains $iterativeSolver "MooringPrimaryShapeSelectionStore.Set(selection);" "MooringIterativeSolver"
 Assert-Contains $iterativeSolver "MooringShapeStore.Set(selection.Shape);" "MooringIterativeSolver"
 
-$selectedShapeReadModel = Read-RepoText "Services/SelectedShapeReadModel.cs"
-Assert-Contains $selectedShapeReadModel "public sealed record SelectedShapeReadModel(" "SelectedShapeReadModel"
-Assert-Contains $selectedShapeReadModel "MooringShapeResult Shape," "SelectedShapeReadModel"
+$primaryShapeGate = Read-RepoText "Services/MooringPrimaryShapeGate.cs"
+Assert-Contains $primaryShapeGate "public static class MooringPrimaryShapeSelectionStore" "MooringPrimaryShapeGate"
 
-Write-Host "Report store consumer map smoke check passed."
+Write-Host "Report store publication retirement boundary smoke check passed."
