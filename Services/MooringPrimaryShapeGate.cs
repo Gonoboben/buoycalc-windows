@@ -152,18 +152,3 @@ public static class MooringPrimaryShapeSelector
             "Кандидатная форма с дискретными нагрузками не стала основной, поэтому используется fallback-форма MooringShapeSolver.");
     }
 }
-
-public static class MooringPrimaryShapeSelectionStore
-{
-    public static MooringPrimaryShapeSelectionResult? Current { get; private set; }
-
-    public static void Set(MooringPrimaryShapeSelectionResult selection)
-    {
-        Current = selection;
-    }
-
-    public static void Clear()
-    {
-        Current = null;
-    }
-}
