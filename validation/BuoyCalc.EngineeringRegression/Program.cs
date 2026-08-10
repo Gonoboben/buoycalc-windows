@@ -535,7 +535,6 @@ internal static class Program
     private static void ClearCompatibilityStores()
     {
         MooringAlternativeShapeStore.Clear();
-        MooringIterativeSolverStore.Clear();
         MooringPrimaryShapeSelectionStore.Clear();
         MooringShapeStore.Clear();
     }
