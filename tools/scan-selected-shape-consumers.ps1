@@ -18,38 +18,45 @@ if ($sourceFiles.Count -eq 0) {
     throw "No C# source files found."
 }
 
-$scanTerms = @(
+$retiredStores = @(
     "SelectedShapeStore",
     "MooringPrimaryShapeSelectionStore",
-    "MooringShapeStore.Current",
-    "MooringShapeStore.Set(",
+    "MooringIterativeSolverStore",
+    "MooringShapeStore"
+)
+
+foreach ($store in $retiredStores) {
+    $escaped = [regex]::Escape($store)
+    $pattern = "(\b(class|record)\s+" + $escaped + "\b)|(\b" + $escaped + "\s*\.)"
+    $references = @(
+        Select-String -Path $sourceFiles.FullName -Pattern $pattern
+    )
+
+    Write-Host ""
+    Write-Host ("Retired selected-shape store: " + $store)
+    Write-Host ("  Actual C# references: " + $references.Count)
+
+    if ($references.Count -ne 0) {
+        foreach ($item in $references) {
+            Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())
+        }
+        throw "$store was retired and must have zero actual C# references."
+    }
+
+    Write-Host "  References: none"
+}
+
+$informationalTerms = @(
     "MooringShapeResult",
     "MooringShapePoint",
     "MooringShapeSegment"
 )
 
-foreach ($scanTerm in $scanTerms) {
-    $references = @(
-        Select-String -Path $sourceFiles.FullName -SimpleMatch $scanTerm
-    )
-
+foreach ($scanTerm in $informationalTerms) {
+    $references = @(Select-String -Path $sourceFiles.FullName -SimpleMatch $scanTerm)
     Write-Host ""
-    Write-Host ("Selected-shape scan term: " + $scanTerm)
+    Write-Host ("Selected-shape calculation type: " + $scanTerm)
     Write-Host ("  Reference count: " + $references.Count)
-
-    if ($references.Count -eq 0) {
-        Write-Host "  References: none"
-    }
-    else {
-        Write-Host "  References:"
-        foreach ($item in $references) {
-            Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())
-        }
-    }
-
-    if ($scanTerm -eq "SelectedShapeStore" -and $references.Count -ne 0) {
-        throw "SelectedShapeStore was retired and must have zero C# references."
-    }
 }
 
 Write-Host ""
