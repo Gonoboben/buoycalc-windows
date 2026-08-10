@@ -22,7 +22,8 @@ $retiredStores = @(
     "SelectedShapeStore",
     "MooringPrimaryShapeSelectionStore",
     "MooringIterativeSolverStore",
-    "MooringShapeStore"
+    "MooringShapeStore",
+    "MooringAlternativeShapeStore"
 )
 
 foreach ($store in $retiredStores) {
@@ -46,43 +47,11 @@ foreach ($store in $retiredStores) {
     Write-Host "  References: none"
 }
 
-# Issue #358 audit-only classification. This section intentionally does not
-# make a retirement decision; it records the exact topology for the CI artifact.
-$alternativeStore = "MooringAlternativeShapeStore"
-$alternativeReferences = @(
-    Select-String -Path $sourceFiles.FullName -SimpleMatch $alternativeStore
-)
-$escapedAlternativeStore = [regex]::Escape($alternativeStore)
-$alternativeDeclarationPattern = "\b(class|record)\s+" + $escapedAlternativeStore + "\b"
-$alternativeSetPattern = "\b" + $escapedAlternativeStore + "\s*\.\s*Set\s*\("
-$alternativeClearPattern = "\b" + $escapedAlternativeStore + "\s*\.\s*Clear\s*\("
-$alternativeCurrentPattern = "\b" + $escapedAlternativeStore + "\s*\.\s*Current\b"
-
-$alternativeDeclarations = @($alternativeReferences | Where-Object { $_.Line -match $alternativeDeclarationPattern })
-$alternativeSetWrites = @($alternativeReferences | Where-Object { $_.Line -match $alternativeSetPattern })
-$alternativeClearWrites = @($alternativeReferences | Where-Object { $_.Line -match $alternativeClearPattern })
-$alternativeCurrentReads = @($alternativeReferences | Where-Object { $_.Line -match $alternativeCurrentPattern })
-
-Write-Host ""
-Write-Host "Alternative shape store audit: MooringAlternativeShapeStore"
-Write-Host ("  Total textual C# references: " + $alternativeReferences.Count)
-Write-Host ("  Declarations: " + $alternativeDeclarations.Count)
-Write-Host ("  Set writes: " + $alternativeSetWrites.Count)
-Write-Host ("  Clear writes: " + $alternativeClearWrites.Count)
-Write-Host ("  Current reads: " + $alternativeCurrentReads.Count)
-Write-Host "  References:"
-foreach ($item in $alternativeReferences) {
-    Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())
-}
-
-if ($alternativeDeclarations.Count -ne 1) {
-    throw "Issue #358 audit expected exactly one MooringAlternativeShapeStore declaration."
-}
-
 $informationalTerms = @(
     "MooringShapeResult",
     "MooringShapePoint",
-    "MooringShapeSegment"
+    "MooringShapeSegment",
+    "MooringAlternativeDiscreteNodeResult"
 )
 
 foreach ($scanTerm in $informationalTerms) {
