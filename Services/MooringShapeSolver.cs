@@ -276,18 +276,3 @@ public static class MooringShapeSolver
 
     private sealed record IterationResult(double AngleScale, int Iterations, bool Converged, double ResidualM);
 }
-
-public static class MooringShapeStore
-{
-    public static MooringShapeResult? Current { get; private set; }
-
-    public static void Set(MooringShapeResult shape)
-    {
-        Current = shape;
-    }
-
-    public static void Clear()
-    {
-        Current = null;
-    }
-}
