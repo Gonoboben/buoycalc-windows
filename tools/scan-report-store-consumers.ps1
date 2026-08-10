@@ -28,8 +28,24 @@ foreach ($storeSymbol in $storeSymbols) {
         Select-String -Path $sourceFiles.FullName -SimpleMatch $storeSymbol
     )
 
+    Write-Host ""
+    Write-Host ("Report store symbol: " + $storeSymbol)
+    Write-Host ("  Total references: " + $references.Count)
+
+    if ($storeSymbol -eq "MooringIterativeSolverStore") {
+        if ($references.Count -ne 0) {
+            foreach ($item in $references) {
+                Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())
+            }
+            throw "MooringIterativeSolverStore was retired and must have zero C# references."
+        }
+
+        Write-Host "  References: none"
+        continue
+    }
+
     if ($references.Count -eq 0) {
-        throw "No references found for $storeSymbol."
+        throw "No references found for $storeSymbol. The MooringShapeStore retirement is a later micro-package."
     }
 
     $escapedSymbol = [regex]::Escape($storeSymbol)
@@ -56,23 +72,10 @@ foreach ($storeSymbol in $storeSymbols) {
         $references | Where-Object { $_.Line -match $readPattern }
     )
 
-    Write-Host ""
-    Write-Host ("Report store symbol: " + $storeSymbol)
-    Write-Host ("  Total references: " + $references.Count)
     Write-Host ("  Declarations: " + $declarations.Count)
     Write-Host ("  Write references: " + $writeReferences.Count)
     Write-Host ("  Read candidates: " + $readCandidates.Count)
     Write-Host ("  Explicit reads: " + $explicitReads.Count)
-
-    if ($declarations.Count -eq 0) {
-        Write-Host "  Declaration: not found by scan pattern"
-    }
-    else {
-        foreach ($item in $declarations) {
-            Write-Host ("  Declaration: " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber)
-        }
-    }
-
     Write-Host "  References:"
     foreach ($item in $references) {
         Write-Host ("    " + (Get-RelativePath $item.Path) + ":" + $item.LineNumber + ": " + $item.Line.Trim())

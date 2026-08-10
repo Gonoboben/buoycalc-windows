@@ -46,12 +46,10 @@ Assert-FileExists $retirementMarkerPath
 
 $historicalMarker = Read-RepoText $historicalMarkerPath
 Assert-Contains $historicalMarker "# Control mark: report store consumers" "Historical report store consumer map"
-Assert-Contains $historicalMarker "TechnicalReportStorePublisher" "Historical report store consumer map"
 
 $retirementMarker = Read-RepoText $retirementMarkerPath
 Assert-Contains $retirementMarker "# Control mark: mutable shape-store retirement boundary" "Shape-store retirement marker"
-Assert-Contains $retirementMarker "TechnicalReportStorePublisher.Publish(data)" "Shape-store retirement marker"
-Assert-Contains $retirementMarker "SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver)" "Shape-store retirement marker"
+Assert-Contains $retirementMarker "MooringIterativeSolverStore" "Shape-store retirement marker"
 
 Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
 Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
@@ -60,22 +58,28 @@ Assert-FileExists "Services/MooringIterativeSolver.cs"
 Assert-FileExists "Services/MooringPrimaryShapeGate.cs"
 
 $calculationSnapshot = Read-RepoText "ApplicationModel/CalculationSnapshot.cs"
-Assert-Contains $calculationSnapshot "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
 Assert-Contains $calculationSnapshot "var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);" "CalculationSnapshotBuilder"
 Assert-NotContains $calculationSnapshot "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
-Assert-NotContains $calculationSnapshot "Publish(data)" "CalculationSnapshotBuilder"
-
-# Remaining compatibility store classes are intentionally retained for the next small PR.
-# This guard proves only that new calculation snapshots no longer publish into them.
-$shapeSolver = Read-RepoText "Services/MooringShapeSolver.cs"
-Assert-Contains $shapeSolver "public static class MooringShapeStore" "MooringShapeSolver"
 
 $iterativeSolver = Read-RepoText "Services/MooringIterativeSolver.cs"
-Assert-Contains $iterativeSolver "public static class MooringIterativeSolverStore" "MooringIterativeSolver"
-Assert-Contains $iterativeSolver "MooringPrimaryShapeSelectionStore.Set(selection);" "MooringIterativeSolver"
-Assert-Contains $iterativeSolver "MooringShapeStore.Set(selection.Shape);" "MooringIterativeSolver"
+Assert-Contains $iterativeSolver "public static class MooringIterativeSolver" "MooringIterativeSolver"
+Assert-Contains $iterativeSolver "public static MooringIterativeSolverResult Build(" "MooringIterativeSolver"
+Assert-NotContains $iterativeSolver "public static class MooringIterativeSolverStore" "MooringIterativeSolver"
+Assert-NotContains $iterativeSolver "MooringIterativeSolverStore" "MooringIterativeSolver"
+Assert-NotContains $iterativeSolver "MooringShapeStore.Current" "MooringIterativeSolver"
+Assert-NotContains $iterativeSolver "MooringPrimaryShapeSelectionStore.Set" "MooringIterativeSolver"
+Assert-NotContains $iterativeSolver "MooringShapeStore.Set(selection.Shape)" "MooringIterativeSolver"
+
+# These two compatibility stores are intentionally retained for one final micro-package.
+$shapeSolver = Read-RepoText "Services/MooringShapeSolver.cs"
+Assert-Contains $shapeSolver "public static class MooringShapeStore" "MooringShapeSolver"
 
 $primaryShapeGate = Read-RepoText "Services/MooringPrimaryShapeGate.cs"
 Assert-Contains $primaryShapeGate "public static class MooringPrimaryShapeSelectionStore" "MooringPrimaryShapeGate"
 
-Write-Host "Report store publication retirement boundary smoke check passed."
+$regression = Read-RepoText "validation/BuoyCalc.EngineeringRegression/Program.cs"
+Assert-NotContains $regression "MooringIterativeSolverStore" "Engineering regression harness"
+Assert-Contains $regression "MooringPrimaryShapeSelectionStore.Clear();" "Engineering regression harness"
+Assert-Contains $regression "MooringShapeStore.Clear();" "Engineering regression harness"
+
+Write-Host "Iterative solver compatibility store retirement boundary smoke check passed."

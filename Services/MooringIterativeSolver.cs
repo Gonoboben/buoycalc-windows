@@ -446,30 +446,3 @@ public static class MooringIterativeSolver
             $"feedback: |ΔXсноса|={Math.Abs(offsetChangeM):0.####} м, max Δузла={nextShape.MaxNodeDeltaM:0.####} м");
     }
 }
-
-public static class MooringIterativeSolverStore
-{
-    public static MooringIterativeSolverResult? Current { get; private set; }
-
-    public static void Set(MooringIterativeSolverResult result)
-    {
-        Current = result;
-
-        var fallbackShape = MooringShapeStore.Current;
-        if (fallbackShape is null)
-        {
-            MooringPrimaryShapeSelectionStore.Clear();
-            return;
-        }
-
-        var selection = MooringPrimaryShapeSelector.Select(fallbackShape, result);
-        MooringPrimaryShapeSelectionStore.Set(selection);
-        MooringShapeStore.Set(selection.Shape);
-    }
-
-    public static void Clear()
-    {
-        Current = null;
-        MooringPrimaryShapeSelectionStore.Clear();
-    }
-}
