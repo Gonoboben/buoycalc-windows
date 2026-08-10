@@ -21,6 +21,12 @@ function Assert-FileExists([string]$relativePath) {
     }
 }
 
+function Assert-FileMissing([string]$relativePath) {
+    if (Test-Path -LiteralPath (Get-RepoPath $relativePath)) {
+        throw "Retired file must remain absent: $relativePath"
+    }
+}
+
 function Assert-Contains([string]$content, [string]$needle, [string]$label) {
     if (-not $content.Contains($needle)) {
         throw "$label does not contain required text: $needle"
@@ -53,7 +59,8 @@ Assert-Contains $marker "No solver physics changes are allowed in this architect
 Assert-FileExists "Services/TechnicalReportStorePublisher.cs"
 Assert-FileExists "Services/MooringShapeSolver.cs"
 Assert-FileExists "Services/MooringIterativeSolver.cs"
-Assert-FileExists "Services/SelectedShapeStore.cs"
+Assert-FileExists "Services/SelectedShapeReadModel.cs"
+Assert-FileMissing "Services/SelectedShapeStore.cs"
 
 $storePublisher = Read-RepoText "Services/TechnicalReportStorePublisher.cs"
 Assert-Contains $storePublisher "public static void Publish(TechnicalReportData data)" "TechnicalReportStorePublisher"
@@ -73,9 +80,8 @@ Assert-Contains $iterativeSolver "MooringPrimaryShapeSelector.Select(fallbackSha
 Assert-Contains $iterativeSolver "MooringPrimaryShapeSelectionStore.Set(selection);" "MooringIterativeSolver"
 Assert-Contains $iterativeSolver "MooringShapeStore.Set(selection.Shape);" "MooringIterativeSolver"
 
-$selectedShapeStore = Read-RepoText "Services/SelectedShapeStore.cs"
-Assert-Contains $selectedShapeStore "MooringPrimaryShapeSelectionStore.Current" "SelectedShapeStore"
-Assert-Contains $selectedShapeStore "var fallbackShape = MooringShapeStore.Current;" "SelectedShapeStore"
-Assert-Contains $selectedShapeStore "MooringShapeStore.Current" "SelectedShapeStore"
+$selectedShapeReadModel = Read-RepoText "Services/SelectedShapeReadModel.cs"
+Assert-Contains $selectedShapeReadModel "public sealed record SelectedShapeReadModel(" "SelectedShapeReadModel"
+Assert-Contains $selectedShapeReadModel "MooringShapeResult Shape," "SelectedShapeReadModel"
 
 Write-Host "Report store consumer map smoke check passed."
