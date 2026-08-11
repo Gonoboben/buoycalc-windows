@@ -161,8 +161,6 @@ internal static class Program
 
     private static ScenarioSnapshot RunScenario(ScenarioDefinition definition)
     {
-        ClearCompatibilityStores();
-
         var result = BuoyCalculator.Calculate(
             definition.Environment,
             RegressionBuoy,
@@ -530,11 +528,6 @@ internal static class Program
                 throw new InvalidOperationException($"{scenario.Name}: selected X/Z sample contains non-finite values.");
             }
         }
-    }
-
-    private static void ClearCompatibilityStores()
-    {
-        MooringAlternativeShapeStore.Clear();
     }
 
     private static EnvironmentInput Environment(
