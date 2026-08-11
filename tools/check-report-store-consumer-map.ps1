@@ -55,7 +55,7 @@ Assert-NotContains $primaryShapeGate "public static class MooringPrimaryShapeSel
 Assert-NotContains $primaryShapeGate "MooringPrimaryShapeSelectionStore." "MooringPrimaryShapeGate"
 
 $regression = Read-RepoText "validation/BuoyCalc.EngineeringRegression/Program.cs"
-Assert-Contains $regression "MooringAlternativeShapeStore.Clear();" "Engineering regression harness"
+Assert-NotContains $regression "MooringAlternativeShapeStore." "Engineering regression harness"
 Assert-NotContains $regression "MooringShapeStore." "Engineering regression harness"
 Assert-NotContains $regression "MooringIterativeSolverStore." "Engineering regression harness"
 Assert-NotContains $regression "MooringPrimaryShapeSelectionStore." "Engineering regression harness"
