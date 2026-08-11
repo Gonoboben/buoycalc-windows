@@ -1,8 +1,8 @@
 # Calculation snapshot dependency inventory
 
-Date: 2026-08-10  
+Date: 2026-08-11  
 Phase: Optimization Phase 1–4  
-Issues: #333, #335, #337, #339, #343, #347, #349, #351, #353
+Issues: #333, #335, #337, #339, #343, #347, #349, #351, #353, #358, #360
 
 ## Purpose
 
@@ -33,7 +33,7 @@ MainWindowViewModel.Calculate
            -> MooringSequencePositioner
            -> MooringDiscreteLoadTensionAnalyzer
            -> MooringDiscreteLoadShapeBuilder           [discrete-load X/Z candidate]
-           -> MooringAlternativeDiscreteNodeProjector
+           -> MooringAlternativeDiscreteNodeProjector   [immutable result only]
            -> MooringIterativeSolver                    [iterative candidate X/Z]
            -> EngineeringDiagnostics
            -> MooringVectorBalance
@@ -61,13 +61,23 @@ The following compatibility holders are retired and guarded against reintroducti
 - `TechnicalReportStorePublisher` — retired after snapshot selection became fully stateless;
 - `MooringIterativeSolverStore` — retired after its publication state was proven unread;
 - `MooringPrimaryShapeSelectionStore` — retired after the stateless selector became authoritative;
-- `MooringShapeStore` — retired after its only remaining use was the closed compatibility publication loop.
+- `MooringShapeStore` — retired after its only remaining use was the closed compatibility publication loop;
+- `MooringAlternativeShapeStore` — retired after CI-backed audit proved `Current reads = 0`, production `Set/Clear` publication was removed, and the validation-only clear was proven unnecessary by the unchanged golden regression baseline.
 
-`MooringShapeResult`, `MooringShapePoint`, `MooringIterativeSolverResult`, `MooringPrimaryShapeGate` and `MooringPrimaryShapeSelector` remain active calculation/result types and algorithms. Their retirement is **not** part of the store cleanup.
+`MooringShapeResult`, `MooringShapePoint`, `MooringIterativeSolverResult`, `MooringAlternativeDiscreteNodeResult`, `MooringPrimaryShapeGate` and `MooringPrimaryShapeSelector` remain active calculation/result types and algorithms. Their retirement is **not** part of the store cleanup.
 
-## Mutable state intentionally still present
+## Alternative/discrete result path after store retirement
 
-`MooringAlternativeShapeStore` remains outside Issue #353. It is historical alternative-display compatibility state and is no longer a 2D/PDF engineering geometry source. Its retirement requires a separate focused consumer audit.
+`MooringAlternativeDiscreteNodeProjector` remains an active calculation step. It returns immutable `MooringAlternativeDiscreteNodeResult` directly into `TechnicalReportData`:
+
+```text
+MooringAlternativeDiscreteNodeProjector.Build(...)
+  -> MooringAlternativeDiscreteNodeResult
+TechnicalReportDataBuilder
+  -> TechnicalReportData.AlternativeDiscreteNodes
+```
+
+No compatibility store is used or required by this path.
 
 ## User-facing geometry consumers
 
@@ -135,15 +145,16 @@ Architecture-only PRs must keep the committed golden baseline unchanged.
 - **#347** — deterministic engineering golden regression harness.
 - **#349** — explicit selected X/Z handoff from snapshot state to 2D/PDF.
 - **#351** — retired `SelectedShapeStore` facade.
-- **#353** — retirement sequence for the remaining mutable shape/report publication loop.
+- **#353** — retired the remaining mutable primary/fallback shape/report publication loop.
+- **#358 / #360** — audited and retired `MooringAlternativeShapeStore` while preserving the immutable alternative/discrete calculation result path.
 
 ## Next migrations
 
-1. Audit `MooringAlternativeShapeStore` separately before any retirement change.
-2. Move `BuoyCalculator.Calculate` plus snapshot creation into a dedicated application calculation use-case once the remaining compatibility-state audit is complete.
-3. Keep deterministic engineering regressions green for all architecture work.
-4. Begin intentional solver/physics changes only through the Physics RFC process and explicit golden-baseline review.
+1. Move `BuoyCalculator.Calculate` plus snapshot creation into a dedicated application calculation use-case so `MainWindowViewModel` no longer owns calculation orchestration.
+2. Keep deterministic engineering regressions green for all architecture work.
+3. Begin intentional solver/physics changes only through the Physics RFC process and explicit golden-baseline review.
+4. Physical roadmap remains: force/shape consistency, global equilibrium residuals, integrated discrete-load equilibrium, seabed/anchor reaction, mode-aware wave physics and reference validation.
 
 ## Engineering invariant
 
-Architecture cleanup does not prove physical validity. The physical roadmap still requires force/shape consistency, global equilibrium residuals, integrated discrete-load equilibrium, seabed/anchor reaction, mode-aware wave physics and validation against reference cases.
+Architecture cleanup does not prove physical validity. All numerical/physics changes remain separate, explicitly reviewed work packages.
