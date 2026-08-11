@@ -24,6 +24,7 @@ function Assert-NotContains([string]$content, [string]$needle, [string]$label) {
 Assert-FileExists "docs/CONTROL_MARK_MUTABLE_SHAPE_STORE_RETIREMENT_BOUNDARY_2026-08-10.md"
 Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
 Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
+Assert-FileMissing "Services/MooringAlternativeShapeStore.cs"
 Assert-FileExists "Services/MooringShapeSolver.cs"
 Assert-FileExists "Services/MooringIterativeSolver.cs"
 Assert-FileExists "Services/MooringPrimaryShapeGate.cs"
@@ -47,6 +48,7 @@ Assert-NotContains $iterativeSolver "public static class MooringIterativeSolverS
 Assert-NotContains $iterativeSolver "MooringIterativeSolverStore." "MooringIterativeSolver"
 Assert-NotContains $iterativeSolver "MooringShapeStore." "MooringIterativeSolver"
 Assert-NotContains $iterativeSolver "MooringPrimaryShapeSelectionStore." "MooringIterativeSolver"
+Assert-NotContains $iterativeSolver "MooringAlternativeShapeStore." "MooringIterativeSolver"
 
 $primaryShapeGate = Read-RepoText "Services/MooringPrimaryShapeGate.cs"
 Assert-Contains $primaryShapeGate "public static class MooringPrimaryShapeGate" "MooringPrimaryShapeGate"
