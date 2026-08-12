@@ -1,8 +1,8 @@
 # Calculation snapshot dependency inventory
 
-Date: 2026-08-10  
-Phase: Optimization Phase 1–4  
-Issues: #333, #335, #337, #339, #343, #347, #349, #351, #353
+Date: 2026-08-12  
+Phase: Optimization Phase 1–5  
+Issues: #333, #335, #337, #339, #343, #347, #349, #351, #353, #358, #360
 
 ## Purpose
 
@@ -33,7 +33,7 @@ MainWindowViewModel.Calculate
            -> MooringSequencePositioner
            -> MooringDiscreteLoadTensionAnalyzer
            -> MooringDiscreteLoadShapeBuilder           [discrete-load X/Z candidate]
-           -> MooringAlternativeDiscreteNodeProjector
+           -> MooringAlternativeDiscreteNodeProjector   [immutable returned result]
            -> MooringIterativeSolver                    [iterative candidate X/Z]
            -> EngineeringDiagnostics
            -> MooringVectorBalance
@@ -61,13 +61,16 @@ The following compatibility holders are retired and guarded against reintroducti
 - `TechnicalReportStorePublisher` — retired after snapshot selection became fully stateless;
 - `MooringIterativeSolverStore` — retired after its publication state was proven unread;
 - `MooringPrimaryShapeSelectionStore` — retired after the stateless selector became authoritative;
-- `MooringShapeStore` — retired after its only remaining use was the closed compatibility publication loop.
+- `MooringShapeStore` — retired after its only remaining use was the closed compatibility publication loop;
+- `MooringAlternativeShapeStore` — retired after PR #359 proved `Current reads = 0`; its projector result already flowed directly into immutable `TechnicalReportData`.
 
-`MooringShapeResult`, `MooringShapePoint`, `MooringIterativeSolverResult`, `MooringPrimaryShapeGate` and `MooringPrimaryShapeSelector` remain active calculation/result types and algorithms. Their retirement is **not** part of the store cleanup.
+`MooringShapeResult`, `MooringShapePoint`, `MooringIterativeSolverResult`, `MooringAlternativeDiscreteNodeResult`, `MooringPrimaryShapeGate` and `MooringPrimaryShapeSelector` remain active calculation/result types and algorithms. Their retirement is **not** part of the store cleanup.
 
-## Mutable state intentionally still present
+## Remaining mutable shape/report state
 
-`MooringAlternativeShapeStore` remains outside Issue #353. It is historical alternative-display compatibility state and is no longer a 2D/PDF engineering geometry source. Its retirement requires a separate focused consumer audit.
+None of the audited historical selected-shape/report compatibility stores remains in the active calculation path.
+
+This does **not** mean the application is globally stateless. UI/project state still exists where appropriate. It means engineering shape/report publication no longer depends on static mutable compatibility stores.
 
 ## User-facing geometry consumers
 
@@ -102,6 +105,8 @@ CalculationSnapshot.SelectedShape
 
 PDF renders `SelectedShapeReadModel.Shape.Nodes` directly and does not select between solver candidates.
 
+The PDF structure guide now identifies `CalculationSnapshot.SelectedShape / SelectedShapeReadModel.Shape.Nodes` as the selected-X/Z source; it no longer attributes geometry to a retired store.
+
 ### Technical Markdown
 
 `TechnicalReportMarkdownBuilder` receives a completed `CalculationSnapshot` and reads:
@@ -112,6 +117,18 @@ snapshot.TechnicalReportData
 ```
 
 It does not execute calculation builders or publish mutable shape state.
+
+## Alternative/discrete projection
+
+`MooringAlternativeDiscreteNodeProjector.Build(...)` remains an active calculation/report component. It returns `MooringAlternativeDiscreteNodeResult` directly to `TechnicalReportDataBuilder`.
+
+Retiring `MooringAlternativeShapeStore` does not retire or alter:
+
+- `MooringDiscreteLoadShapeBuilder`;
+- alternative X/Z candidate calculations;
+- projected discrete-node rows;
+- iterative solver input/output;
+- primary-shape gate behavior.
 
 ## Regression boundary
 
@@ -135,12 +152,14 @@ Architecture-only PRs must keep the committed golden baseline unchanged.
 - **#347** — deterministic engineering golden regression harness.
 - **#349** — explicit selected X/Z handoff from snapshot state to 2D/PDF.
 - **#351** — retired `SelectedShapeStore` facade.
-- **#353** — retirement sequence for the remaining mutable shape/report publication loop.
+- **#353** — retired the remaining mutable main-shape/report publication loop.
+- **#358** — exact CI-backed audit of `MooringAlternativeShapeStore`; `Current reads = 0`.
+- **#360** — retirement sequence for unread alternative-shape compatibility state and stale PDF provenance.
 
 ## Next migrations
 
-1. Audit `MooringAlternativeShapeStore` separately before any retirement change.
-2. Move `BuoyCalculator.Calculate` plus snapshot creation into a dedicated application calculation use-case once the remaining compatibility-state audit is complete.
+1. Define a dedicated application calculation use-case that owns `BuoyCalculator.Calculate(...)` plus `CalculationSnapshotBuilder.Build(...)`, without moving physics out of the calculation core.
+2. Keep `MainWindowViewModel` as an application/UI consumer rather than an orchestration owner where practical.
 3. Keep deterministic engineering regressions green for all architecture work.
 4. Begin intentional solver/physics changes only through the Physics RFC process and explicit golden-baseline review.
 
