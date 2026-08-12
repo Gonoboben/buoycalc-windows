@@ -22,17 +22,22 @@ function Assert-NotContains([string]$content, [string]$needle, [string]$label) {
 }
 
 Assert-FileExists "docs/CONTROL_MARK_MUTABLE_SHAPE_STORE_RETIREMENT_BOUNDARY_2026-08-10.md"
+Assert-FileExists "docs/CONTROL_MARK_ALTERNATIVE_SHAPE_STORE_RETIREMENT_BOUNDARY_2026-08-10.md"
 Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
 Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
+Assert-FileMissing "Services/MooringAlternativeShapeStore.cs"
 Assert-FileExists "Services/MooringShapeSolver.cs"
 Assert-FileExists "Services/MooringIterativeSolver.cs"
 Assert-FileExists "Services/MooringPrimaryShapeGate.cs"
+Assert-FileExists "Services/MooringAlternativeDiscreteNodeProjector.cs"
+Assert-FileExists "Services/PdfReportStructureGuide.cs"
 Assert-FileExists "validation/BuoyCalc.EngineeringRegression/Program.cs"
 
 $snapshot = Read-RepoText "ApplicationModel/CalculationSnapshot.cs"
 Assert-Contains $snapshot "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
 Assert-Contains $snapshot "SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver)" "CalculationSnapshotBuilder"
 Assert-NotContains $snapshot "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
+Assert-NotContains $snapshot "MooringAlternativeShapeStore." "CalculationSnapshotBuilder"
 
 $shapeSolver = Read-RepoText "Services/MooringShapeSolver.cs"
 Assert-Contains $shapeSolver "public static class MooringShapeSolver" "MooringShapeSolver"
@@ -54,10 +59,18 @@ Assert-Contains $primaryShapeGate "public static class MooringPrimaryShapeSelect
 Assert-NotContains $primaryShapeGate "public static class MooringPrimaryShapeSelectionStore" "MooringPrimaryShapeGate"
 Assert-NotContains $primaryShapeGate "MooringPrimaryShapeSelectionStore." "MooringPrimaryShapeGate"
 
+$alternativeProjector = Read-RepoText "Services/MooringAlternativeDiscreteNodeProjector.cs"
+Assert-Contains $alternativeProjector "return new MooringAlternativeDiscreteNodeResult(" "MooringAlternativeDiscreteNodeProjector"
+Assert-NotContains $alternativeProjector "MooringAlternativeShapeStore." "MooringAlternativeDiscreteNodeProjector"
+
+$pdfGuide = Read-RepoText "Services/PdfReportStructureGuide.cs"
+Assert-Contains $pdfGuide "CalculationSnapshot.SelectedShape / SelectedShapeReadModel.Shape.Nodes" "PdfReportStructureGuide"
+Assert-NotContains $pdfGuide "MooringAlternativeShapeStore" "PdfReportStructureGuide"
+
 $regression = Read-RepoText "validation/BuoyCalc.EngineeringRegression/Program.cs"
-Assert-Contains $regression "MooringAlternativeShapeStore.Clear();" "Engineering regression harness"
+Assert-NotContains $regression "MooringAlternativeShapeStore." "Engineering regression harness"
 Assert-NotContains $regression "MooringShapeStore." "Engineering regression harness"
 Assert-NotContains $regression "MooringIterativeSolverStore." "Engineering regression harness"
 Assert-NotContains $regression "MooringPrimaryShapeSelectionStore." "Engineering regression harness"
 
-Write-Host "Mutable shape-store retirement boundary smoke check passed."
+Write-Host "Mutable report/shape-store retirement boundary smoke check passed."
