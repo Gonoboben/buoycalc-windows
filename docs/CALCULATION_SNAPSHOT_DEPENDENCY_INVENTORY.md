@@ -1,8 +1,8 @@
 # Calculation snapshot dependency inventory
 
-Date: 2026-08-11  
+Date: 2026-08-12  
 Phase: Optimization Phase 1–4  
-Issues: #333, #335, #337, #339, #343, #347, #349, #351, #353, #358, #360
+Issues: #333, #335, #337, #339, #343, #347, #349, #351, #353, #358, #360, #365
 
 ## Purpose
 
@@ -20,9 +20,10 @@ The discrete/iterative path remains the preferred physical direction because it 
 
 ```text
 MainWindowViewModel.Calculate
-  -> BuoyCalculator.Calculate(...)
-     -> CalculationResult
-  -> MainWindowCalculationDisplayBuilder.Build(..., result)
+  -> MainWindowCalculationInputBuilder.Build(...)
+  -> ApplicationCalculationRunner.Run(...)
+     -> BuoyCalculator.Calculate(...)
+        -> CalculationResult
      -> CalculationSnapshotBuilder.Build(environment, result)
         -> TechnicalReportDataBuilder.Build(environment, result)
            -> SegmentTensionAnalyzer
@@ -42,6 +43,9 @@ MainWindowViewModel.Calculate
               -> MooringPrimaryShapeGate.Evaluate(...)
            -> SelectedShapeReadModel
         -> immutable CalculationSnapshot
+     -> ApplicationCalculationRun(Result, Snapshot)
+  -> MainWindowCalculationDisplayBuilder.Build(..., run)
+     -> consumes run.Result / run.Snapshot
      -> MainWindowCalculationDisplay.SelectedShape = snapshot.SelectedShape
      -> ReportBuildBoundary.Build(..., snapshot)
         -> UserReportBuilder consumes snapshot.Result
@@ -51,7 +55,7 @@ MainWindowViewModel.Calculate
      -> PDF export receives selected X/Z explicitly
 ```
 
-There is no mutable selected-shape/report-store publication in this path.
+There is no mutable selected-shape/report-store publication in this path. Presentation code does not invoke `BuoyCalculator.Calculate(...)` or construct `CalculationSnapshot`; the application runner owns both operations.
 
 ## Retired mutable compatibility state
 
@@ -123,6 +127,24 @@ snapshot.TechnicalReportData
 
 It does not execute calculation builders or publish mutable shape state.
 
+## Application calculation-run boundary
+
+`ApplicationCalculationRunner` is the presentation-facing calculation use case:
+
+```text
+ApplicationCalculationRunner.Run(inputs...)
+  -> BuoyCalculator.Calculate(...)
+  -> CalculationSnapshotBuilder.Build(environment, result)
+  -> ApplicationCalculationRun(Result, Snapshot)
+```
+
+The read-model CI guard requires:
+
+- no `BuoyCalculator.Calculate(...)` calls in `ViewModels` or `Views`;
+- no `CalculationSnapshotBuilder.Build(...)` calls in `ViewModels` or `Views`;
+- display/report renderers to consume a completed snapshot rather than construct one;
+- `MainWindowCalculationDisplayBuilder` to accept `ApplicationCalculationRun` directly.
+
 ## Regression boundary
 
 The deterministic engineering regression harness protects five canonical scenarios:
@@ -147,11 +169,12 @@ Architecture-only PRs must keep the committed golden baseline unchanged.
 - **#351** — retired `SelectedShapeStore` facade.
 - **#353** — retired the remaining mutable primary/fallback shape/report publication loop.
 - **#358 / #360** — audited and retired `MooringAlternativeShapeStore` while preserving the immutable alternative/discrete calculation result path.
+- **#365** — moved core calculation plus snapshot orchestration behind `ApplicationCalculationRunner`; presentation now consumes a completed `ApplicationCalculationRun`.
 
 ## Next migrations
 
-1. Move `BuoyCalculator.Calculate` plus snapshot creation into a dedicated application calculation use-case so `MainWindowViewModel` no longer owns calculation orchestration.
-2. Keep deterministic engineering regressions green for all architecture work.
+1. Keep deterministic engineering regressions green for all remaining architecture work.
+2. Treat the application calculation-run boundary as the stable entry point for presentation; do not move calculation ownership back into ViewModels/renderers.
 3. Begin intentional solver/physics changes only through the Physics RFC process and explicit golden-baseline review.
 4. Physical roadmap remains: force/shape consistency, global equilibrium residuals, integrated discrete-load equilibrium, seabed/anchor reaction, mode-aware wave physics and reference validation.
 
