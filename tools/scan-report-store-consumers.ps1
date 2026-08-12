@@ -20,7 +20,8 @@ if ($sourceFiles.Count -eq 0) {
 
 $retiredStoreSymbols = @(
     "MooringShapeStore",
-    "MooringIterativeSolverStore"
+    "MooringIterativeSolverStore",
+    "MooringAlternativeShapeStore"
 )
 
 foreach ($storeSymbol in $retiredStoreSymbols) {
