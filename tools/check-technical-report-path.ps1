@@ -96,6 +96,7 @@ $markdownBuilder = Read-RepoText "Services/TechnicalReportMarkdownBuilder.cs"
 Assert-Contains $markdownBuilder "CalculationSnapshot snapshot" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var result = snapshot.Result;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var data = snapshot.TechnicalReportData;" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "var forceShapeConsistency = data.ForceShapeConsistency;" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "CalculationSnapshotBuilder.Build" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "TechnicalReportDataBuilder.Build" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "TechnicalReportStorePublisher.Publish" "TechnicalReportMarkdownBuilder"
@@ -111,6 +112,7 @@ $bridgeCalls = @(
     "AppendShapeProjectionRows",
     "AppendShapeForceRows",
     "AppendShapeTensionRows",
+    "AppendForceShapeConsistencyRows",
     "AppendDiscreteLoadTensionRows",
     "AppendDiscreteLoadShapeRows",
     "AppendAlternativeDiscreteNodeRows",
@@ -127,6 +129,7 @@ $bridge = Read-RepoText "Services/TechnicalReportMarkdownSectionBridge.cs"
 
 $rendererClasses = @(
     "TechnicalReportMarkdownMovedSections",
+    "TechnicalReportMarkdownForceShapeSections",
     "TechnicalReportMarkdownDiscreteShapeSections",
     "TechnicalReportMarkdownDiscreteTensionSections",
     "TechnicalReportMarkdownDiscreteNodeSections",
@@ -147,6 +150,7 @@ Assert-NotContains $bridge ".Invoke(" "TechnicalReportMarkdownSectionBridge"
 
 $rendererFiles = @(
     "Services/TechnicalReportMarkdownMovedSections.cs",
+    "Services/TechnicalReportMarkdownForceShapeSections.cs",
     "Services/TechnicalReportMarkdownDiscreteShapeSections.cs",
     "Services/TechnicalReportMarkdownDiscreteTensionSections.cs",
     "Services/TechnicalReportMarkdownDiscreteNodeSections.cs",
@@ -157,5 +161,15 @@ $rendererFiles = @(
 foreach ($rendererFile in $rendererFiles) {
     Assert-FileExists $rendererFile
 }
+
+$forceShapeRenderer = Read-RepoText "Services/TechnicalReportMarkdownForceShapeSections.cs"
+Assert-Contains $forceShapeRenderer "MooringForceShapeConsistencyResult" "Force-shape Markdown renderer"
+Assert-Contains $forceShapeRenderer "consistency.AvailableRowCount" "Force-shape Markdown renderer"
+Assert-Contains $forceShapeRenderer "consistency.MaxRelativeResidual" "Force-shape Markdown renderer"
+Assert-Contains $forceShapeRenderer "row.RelativeResidual" "Force-shape Markdown renderer"
+Assert-Contains $forceShapeRenderer "row.Status" "Force-shape Markdown renderer"
+Assert-NotContains $forceShapeRenderer "MooringForceShapeConsistencyAnalyzer.Build" "Force-shape Markdown renderer"
+Assert-NotContains $forceShapeRenderer "MooringShapeSolver.Build" "Force-shape Markdown renderer"
+Assert-NotContains $forceShapeRenderer "MooringShapeTensionAnalyzer.Build" "Force-shape Markdown renderer"
 
 Write-Host "Technical report path smoke check passed."
