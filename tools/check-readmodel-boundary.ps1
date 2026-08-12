@@ -39,6 +39,21 @@ function Assert-NotContains([string]$content, [string]$needle, [string]$label) {
     }
 }
 
+function Assert-CSharpDirectoryNotContains([string]$relativeDirectory, [string]$needle, [string]$label) {
+    $directory = Get-RepoPath $relativeDirectory
+    if (-not (Test-Path -LiteralPath $directory)) {
+        throw "Required directory is missing: $relativeDirectory"
+    }
+
+    foreach ($file in Get-ChildItem -LiteralPath $directory -Recurse -File -Filter "*.cs") {
+        $content = Get-Content -LiteralPath $file.FullName -Raw
+        if ($content.Contains($needle)) {
+            $relativePath = [System.IO.Path]::GetRelativePath($repoRoot, $file.FullName)
+            throw "$label contains forbidden text in ${relativePath}: $needle"
+        }
+    }
+}
+
 $markerPath = "docs/CONTROL_MARK_CALCULATION_RESULT_READ_MODEL_BOUNDARY_2026-07-02.md"
 Assert-FileExists $markerPath
 
@@ -51,19 +66,41 @@ Assert-Contains $marker "explicit read-model builder" "Read-model boundary marke
 Assert-Contains $marker "Markdown / PDF / 2D / UI renderers" "Read-model boundary marker"
 Assert-Contains $marker "No solver physics changes are allowed in this phase." "Read-model boundary marker"
 
+Assert-FileExists "ViewModels/MainWindowViewModel.cs"
 Assert-FileExists "ViewModels/MainWindowCalculationDisplayBuilder.cs"
 Assert-FileExists "Services/TechnicalReportBuilder.cs"
 Assert-FileExists "Services/TechnicalReportMarkdownBuilder.cs"
 Assert-FileExists "Services/TechnicalReportDataBuilder.cs"
 Assert-FileExists "Services/TechnicalReportData.cs"
 Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
+Assert-FileExists "ApplicationModel/ApplicationCalculationRunner.cs"
 Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
 Assert-FileExists "ApplicationModel/SelectedMooringShapeProvider.cs"
 
+$viewModel = Read-RepoText "ViewModels/MainWindowViewModel.cs"
+Assert-Contains $viewModel "using BuoyCalc.Windows.ApplicationModel;" "MainWindowViewModel"
+Assert-Contains $viewModel "ApplicationCalculationRunner.Run(" "MainWindowViewModel"
+Assert-NotContains $viewModel "BuoyCalculator.Calculate(" "MainWindowViewModel"
+Assert-NotContains $viewModel "CalculationSnapshotBuilder.Build(" "MainWindowViewModel"
+
 $displayBuilder = Read-RepoText "ViewModels/MainWindowCalculationDisplayBuilder.cs"
-Assert-Contains $displayBuilder "CalculationResult result" "MainWindowCalculationDisplayBuilder"
-Assert-Contains $displayBuilder "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "MainWindowCalculationDisplayBuilder"
+Assert-Contains $displayBuilder "ApplicationCalculationRun run" "MainWindowCalculationDisplayBuilder"
+Assert-Contains $displayBuilder "var result = run.Result;" "MainWindowCalculationDisplayBuilder"
+Assert-Contains $displayBuilder "var snapshot = run.Snapshot;" "MainWindowCalculationDisplayBuilder"
 Assert-Contains $displayBuilder "ReportBuildBoundary.Build(projectName, environment, buoy, anchor, snapshot)" "MainWindowCalculationDisplayBuilder"
+Assert-NotContains $displayBuilder "CalculationResult result" "MainWindowCalculationDisplayBuilder"
+Assert-NotContains $displayBuilder "CalculationSnapshotBuilder.Build(" "MainWindowCalculationDisplayBuilder"
+
+$applicationRunner = Read-RepoText "ApplicationModel/ApplicationCalculationRunner.cs"
+Assert-Contains $applicationRunner "public static ApplicationCalculationRun Run(" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "var result = BuoyCalculator.Calculate(" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "return new ApplicationCalculationRun(result, snapshot);" "ApplicationCalculationRunner"
+
+Assert-CSharpDirectoryNotContains "ViewModels" "BuoyCalculator.Calculate(" "ViewModel presentation layer"
+Assert-CSharpDirectoryNotContains "Views" "BuoyCalculator.Calculate(" "View presentation layer"
+Assert-CSharpDirectoryNotContains "ViewModels" "CalculationSnapshotBuilder.Build(" "ViewModel presentation layer"
+Assert-CSharpDirectoryNotContains "Views" "CalculationSnapshotBuilder.Build(" "View presentation layer"
 
 $entryBuilder = Read-RepoText "Services/TechnicalReportBuilder.cs"
 Assert-Contains $entryBuilder "CalculationSnapshot snapshot" "TechnicalReportBuilder"
@@ -106,6 +143,19 @@ Assert-Contains $reportBoundary "CalculationSnapshot snapshot" "ReportBuildBound
 Assert-Contains $reportBoundary "UserReportBuilder.Build(environment, snapshot.Result)" "ReportBuildBoundary"
 Assert-Contains $reportBoundary "TechnicalReportBuilder.Build(projectName, environment, buoy, anchor, snapshot)" "ReportBuildBoundary"
 Assert-NotContains $reportBoundary "CalculationSnapshotBuilder.Build" "ReportBuildBoundary"
+
+$rendererPaths = @(
+    "ViewModels/MainWindowCalculationDisplayBuilder.cs",
+    "Services/ReportBuildBoundary.cs",
+    "Services/UserReportBuilder.cs",
+    "Services/TechnicalReportBuilder.cs",
+    "Services/TechnicalReportMarkdownBuilder.cs",
+    "Services/PdfReportBuilder.cs"
+)
+foreach ($rendererPath in $rendererPaths) {
+    $renderer = Read-RepoText $rendererPath
+    Assert-NotContains $renderer "CalculationSnapshotBuilder.Build(" $rendererPath
+}
 
 $dataBuilder = Read-RepoText "Services/TechnicalReportDataBuilder.cs"
 Assert-Contains $dataBuilder "public static TechnicalReportData Build(EnvironmentInput environment, CalculationResult result)" "TechnicalReportDataBuilder"

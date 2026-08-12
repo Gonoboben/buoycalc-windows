@@ -42,10 +42,17 @@ function Assert-NotContains([string]$content, [string]$needle, [string]$label) {
 Assert-FileMissing "Services/ReportBuilder.cs"
 Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
 
+Assert-FileExists "ApplicationModel/ApplicationCalculationRunner.cs"
+$applicationRunner = Read-RepoText "ApplicationModel/ApplicationCalculationRunner.cs"
+Assert-Contains $applicationRunner "var result = BuoyCalculator.Calculate(" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "ApplicationCalculationRunner"
+
 Assert-FileExists "ViewModels/MainWindowCalculationDisplayBuilder.cs"
 $displayBuilder = Read-RepoText "ViewModels/MainWindowCalculationDisplayBuilder.cs"
-Assert-Contains $displayBuilder "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "MainWindowCalculationDisplayBuilder"
+Assert-Contains $displayBuilder "ApplicationCalculationRun run" "MainWindowCalculationDisplayBuilder"
+Assert-Contains $displayBuilder "var snapshot = run.Snapshot;" "MainWindowCalculationDisplayBuilder"
 Assert-Contains $displayBuilder "ReportBuildBoundary.Build(projectName, environment, buoy, anchor, snapshot)" "MainWindowCalculationDisplayBuilder"
+Assert-NotContains $displayBuilder "CalculationSnapshotBuilder.Build(" "MainWindowCalculationDisplayBuilder"
 
 $technicalReportBuilder = Read-RepoText "Services/TechnicalReportBuilder.cs"
 Assert-Contains $technicalReportBuilder "CalculationSnapshot snapshot" "TechnicalReportBuilder"
