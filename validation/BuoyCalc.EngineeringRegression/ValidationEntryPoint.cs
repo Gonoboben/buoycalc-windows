@@ -4,11 +4,12 @@ internal static class ValidationEntryPoint
     {
         try
         {
+            ShapeLineLengthSourceRegression.Validate();
             ForceShapeConsistencyRegression.Validate();
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine("Force-shape consistency regression failure:");
+            Console.Error.WriteLine("Engineering validation regression failure:");
             Console.Error.WriteLine(ex);
             return 1;
         }

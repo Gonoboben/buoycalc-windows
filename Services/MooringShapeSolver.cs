@@ -62,7 +62,7 @@ public static class MooringShapeSolver
         var orderedSegments = result.SegmentRows.OrderBy(x => x.Number).ToList();
         var tensionRows = SegmentTensionAnalyzer.Build(result).ToDictionary(x => x.Number);
         var iteration = SolveAngleScale(orderedSegments, tensionRows, lineLengthM, targetAnchorDepthM);
-        var nodes = BuildNodes(orderedSegments, tensionRows, targetAnchorDepthM, iteration.AngleScale);
+        var nodes = BuildNodes(orderedSegments, tensionRows, targetAnchorDepthM, lineLengthM, iteration.AngleScale);
 
         var buoyPoint = nodes.FirstOrDefault();
         var anchorPoint = nodes.LastOrDefault();
@@ -168,10 +168,10 @@ public static class MooringShapeSolver
         IReadOnlyList<SegmentCalculationRow> orderedSegments,
         IReadOnlyDictionary<int, SegmentTensionRow> tensionRows,
         double targetAnchorDepthM,
+        double lineLengthM,
         double angleScale)
     {
         var nodes = new List<MooringShapePoint>();
-        var lineLengthM = orderedSegments.Sum(x => x.SegmentLengthM);
         var verticalSpanM = VerticalSpan(orderedSegments, tensionRows, angleScale, lineLengthM, targetAnchorDepthM);
         var topNodeDepthM = Math.Max(0, targetAnchorDepthM - verticalSpanM);
         var firstSegment = orderedSegments.First();
