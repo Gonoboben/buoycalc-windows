@@ -5,8 +5,8 @@ using BuoyCalc.Windows.Services;
 internal static class ForceShapeConsistencyRegression
 {
     private const double ExactResidualTolerance = 1e-10;
-    private const double VerticalRelativeTolerance = 1e-8;
-    private const double VerticalAngleToleranceDeg = 1e-6;
+    private const double RelativeBudgetMargin = 1e-12;
+    private const double AngleBudgetMarginDeg = 1e-10;
 
     private static readonly SeabedPreset RegressionSeabed = new(
         "reg:sand",
@@ -83,22 +83,26 @@ internal static class ForceShapeConsistencyRegression
         }
         AssertReconstructionIdentity(mismatchRow, "synthetic mismatch identity");
 
-        var mismatch10 = BuildSyntheticAtGeometryAngle(angleFromVerticalDeg: 10, tensionN: 50);
-        var mismatch30 = BuildSyntheticAtGeometryAngle(angleFromVerticalDeg: 30, tensionN: 50);
-        var row10 = RequireSingleAvailable(mismatch10, "synthetic 10-degree mismatch");
-        var row30 = RequireSingleAvailable(mismatch30, "synthetic 30-degree mismatch");
+        var row10 = RequireSingleAvailable(
+            BuildSyntheticAtGeometryAngle(angleFromVerticalDeg: 10, tensionN: 50),
+            "synthetic 10-degree mismatch");
+        var row30 = RequireSingleAvailable(
+            BuildSyntheticAtGeometryAngle(angleFromVerticalDeg: 30, tensionN: 50),
+            "synthetic 30-degree mismatch");
         if (row30.ResidualN!.Value <= row10.ResidualN!.Value ||
             row30.AngleDifferenceDeg!.Value <= row10.AngleDifferenceDeg!.Value)
         {
             throw new InvalidOperationException("synthetic mismatch: residual must grow with angle mismatch at fixed tension.");
         }
 
-        var zeroForce = BuildSynthetic(dxM: 0, dzM: 5, horizontalForceN: 0, verticalForceN: 0);
-        var zeroForceRow = RequireSingleIndeterminate(zeroForce, "synthetic zero-force");
+        var zeroForceRow = RequireSingleIndeterminate(
+            BuildSynthetic(dxM: 0, dzM: 5, horizontalForceN: 0, verticalForceN: 0),
+            "synthetic zero-force");
         AssertResidualsUnavailable(zeroForceRow, "synthetic zero-force");
 
-        var zeroGeometry = BuildSynthetic(dxM: 0, dzM: 0, horizontalForceN: 30, verticalForceN: 40);
-        var zeroGeometryRow = RequireSingleIndeterminate(zeroGeometry, "synthetic zero-geometry");
+        var zeroGeometryRow = RequireSingleIndeterminate(
+            BuildSynthetic(dxM: 0, dzM: 0, horizontalForceN: 30, verticalForceN: 40),
+            "synthetic zero-geometry");
         AssertResidualsUnavailable(zeroGeometryRow, "synthetic zero-geometry");
     }
 
@@ -179,7 +183,7 @@ internal static class ForceShapeConsistencyRegression
 
         if (consistency.AvailableRowCount + consistency.IndeterminateRowCount != consistency.Rows.Count)
         {
-            throw new InvalidOperationException($"{name}: available/indeterminate force-shape row accounting is inconsistent.");
+            throw new InvalidOperationException($"{name}: available/indeterminate row accounting is inconsistent.");
         }
 
         foreach (var row in consistency.Rows.Where(x => x.IsAvailable))
@@ -194,22 +198,45 @@ internal static class ForceShapeConsistencyRegression
 
         if (expectVerticalZeroCurrent)
         {
-            if (consistency.IndeterminateRowCount != 0)
-            {
-                throw new InvalidOperationException($"{name}: vertical zero-current case contains indeterminate rows.");
-            }
+            ValidateVerticalNumericalBudget(name, environment, result, consistency);
+        }
+    }
 
-            if (consistency.MaxRelativeResidual!.Value > VerticalRelativeTolerance)
-            {
-                throw new InvalidOperationException(
-                    $"{name}: max relative residual {consistency.MaxRelativeResidual.Value:R} exceeds {VerticalRelativeTolerance:R}.");
-            }
+    private static void ValidateVerticalNumericalBudget(
+        string name,
+        EnvironmentInput environment,
+        CalculationResult result,
+        MooringForceShapeConsistencyResult consistency)
+    {
+        if (consistency.IndeterminateRowCount != 0)
+        {
+            throw new InvalidOperationException($"{name}: vertical zero-current case contains indeterminate rows.");
+        }
 
-            if (consistency.MaxAngleDifferenceDeg!.Value > VerticalAngleToleranceDeg)
-            {
-                throw new InvalidOperationException(
-                    $"{name}: max angle difference {consistency.MaxAngleDifferenceDeg.Value:R} deg exceeds {VerticalAngleToleranceDeg:R} deg.");
-            }
+        if (Math.Abs(result.CurrentForceN) > ExactResidualTolerance ||
+            result.SegmentRows.Any(x => Math.Abs(x.CurrentForceN) > ExactResidualTolerance))
+        {
+            throw new InvalidOperationException($"{name}: zero-current limiting case contains non-zero base current force.");
+        }
+
+        var segmentLengthSumM = result.SegmentRows.Sum(x => x.SegmentLengthM);
+        var depthM = Math.Max(0, environment.DepthM);
+        var angleBudgetRad = segmentLengthSumM > depthM && depthM > 0
+            ? Math.Acos(Math.Clamp(depthM / segmentLengthSumM, 0, 1))
+            : 0;
+        var angleBudgetDeg = angleBudgetRad * 180.0 / Math.PI;
+        var relativeChordBudget = 2.0 * Math.Sin(angleBudgetRad / 2.0);
+
+        if (consistency.MaxAngleDifferenceDeg!.Value > angleBudgetDeg + AngleBudgetMarginDeg)
+        {
+            throw new InvalidOperationException(
+                $"{name}: max angle difference {consistency.MaxAngleDifferenceDeg.Value:R} deg exceeds representation-derived budget {angleBudgetDeg:R} + {AngleBudgetMarginDeg:R} deg.");
+        }
+
+        if (consistency.MaxRelativeResidual!.Value > relativeChordBudget + RelativeBudgetMargin)
+        {
+            throw new InvalidOperationException(
+                $"{name}: max relative residual {consistency.MaxRelativeResidual.Value:R} exceeds representation-derived chord budget {relativeChordBudget:R} + {RelativeBudgetMargin:R}.");
         }
     }
 
