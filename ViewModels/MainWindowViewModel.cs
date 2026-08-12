@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
 using BuoyCalc.Windows.Services;
 
@@ -802,7 +803,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 AssemblyItems.ToList(),
                 SafetyFactor));
 
-        var result = BuoyCalculator.Calculate(
+        var run = ApplicationCalculationRunner.Run(
             input.Environment,
             input.Buoy,
             input.AssemblyItems,
@@ -821,7 +822,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             BuoyName,
             AnchorName,
             AnchorType,
-            result);
+            run);
 
         PublishCalculationDisplay(display);
         UpdateCurrentProfileSummary();
