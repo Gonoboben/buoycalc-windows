@@ -11,6 +11,11 @@ internal static class TechnicalReportMarkdownSectionBridge
             return;
         }
 
+        if (TechnicalReportMarkdownForceShapeSections.TryAppend(methodName, args))
+        {
+            return;
+        }
+
         if (TechnicalReportMarkdownDiscreteShapeSections.TryAppend(methodName, args))
         {
             return;
