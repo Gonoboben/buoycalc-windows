@@ -44,8 +44,11 @@ Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
 
 Assert-FileExists "ViewModels/MainWindowCalculationDisplayBuilder.cs"
 $displayBuilder = Read-RepoText "ViewModels/MainWindowCalculationDisplayBuilder.cs"
-Assert-Contains $displayBuilder "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "MainWindowCalculationDisplayBuilder"
+Assert-Contains $displayBuilder "ApplicationCalculationRun run" "MainWindowCalculationDisplayBuilder"
+Assert-Contains $displayBuilder "var result = run.Result;" "MainWindowCalculationDisplayBuilder"
+Assert-Contains $displayBuilder "var snapshot = run.Snapshot;" "MainWindowCalculationDisplayBuilder"
 Assert-Contains $displayBuilder "ReportBuildBoundary.Build(projectName, environment, buoy, anchor, snapshot)" "MainWindowCalculationDisplayBuilder"
+Assert-NotContains $displayBuilder "CalculationSnapshotBuilder.Build(" "MainWindowCalculationDisplayBuilder"
 
 $technicalReportBuilder = Read-RepoText "Services/TechnicalReportBuilder.cs"
 Assert-Contains $technicalReportBuilder "CalculationSnapshot snapshot" "TechnicalReportBuilder"
