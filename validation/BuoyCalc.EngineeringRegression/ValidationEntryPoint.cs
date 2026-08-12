@@ -10,7 +10,6 @@ internal static class ValidationEntryPoint
         {
             Console.Error.WriteLine("Force-shape consistency regression failure:");
             Console.Error.WriteLine(ex);
-            ForceShapeConsistencyEvidence.PrintVerticalZeroCurrent();
             return 1;
         }
 
