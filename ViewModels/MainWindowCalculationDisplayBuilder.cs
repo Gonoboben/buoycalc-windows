@@ -40,32 +40,6 @@ internal static class MainWindowCalculationDisplayBuilder
         string buoyName,
         string anchorName,
         string anchorType,
-        CalculationResult result)
-    {
-        var snapshot = CalculationSnapshotBuilder.Build(environment, result);
-        return Build(
-            projectName,
-            environment,
-            buoy,
-            anchor,
-            assemblyItems,
-            sequenceItems,
-            buoyName,
-            anchorName,
-            anchorType,
-            new ApplicationCalculationRun(result, snapshot));
-    }
-
-    internal static MainWindowCalculationDisplay Build(
-        string projectName,
-        EnvironmentInput environment,
-        BuoyInput buoy,
-        AnchorInput anchor,
-        IReadOnlyList<AssemblyItemInput> assemblyItems,
-        IReadOnlyList<MainWindowSequenceDisplayItem> sequenceItems,
-        string buoyName,
-        string anchorName,
-        string anchorType,
         ApplicationCalculationRun run)
     {
         var result = run.Result;
