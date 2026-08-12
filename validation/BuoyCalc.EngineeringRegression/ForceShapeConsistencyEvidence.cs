@@ -1,5 +1,6 @@
 using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
+using BuoyCalc.Windows.Services;
 
 internal static class ForceShapeConsistencyEvidence
 {
@@ -45,6 +46,7 @@ internal static class ForceShapeConsistencyEvidence
         };
 
         var result = BuoyCalculator.Calculate(environment, buoy, assembly, anchor, 3.0);
+        var baseTensions = SegmentTensionAnalyzer.Build(result);
         var snapshot = CalculationSnapshotBuilder.Build(environment, result);
         var data = snapshot.TechnicalReportData;
         var consistency = data.ForceShapeConsistency;
@@ -64,8 +66,19 @@ internal static class ForceShapeConsistencyEvidence
 
         if (worst is not null)
         {
+            var segment = result.SegmentRows.Single(x => x.Number == worst.SegmentNumber);
+            var baseTension = baseTensions.Single(x => x.Number == worst.SegmentNumber);
+            var shapeNode = data.Shape.Nodes
+                .Where(x => x.Number > 0 && x.SegmentNumber == worst.SegmentNumber)
+                .Last();
+
             Console.Error.WriteLine($"WorstSegment={worst.SegmentNumber}");
             Console.Error.WriteLine($"WorstSource={worst.SourceElement}");
+            Console.Error.WriteLine($"SegmentCurrentForceN={segment.CurrentForceN:R}");
+            Console.Error.WriteLine($"BaseCumulativeH={baseTension.CumulativeHorizontalForceN:R}");
+            Console.Error.WriteLine($"BaseCumulativeV={baseTension.CumulativeVerticalForceN:R}");
+            Console.Error.WriteLine($"BaseAngleDeg={baseTension.AngleFromVerticalDeg:R}");
+            Console.Error.WriteLine($"ShapeNodeAngleDeg={shapeNode.SegmentAngleFromVerticalDeg:R}");
             Console.Error.WriteLine($"dx={worst.DeltaXM:R}");
             Console.Error.WriteLine($"dz={worst.DeltaZM:R}");
             Console.Error.WriteLine($"Lgeom={worst.GeometryLengthM:R}");
