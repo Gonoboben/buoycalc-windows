@@ -11,6 +11,7 @@ public static class TechnicalReportDataBuilder
         var shapeProjection = MooringShapeProjection.Build(shape);
         var shapeForces = MooringShapeForceAnalyzer.Build(result, shapeProjection);
         var shapeTensions = MooringShapeTensionAnalyzer.Build(result, tensionRows, shapeForces);
+        var forceShapeConsistency = MooringForceShapeConsistencyAnalyzer.Build(shapeProjection, shapeTensions);
         var sequencePositions = MooringSequencePositioner.Build(result);
         var discreteLoadTensions = MooringDiscreteLoadTensionAnalyzer.Build(result, tensionRows, sequencePositions);
         var discreteLoadShape = MooringDiscreteLoadShapeBuilder.Build(shape, discreteLoadTensions);
@@ -25,6 +26,7 @@ public static class TechnicalReportDataBuilder
             shapeProjection,
             shapeForces,
             shapeTensions,
+            forceShapeConsistency,
             sequencePositions,
             discreteLoadTensions,
             discreteLoadShape,

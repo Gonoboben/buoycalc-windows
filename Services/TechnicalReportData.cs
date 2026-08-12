@@ -8,6 +8,7 @@ public sealed record TechnicalReportData(
     MooringShapeProjectionResult ShapeProjection,
     MooringShapeForceResult ShapeForces,
     MooringShapeTensionResult ShapeTensions,
+    MooringForceShapeConsistencyResult ForceShapeConsistency,
     MooringSequencePositionResult SequencePositions,
     MooringDiscreteLoadTensionResult DiscreteLoadTensions,
     MooringDiscreteLoadShapeResult DiscreteLoadShape,
