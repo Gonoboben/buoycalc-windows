@@ -19,7 +19,7 @@
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
         <StackPanel Spacing="4">
           <TextBlock Text="Профиль течения по глубине" FontSize="22" FontWeight="Bold" />
-          <TextBlock Text="Задайте U/V/W и плотность воды по глубине. Линия разбивается на сегменты не длинннее 1 м; U/V/W и плотность интерполируются на глубине каждого сегмента. Базовая модель сопротивления использует только |Uгор|. Компонента W применяется в ориентационно-зависимой �/Z-оценке силы линии и поэтому может влиять на кандидатную и выбранную форму, но не на базовые проверки якоря и слабого звена. Для буя, соединителей и приборов применяется max |Uгор| профиля, а для расчётов веса в воде — средняя плотность профиля." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+          <TextBlock Text="Задайте U/V/W и плотность воды по глубине. Линия разбивается на сегменты не длиннее 0.20 м; U/V/W и плотность интерполируются на глубине каждого сегмента. Базовая модель сопротивления использует только |Uгор|. Компонента W применяется в ориентационно-зависимой X/Z-оценке силы линии и поэтому может влиять на кандидатную и выбранную форму, но не на базовые проверки якоря и слабого звена. Для буя, соединителей и приборов применяется max |Uгор| профиля, а для расчётов веса в воде — средняя плотность профиля." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
         </StackPanel>
         <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Top">
           <TextBlock Text="{x:Static services:AppInfo.DisplayVersion}" FontSize="12" Foreground="#263653" FontWeight="Bold" />
@@ -29,7 +29,7 @@
 
     <Border Grid.Row="1" Background="White" CornerRadius="16" Padding="14" BoxShadow="0 2 12 #18000000">
       <StackPanel Spacing="10">
-        <CheckBox IsChecked="{Binding UseCurrentProfile}" Content="Использовать профиль течения вместо одного значения скорости CurrentSpeed" />
+        <CheckBox IsChecked="{Binding UseCurrentProfile}" Content="Использовать профиль течения вместо одного значения CurrentSpeed" />
         <TextBox Text="{Binding PlanarXAxisAzimuthDeg}" Watermark="Азимут оси +X, ° (0 = Север, 90 = Восток; пусто = не задан)" FontSize="12" />
         <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
           <TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
@@ -49,7 +49,7 @@
             <TextBlock Grid.Column="1" Text="U East" FontSize="11" FontWeight="Bold" />
             <TextBlock Grid.Column="2" Text="V North" FontSize="11" FontWeight="Bold" />
             <TextBlock Grid.Column="3" Text="W Vert. (+ вниз)" FontSize="11" FontWeight="Bold" />
-            <TextBlock Grid.Column="4" Text="́, кг/м³" FontSize="11" FontWeight="Bold" />
+            <TextBlock Grid.Column="4" Text="ρ, кг/м³" FontSize="11" FontWeight="Bold" />
             <TextBlock Grid.Column="5" Text="Сводка" FontSize="11" FontWeight="Bold" />
             <TextBlock Grid.Column="6" Text="" FontSize="11" FontWeight="Bold" />
           </Grid>
