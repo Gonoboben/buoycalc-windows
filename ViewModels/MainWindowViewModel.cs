@@ -22,6 +22,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _depth = "50";
     private string _currentSpeed = "0.5";
     private bool _useCurrentProfile;
+    private string _planarXAxisAzimuthDeg = string.Empty;
     private string _currentProfileSummary = "Профиль течения отключён. Используется одно значение скорости.";
     private string _waveHeight = "1.0";
     private string _wavePeriod = "6.0";
@@ -111,6 +112,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string WaterDensity { get => _waterDensity; set { if (SetProperty(ref _waterDensity, value)) UpdateVisualizationSummary(); } }
     public string Depth { get => _depth; set { if (SetProperty(ref _depth, value)) UpdateVisualizationSummary(); } }
     public string CurrentSpeed { get => _currentSpeed; set { if (SetProperty(ref _currentSpeed, value)) UpdateCurrentProfileSummary(); } }
+    public string PlanarXAxisAzimuthDeg { get => _planarXAxisAzimuthDeg; set => SetProperty(ref _planarXAxisAzimuthDeg, value); }
 
     public bool UseCurrentProfile
     {
@@ -494,6 +496,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         Depth = template.Depth;
         CurrentSpeed = template.CurrentSpeed;
         UseCurrentProfile = template.UseCurrentProfile;
+        PlanarXAxisAzimuthDeg = string.Empty;
         WaveHeight = template.WaveHeight;
         WavePeriod = template.WavePeriod;
         SelectedSeabedPreset = SeabedCatalog.ById(template.SeabedPresetId);
@@ -644,7 +647,10 @@ public sealed class MainWindowViewModel : ViewModelBase
                     UseCurrentProfile,
                     WaveHeight,
                     WavePeriod,
-                    SelectedSeabedPreset?.Id),
+                    SelectedSeabedPreset?.Id)
+                {
+                    PlanarXAxisAzimuthDeg = PlanarXAxisAzimuthDeg
+                },
                 new MainWindowProjectBuoySaveSource(
                     BuoyName,
                     SelectedBuoyPreset?.Id,
@@ -674,6 +680,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         Depth = restore.Environment.Depth;
         CurrentSpeed = restore.Environment.CurrentSpeed;
         UseCurrentProfile = restore.Environment.UseCurrentProfile;
+        PlanarXAxisAzimuthDeg = restore.Environment.PlanarXAxisAzimuthDeg;
         WaveHeight = restore.Environment.WaveHeight;
         WavePeriod = restore.Environment.WavePeriod;
         SelectedSeabedPreset = SeabedPresets.FirstOrDefault(x => x.Id == restore.Environment.SelectedSeabedPresetId) ?? SeabedCatalog.ById("unknown");
