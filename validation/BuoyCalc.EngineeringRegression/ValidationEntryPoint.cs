@@ -1,3 +1,6 @@
+using System.Text.Json;
+using BuoyCalc.Windows.Models;
+
 internal static class ValidationEntryPoint
 {
     public static int Main(string[] args)
@@ -17,6 +20,7 @@ internal static class ValidationEntryPoint
             UniformCurrentReportRegression.Validate();
             RopeMetadataRegression.Validate();
             ProfilePlanarProjectionRegression.Validate();
+            ProjectDtoCompatibilityRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
             FinalIterationSignedNodeEquilibriumRegression.Validate();
@@ -29,5 +33,34 @@ internal static class ValidationEntryPoint
         }
 
         return Program.Main(args);
+    }
+}
+
+internal static class ProjectDtoCompatibilityRegression
+{
+    public static void Validate()
+    {
+        const string legacyJson = "{\"ProjectName\":\"Legacy\",\"WaterDensity\":\"1025\",\"UseCurrentProfile\":\"true\"}";
+        var legacy = JsonSerializer.Deserialize<BuoyProjectDto>(legacyJson)
+            ?? throw new InvalidOperationException("Project DTO compatibility regression: legacy JSON did not deserialize.");
+
+        if (legacy.PlanarXAxisAzimuthDeg != string.Empty)
+            throw new InvalidOperationException("Project DTO compatibility regression: missing optional field must restore as empty string.");
+
+        var source = new BuoyProjectDto
+        {
+            ProjectName = "Schema",
+            WaterDensity = "1025",
+            UseCurrentProfile = "true",
+            PlanarXAxisAzimuthDeg = "270"
+        };
+        var json = JsonSerializer.Serialize(source);
+        var restored = JsonSerializer.Deserialize<BuoyProjectDto>(json)
+            ?? throw new InvalidOperationException("Project DTO compatibility regression: round-trip JSON did not deserialize.");
+
+        if (restored.PlanarXAxisAzimuthDeg != "270")
+            throw new InvalidOperationException("Project DTO compatibility regression: optional field did not round-trip.");
+        if (restored.UseCurrentProfile != "true" || restored.WaterDensity != "1025")
+            throw new InvalidOperationException("Project DTO compatibility regression: existing fields changed during round-trip.");
     }
 }
