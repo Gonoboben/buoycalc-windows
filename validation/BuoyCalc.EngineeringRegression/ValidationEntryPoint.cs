@@ -8,6 +8,7 @@ internal static class ValidationEntryPoint
             ForceShapeConsistencyRegression.Validate();
             SignedOrientationRegression.Validate();
             BoundaryLoadOwnershipRegression.Validate();
+            ConstantLoadContinuousReferenceRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
             FinalIterationSignedNodeEquilibriumRegression.Validate();
