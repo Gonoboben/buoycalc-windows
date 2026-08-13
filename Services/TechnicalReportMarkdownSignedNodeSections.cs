@@ -8,24 +8,59 @@ internal static class TechnicalReportMarkdownSignedNodeSections
 {
     public static bool TryAppend(string methodName, object[] args)
     {
-        if (methodName != "AppendSignedNodeEquilibriumRows")
+        if (methodName == "AppendSignedNodeEquilibriumRows")
         {
-            return false;
+            AppendSignedNodeEquilibriumRows(
+                (StringBuilder)args[0],
+                (MooringSignedNodeEquilibriumResult)args[1],
+                "## Signed-равновесие внутренних дискретных узлов",
+                "Candidate B — информационная signed X/Z free-body диагностика внутренних сгруппированных дискретных узлов pre-iterative candidate-формы с дискретными нагрузками. Раздел только отображает уже рассчитанный MooringSignedNodeEquilibriumResult.",
+                "Это не selected-shape equilibrium: верхний узел буя и нижний узел якоря не считаются решёнными free body без соответствующих граничных реакций. Инженерный pass/fail threshold не утверждён; диагностика не влияет на solver convergence, MooringPrimaryShapeGate, selected X/Z, CalculationResult verdict, anchor reserve или weak-link checks.");
+            return true;
+        }
+
+        if (methodName == "AppendFinalIterationSignedNodeEquilibriumRows")
+        {
+            AppendFinalIterationSignedNodeEquilibriumRows(
+                (StringBuilder)args[0],
+                args[1] as MooringSignedNodeEquilibriumResult);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void AppendFinalIterationSignedNodeEquilibriumRows(
+        StringBuilder sb,
+        MooringSignedNodeEquilibriumResult? equilibrium)
+    {
+        if (equilibrium is null)
+        {
+            sb.AppendLine("## Signed-равновесие внутренних узлов — финальная итерационная кандидатная форма");
+            sb.AppendLine("Final-iteration Candidate B недоступен: итерационный solver не опубликовал retained same-iteration discrete tension/shape state. Нулевой residual не синтезируется.");
+            sb.AppendLine("Это не влияет на solver convergence, stop reason, MooringPrimaryShapeGate, selected X/Z, CalculationResult verdict, anchor reserve или weak-link checks.");
+            sb.AppendLine();
+            return;
         }
 
         AppendSignedNodeEquilibriumRows(
-            (StringBuilder)args[0],
-            (MooringSignedNodeEquilibriumResult)args[1]);
-        return true;
+            sb,
+            equilibrium,
+            "## Signed-равновесие внутренних узлов — финальная итерационная кандидатная форма",
+            "Final-iteration Candidate B — информационная signed X/Z free-body диагностика внутренних сгруппированных дискретных узлов, рассчитанная ранее из retained same-iteration FinalDiscreteLoadTensions + FinalDiscreteLoadShape. Markdown не перестраивает force/shape state и не пересчитывает residual.",
+            "Это диагностика финальной iterative candidate, а не автоматически selected-shape equilibrium: MooringPrimaryShapeGate может принять или отклонить candidate. Инженерный pass/fail threshold не утверждён; результат не влияет на solver convergence, stop reason, gate, selected X/Z, CalculationResult verdict, anchor reserve или weak-link checks.");
     }
 
     private static void AppendSignedNodeEquilibriumRows(
         StringBuilder sb,
-        MooringSignedNodeEquilibriumResult equilibrium)
+        MooringSignedNodeEquilibriumResult equilibrium,
+        string heading,
+        string stateDescription,
+        string boundaryDescription)
     {
-        sb.AppendLine("## Signed-равновесие внутренних дискретных узлов");
-        sb.AppendLine("Candidate B — информационная signed X/Z free-body диагностика внутренних сгруппированных дискретных узлов pre-iterative candidate-формы с дискретными нагрузками. Раздел только отображает уже рассчитанный MooringSignedNodeEquilibriumResult.");
-        sb.AppendLine("Это не selected-shape equilibrium: верхний узел буя и нижний узел якоря не считаются решёнными free body без соответствующих граничных реакций. Инженерный pass/fail threshold не утверждён; диагностика не влияет на solver convergence, MooringPrimaryShapeGate, selected X/Z, CalculationResult verdict, anchor reserve или weak-link checks.");
+        sb.AppendLine(heading);
+        sb.AppendLine(stateDescription);
+        sb.AppendLine(boundaryDescription);
         sb.AppendLine();
         sb.AppendLine($"- Сгруппированных внутренних узлов: {equilibrium.NodeCount}");
         sb.AppendLine($"- Доступных residual: {equilibrium.AvailableNodeCount}");
@@ -37,7 +72,7 @@ internal static class TechnicalReportMarkdownSignedNodeSections
 
         if (equilibrium.Rows.Count == 0)
         {
-            sb.AppendLine("Внутренние сгруппированные дискретные узлы для Candidate B отсутствуют.");
+            sb.AppendLine("Внутренние сгруппированные дискретные узлы для этого Candidate B state отсутствуют.");
             sb.AppendLine();
             sb.AppendLine(equilibrium.MethodNote);
             sb.AppendLine();
