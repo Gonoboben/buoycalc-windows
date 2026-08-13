@@ -57,7 +57,7 @@ public static class MooringDiscreteLoadTensionAnalyzer
 
     public static MooringDiscreteLoadTensionResult Build(
         CalculationResult result,
-        IReadOnlyList<SegmentTensionRow> originalTensionRows,
+        IReadOnlyList<SegmentTensionRow> distributedTensionRows,
         MooringSequencePositionResult sequencePositions)
     {
         if (result.SegmentRows.Count == 0 || sequencePositions.Rows.Count == 0)
@@ -76,18 +76,17 @@ public static class MooringDiscreteLoadTensionAnalyzer
                 x.CurrentForceN))
             .ToList();
 
-        var originalByNumber = originalTensionRows.ToDictionary(x => x.Number);
+        var distributedByNumber = distributedTensionRows.ToDictionary(x => x.Number);
         var rowsBySegment = new Dictionary<int, MooringDiscreteLoadTensionRow>();
         var orderedSegments = result.SegmentRows.OrderBy(x => x.Number).ToList();
 
-        var cumulativeSegmentHorizontalForceN = 0.0;
-        var cumulativeSegmentVerticalForceN = 0.0;
-
         foreach (var segment in orderedSegments.OrderByDescending(x => x.Number))
         {
-            var segmentWeightKg = segment.WeightWaterKg;
-            cumulativeSegmentHorizontalForceN += segment.CurrentForceN;
-            cumulativeSegmentVerticalForceN += segmentWeightKg * G;
+            if (!distributedByNumber.TryGetValue(segment.Number, out var distributed))
+            {
+                throw new InvalidOperationException(
+                    $"Нет authoritative distributed cut-state для segment #{segment.Number}.");
+            }
 
             var discreteWeightBelowKg = discreteLoads
                 .Where(x => x.PositionAlongLineM >= segment.StartLengthM)
@@ -96,8 +95,8 @@ public static class MooringDiscreteLoadTensionAnalyzer
                 .Where(x => x.PositionAlongLineM >= segment.StartLengthM)
                 .Sum(x => x.CurrentForceN);
 
-            var cumulativeHorizontalForceN = cumulativeSegmentHorizontalForceN + discreteForceBelowN;
-            var cumulativeVerticalForceN = cumulativeSegmentVerticalForceN + discreteWeightBelowKg * G;
+            var cumulativeHorizontalForceN = distributed.CumulativeHorizontalForceN + discreteForceBelowN;
+            var cumulativeVerticalForceN = distributed.CumulativeVerticalForceN + discreteWeightBelowKg * G;
             var discreteTensionN = Math.Sqrt(
                 cumulativeHorizontalForceN * cumulativeHorizontalForceN +
                 cumulativeVerticalForceN * cumulativeVerticalForceN);
@@ -106,9 +105,8 @@ public static class MooringDiscreteLoadTensionAnalyzer
                 Math.Abs(cumulativeHorizontalForceN),
                 Math.Max(0.0001, Math.Abs(cumulativeVerticalForceN))) * 180.0 / Math.PI;
 
-            originalByNumber.TryGetValue(segment.Number, out var original);
-            var originalTensionKn = original?.TensionKn ?? 0;
-            var originalAngleDeg = original?.AngleFromVerticalDeg ?? 0;
+            var originalTensionKn = distributed.TensionKn;
+            var originalAngleDeg = distributed.AngleFromVerticalDeg;
             var tensionDifferenceKn = discreteTensionKn - originalTensionKn;
             var angleDifferenceDeg = discreteAngleDeg - originalAngleDeg;
             var relativeDifference = Math.Abs(tensionDifferenceKn) / Math.Max(0.001, Math.Abs(originalTensionKn));
@@ -121,8 +119,8 @@ public static class MooringDiscreteLoadTensionAnalyzer
                 segment.EndLengthM,
                 segment.EstimatedDepthM,
                 segment.SegmentLengthM,
-                segmentWeightKg,
-                segment.CurrentForceN,
+                distributed.WeightWaterKg,
+                distributed.SegmentCurrentForceN,
                 discreteWeightBelowKg,
                 discreteForceBelowN,
                 cumulativeHorizontalForceN,
@@ -159,7 +157,7 @@ public static class MooringDiscreteLoadTensionAnalyzer
             relativeTopDifference,
             maxAngleDifference,
             relativeTopDifference <= RelativeTolerance,
-            "Дискретные элементы с координатой s учитываются как локальные вес в воде и горизонтальная сила ниже рассматриваемого сечения. Полученная ведомость используется для альтернативной X/Z-формы и итерационного feedback-цикла кандидатной формы.");
+            "Authoritative distributed start-cut H/V берутся из переданных SegmentTensionRow; connector/payload point loads по s добавляются поверх этого distributed state. Полученная ведомость используется для альтернативной X/Z-формы и итерационного feedback-цикла кандидатной формы.");
     }
 
     private static MooringDiscreteLoadTensionResult Empty(string note)
