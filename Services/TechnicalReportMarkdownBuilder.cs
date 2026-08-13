@@ -65,7 +65,14 @@ public static class TechnicalReportMarkdownBuilder
         TechnicalReportMarkdownSectionBridge.Append("AppendSignedNodeEquilibriumRows", sb, signedNodeEquilibrium);
         TechnicalReportMarkdownSectionBridge.Append("AppendAlternativeDiscreteNodeRows", sb, alternativeDiscreteNodes);
         TechnicalReportMarkdownSectionBridge.Append("AppendIterativeSolverRows", sb, iterativeSolver);
-        TechnicalReportMarkdownSectionBridge.Append("AppendFinalIterationSignedNodeEquilibriumRows", sb, finalIterationSignedNodeEquilibrium);
+        if (finalIterationSignedNodeEquilibrium is null)
+        {
+            TechnicalReportMarkdownSectionBridge.Append("AppendFinalIterationSignedNodeEquilibriumUnavailable", sb);
+        }
+        else
+        {
+            TechnicalReportMarkdownSectionBridge.Append("AppendFinalIterationSignedNodeEquilibriumRows", sb, finalIterationSignedNodeEquilibrium);
+        }
         TechnicalReportMarkdownSectionBridge.Append("AppendChecks", sb, result);
 
         sb.AppendLine("## Ограничения");

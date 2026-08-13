@@ -19,30 +19,35 @@ internal static class TechnicalReportMarkdownSignedNodeSections
             return true;
         }
 
+        if (methodName == "AppendFinalIterationSignedNodeEquilibriumUnavailable")
+        {
+            AppendFinalIterationSignedNodeEquilibriumUnavailable((StringBuilder)args[0]);
+            return true;
+        }
+
         if (methodName == "AppendFinalIterationSignedNodeEquilibriumRows")
         {
             AppendFinalIterationSignedNodeEquilibriumRows(
                 (StringBuilder)args[0],
-                args[1] as MooringSignedNodeEquilibriumResult);
+                (MooringSignedNodeEquilibriumResult)args[1]);
             return true;
         }
 
         return false;
     }
 
+    private static void AppendFinalIterationSignedNodeEquilibriumUnavailable(StringBuilder sb)
+    {
+        sb.AppendLine("## Signed-равновесие внутренних узлов — финальная итерационная кандидатная форма");
+        sb.AppendLine("Final-iteration Candidate B недоступен: итерационный solver не опубликовал retained same-iteration discrete tension/shape state. Нулевой residual не синтезируется.");
+        sb.AppendLine("Это не влияет на solver convergence, stop reason, MooringPrimaryShapeGate, selected X/Z, CalculationResult verdict, anchor reserve или weak-link checks.");
+        sb.AppendLine();
+    }
+
     private static void AppendFinalIterationSignedNodeEquilibriumRows(
         StringBuilder sb,
-        MooringSignedNodeEquilibriumResult? equilibrium)
+        MooringSignedNodeEquilibriumResult equilibrium)
     {
-        if (equilibrium is null)
-        {
-            sb.AppendLine("## Signed-равновесие внутренних узлов — финальная итерационная кандидатная форма");
-            sb.AppendLine("Final-iteration Candidate B недоступен: итерационный solver не опубликовал retained same-iteration discrete tension/shape state. Нулевой residual не синтезируется.");
-            sb.AppendLine("Это не влияет на solver convergence, stop reason, MooringPrimaryShapeGate, selected X/Z, CalculationResult verdict, anchor reserve или weak-link checks.");
-            sb.AppendLine();
-            return;
-        }
-
         AppendSignedNodeEquilibriumRows(
             sb,
             equilibrium,
