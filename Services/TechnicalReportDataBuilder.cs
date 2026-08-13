@@ -7,6 +7,7 @@ public static class TechnicalReportDataBuilder
     public static TechnicalReportData Build(EnvironmentInput environment, CalculationResult result)
     {
         var tensionRows = SegmentTensionAnalyzer.Build(result);
+        var signedOrientation = MooringSignedOrientationAnalyzer.Build(tensionRows);
         var shape = MooringShapeSolver.Build(environment, result);
         var shapeProjection = MooringShapeProjection.Build(shape);
         var shapeForces = MooringShapeForceAnalyzer.Build(result, shapeProjection);
@@ -34,6 +35,7 @@ public static class TechnicalReportDataBuilder
 
         return new TechnicalReportData(
             tensionRows,
+            signedOrientation,
             shape,
             shapeProjection,
             shapeForces,
