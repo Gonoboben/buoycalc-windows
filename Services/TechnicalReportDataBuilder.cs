@@ -21,6 +21,14 @@ public static class TechnicalReportDataBuilder
             discreteLoadShape);
         var alternativeDiscreteNodes = MooringAlternativeDiscreteNodeProjector.Build(sequencePositions, discreteLoadShape, shape);
         var iterativeSolver = MooringIterativeSolver.Build(result, shape, sequencePositions, tensionRows);
+        var finalIterationSignedNodeEquilibrium =
+            iterativeSolver.FinalDiscreteLoadTensions is not null &&
+            iterativeSolver.FinalDiscreteLoadShape is not null
+                ? MooringSignedNodeEquilibriumAnalyzer.Build(
+                    sequencePositions,
+                    iterativeSolver.FinalDiscreteLoadTensions,
+                    iterativeSolver.FinalDiscreteLoadShape)
+                : null;
         var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
         var vectorBalance = MooringVectorBalance.Build(result);
 
@@ -37,6 +45,7 @@ public static class TechnicalReportDataBuilder
             signedNodeEquilibrium,
             alternativeDiscreteNodes,
             iterativeSolver,
+            finalIterationSignedNodeEquilibrium,
             diagnostics,
             vectorBalance);
     }

@@ -15,5 +15,6 @@ public sealed record TechnicalReportData(
     MooringSignedNodeEquilibriumResult SignedNodeEquilibrium,
     MooringAlternativeDiscreteNodeResult AlternativeDiscreteNodes,
     MooringIterativeSolverResult IterativeSolver,
+    MooringSignedNodeEquilibriumResult? FinalIterationSignedNodeEquilibrium,
     EngineeringDiagnosticsResult Diagnostics,
     MooringVectorBalanceResult VectorBalance);
