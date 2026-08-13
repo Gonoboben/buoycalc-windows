@@ -97,6 +97,7 @@ Assert-Contains $markdownBuilder "CalculationSnapshot snapshot" "TechnicalReport
 Assert-Contains $markdownBuilder "var result = snapshot.Result;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var data = snapshot.TechnicalReportData;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var forceShapeConsistency = data.ForceShapeConsistency;" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "var signedNodeEquilibrium = data.SignedNodeEquilibrium;" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "CalculationSnapshotBuilder.Build" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "TechnicalReportDataBuilder.Build" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "TechnicalReportStorePublisher.Publish" "TechnicalReportMarkdownBuilder"
@@ -115,6 +116,7 @@ $bridgeCalls = @(
     "AppendForceShapeConsistencyRows",
     "AppendDiscreteLoadTensionRows",
     "AppendDiscreteLoadShapeRows",
+    "AppendSignedNodeEquilibriumRows",
     "AppendAlternativeDiscreteNodeRows",
     "AppendIterativeSolverRows",
     "AppendChecks"
@@ -131,6 +133,7 @@ $rendererClasses = @(
     "TechnicalReportMarkdownMovedSections",
     "TechnicalReportMarkdownForceShapeSections",
     "TechnicalReportMarkdownDiscreteShapeSections",
+    "TechnicalReportMarkdownSignedNodeSections",
     "TechnicalReportMarkdownDiscreteTensionSections",
     "TechnicalReportMarkdownDiscreteNodeSections",
     "TechnicalReportMarkdownIterativeSolverSections",
@@ -152,6 +155,7 @@ $rendererFiles = @(
     "Services/TechnicalReportMarkdownMovedSections.cs",
     "Services/TechnicalReportMarkdownForceShapeSections.cs",
     "Services/TechnicalReportMarkdownDiscreteShapeSections.cs",
+    "Services/TechnicalReportMarkdownSignedNodeSections.cs",
     "Services/TechnicalReportMarkdownDiscreteTensionSections.cs",
     "Services/TechnicalReportMarkdownDiscreteNodeSections.cs",
     "Services/TechnicalReportMarkdownIterativeSolverSections.cs",
@@ -171,5 +175,18 @@ Assert-Contains $forceShapeRenderer "row.Status" "Force-shape Markdown renderer"
 Assert-NotContains $forceShapeRenderer "MooringForceShapeConsistencyAnalyzer.Build" "Force-shape Markdown renderer"
 Assert-NotContains $forceShapeRenderer "MooringShapeSolver.Build" "Force-shape Markdown renderer"
 Assert-NotContains $forceShapeRenderer "MooringShapeTensionAnalyzer.Build" "Force-shape Markdown renderer"
+
+$signedNodeRenderer = Read-RepoText "Services/TechnicalReportMarkdownSignedNodeSections.cs"
+Assert-Contains $signedNodeRenderer "MooringSignedNodeEquilibriumResult" "Signed-node Markdown renderer"
+Assert-Contains $signedNodeRenderer "equilibrium.AvailableNodeCount" "Signed-node Markdown renderer"
+Assert-Contains $signedNodeRenderer "equilibrium.MaxRelativeResidual" "Signed-node Markdown renderer"
+Assert-Contains $signedNodeRenderer "row.ResidualXN" "Signed-node Markdown renderer"
+Assert-Contains $signedNodeRenderer "row.ResidualZN" "Signed-node Markdown renderer"
+Assert-Contains $signedNodeRenderer "row.RelativeResidual" "Signed-node Markdown renderer"
+Assert-Contains $signedNodeRenderer "row.Status" "Signed-node Markdown renderer"
+Assert-NotContains $signedNodeRenderer "MooringSignedNodeEquilibriumAnalyzer.Build" "Signed-node Markdown renderer"
+Assert-NotContains $signedNodeRenderer "MooringDiscreteLoadTensionAnalyzer.Build" "Signed-node Markdown renderer"
+Assert-NotContains $signedNodeRenderer "MooringDiscreteLoadShapeBuilder.Build" "Signed-node Markdown renderer"
+Assert-NotContains $signedNodeRenderer "MooringIterativeSolver.Build" "Signed-node Markdown renderer"
 
 Write-Host "Technical report path smoke check passed."
