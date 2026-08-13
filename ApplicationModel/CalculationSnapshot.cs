@@ -18,7 +18,15 @@ public static class CalculationSnapshotBuilder
 {
     public static CalculationSnapshot Build(EnvironmentInput environment, CalculationResult result)
     {
-        var data = TechnicalReportDataBuilder.Build(environment, result);
+        return Build(environment, null, result);
+    }
+
+    public static CalculationSnapshot Build(
+        EnvironmentInput environment,
+        BuoyInput? buoy,
+        CalculationResult result)
+    {
+        var data = TechnicalReportDataBuilder.Build(environment, buoy, result);
         var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);
 
         return new CalculationSnapshot(
