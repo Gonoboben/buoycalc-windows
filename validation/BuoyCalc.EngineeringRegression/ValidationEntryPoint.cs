@@ -14,6 +14,7 @@ internal static class ValidationEntryPoint
             BerteauxConstitutiveDragBoundaryRegression.Validate();
             BerteauxPlanarResistanceVectorRegression.Validate();
             UniformCurrentReadModelRegression.Validate();
+            UniformCurrentReportRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
             FinalIterationSignedNodeEquilibriumRegression.Validate();
