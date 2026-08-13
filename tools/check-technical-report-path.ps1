@@ -100,6 +100,7 @@ Assert-Contains $markdownBuilder "var data = snapshot.TechnicalReportData;" "Tec
 Assert-Contains $markdownBuilder "var forceShapeConsistency = data.ForceShapeConsistency;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var signedNodeEquilibrium = data.SignedNodeEquilibrium;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var finalIterationSignedNodeEquilibrium = data.FinalIterationSignedNodeEquilibrium;" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "var surfaceBoundaryInfo = data.SurfaceBoundaryInfo;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "if (finalIterationSignedNodeEquilibrium is null)" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "CalculationSnapshotBuilder.Build" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "TechnicalReportDataBuilder.Build" "TechnicalReportMarkdownBuilder"
@@ -109,6 +110,7 @@ $bridgeCalls = @(
     "AppendVectorBalanceRows",
     "AppendElementRows",
     "AppendSequencePositionRows",
+    "AppendSurfaceBoundaryInfo",
     "AppendModelCoverageRows",
     "AppendSegmentRows",
     "AppendTensionRows",
@@ -137,6 +139,7 @@ $bridge = Read-RepoText "Services/TechnicalReportMarkdownSectionBridge.cs"
 $rendererClasses = @(
     "TechnicalReportMarkdownMovedSections",
     "TechnicalReportMarkdownForceShapeSections",
+    "TechnicalReportMarkdownSurfaceBoundarySections",
     "TechnicalReportMarkdownDiscreteShapeSections",
     "TechnicalReportMarkdownSignedNodeSections",
     "TechnicalReportMarkdownDiscreteTensionSections",
@@ -159,6 +162,7 @@ Assert-NotContains $bridge ".Invoke(" "TechnicalReportMarkdownSectionBridge"
 $rendererFiles = @(
     "Services/TechnicalReportMarkdownMovedSections.cs",
     "Services/TechnicalReportMarkdownForceShapeSections.cs",
+    "Services/TechnicalReportMarkdownSurfaceBoundarySections.cs",
     "Services/TechnicalReportMarkdownDiscreteShapeSections.cs",
     "Services/TechnicalReportMarkdownSignedNodeSections.cs",
     "Services/TechnicalReportMarkdownDiscreteTensionSections.cs",
@@ -180,6 +184,14 @@ Assert-Contains $forceShapeRenderer "row.Status" "Force-shape Markdown renderer"
 Assert-NotContains $forceShapeRenderer "MooringForceShapeConsistencyAnalyzer.Build" "Force-shape Markdown renderer"
 Assert-NotContains $forceShapeRenderer "MooringShapeSolver.Build" "Force-shape Markdown renderer"
 Assert-NotContains $forceShapeRenderer "MooringShapeTensionAnalyzer.Build" "Force-shape Markdown renderer"
+
+$surfaceBoundaryRenderer = Read-RepoText "Services/TechnicalReportMarkdownSurfaceBoundarySections.cs"
+Assert-Contains $surfaceBoundaryRenderer "MooringSurfaceBoundaryInfoResult" "Surface-boundary Markdown renderer"
+Assert-Contains $surfaceBoundaryRenderer "AppendSurfaceBoundaryInfo" "Surface-boundary Markdown renderer"
+Assert-Contains $surfaceBoundaryRenderer "не участвуют в solver feedback" "Surface-boundary Markdown renderer"
+Assert-NotContains $surfaceBoundaryRenderer "MooringSurfaceBoundaryInfoAnalyzer.Build" "Surface-boundary Markdown renderer"
+Assert-NotContains $surfaceBoundaryRenderer "CalculationSnapshotBuilder.Build" "Surface-boundary Markdown renderer"
+Assert-NotContains $surfaceBoundaryRenderer "TechnicalReportDataBuilder.Build" "Surface-boundary Markdown renderer"
 
 $signedNodeRenderer = Read-RepoText "Services/TechnicalReportMarkdownSignedNodeSections.cs"
 Assert-Contains $signedNodeRenderer "MooringSignedNodeEquilibriumResult" "Signed-node Markdown renderer"
