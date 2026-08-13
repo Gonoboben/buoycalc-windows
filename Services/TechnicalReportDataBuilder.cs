@@ -11,6 +11,7 @@ public static class TechnicalReportDataBuilder
         var shape = MooringShapeSolver.Build(environment, result);
         var shapeProjection = MooringShapeProjection.Build(shape);
         var shapeForces = MooringShapeForceAnalyzer.Build(result, shapeProjection);
+        var uniformCurrentNormalVector = MooringUniformCurrentNormalVectorAnalyzer.Build(environment, result, shapeProjection, shapeForces);
         var shapeTensions = MooringShapeTensionAnalyzer.Build(result, tensionRows, shapeForces);
         var forceShapeConsistency = MooringForceShapeConsistencyAnalyzer.Build(shapeProjection, shapeTensions);
         var sequencePositions = MooringSequencePositioner.Build(result);
@@ -39,6 +40,7 @@ public static class TechnicalReportDataBuilder
             shape,
             shapeProjection,
             shapeForces,
+            uniformCurrentNormalVector,
             shapeTensions,
             forceShapeConsistency,
             sequencePositions,
