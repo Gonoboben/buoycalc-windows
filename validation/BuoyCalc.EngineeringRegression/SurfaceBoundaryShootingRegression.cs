@@ -143,17 +143,40 @@ internal static class SurfaceBoundaryShootingRegression
         AssertClassification(
             results[0],
             SurfaceBoundaryClassification.VerticalGeometryBoundaryNonUnique);
+        AssertClassification(results[1], SurfaceBoundaryClassification.Solved);
+        AssertClassification(results[2], SurfaceBoundaryClassification.Solved);
+        AssertClassification(results[3], SurfaceBoundaryClassification.Solved);
+        AssertClassification(results[4], SurfaceBoundaryClassification.Solved);
         AssertClassification(
             results[5],
             SurfaceBoundaryClassification.NoGeometricSolutionLineShorterThanDepth);
         AssertClassification(
             results[6],
             SurfaceBoundaryClassification.NoFiniteRootTautWithHorizontalLoad);
+        AssertClassification(
+            results[7],
+            SurfaceBoundaryClassification.NoRootWithinBuoyancyCapacity);
 
-        if (results[7].Classification == SurfaceBoundaryClassification.Solved)
+        var buoyantSample = RequireSolvedSample(results[2]);
+        if (buoyantSample.MaxVN <= buoyantSample.Q0N)
         {
             throw new InvalidOperationException(
-                "surface-boundary H: deliberately low-capacity buoy unexpectedly produced a depth-closing root.");
+                "surface-boundary C: negative signed line weight must increase the downward cable-tension component V when crossed top-to-bottom.");
+        }
+
+        var discreteSample = RequireSolvedSample(results[3]);
+        if (discreteSample.PointCrossingCount != 1)
+        {
+            throw new InvalidOperationException(
+                $"surface-boundary D: expected one grouped same-s point crossing, got {discreteSample.PointCrossingCount}.");
+        }
+
+        var tautUpper = results[6].UpperCapacitySample
+            ?? throw new InvalidOperationException("surface-boundary G: expected an upper capacity sample.");
+        if (Math.Abs(tautUpper.VerticalResidualM) > DepthToleranceM)
+        {
+            throw new InvalidOperationException(
+                $"surface-boundary G: regression expects the finite-capacity trial to fall inside the numerical 0.01 m band so the analytical no-finite-root override remains protected; got {tautUpper.VerticalResidualM:R} m.");
         }
 
         foreach (var result in results)
@@ -325,7 +348,6 @@ internal static class SurfaceBoundaryShootingRegression
         var lowQ = 0.0;
         var highQ = qCapacityN;
         var lowSample = lower;
-        var highSample = upper;
 
         for (var iteration = 1; iteration <= MaxBisectionIterations; iteration++)
         {
@@ -369,7 +391,6 @@ internal static class SurfaceBoundaryShootingRegression
             if (HasSignChangingBracket(lowSample.VerticalResidualM, mid.VerticalResidualM))
             {
                 highQ = midQ;
-                highSample = mid;
             }
             else
             {
@@ -527,6 +548,7 @@ internal static class SurfaceBoundaryShootingRegression
             name,
             SurfaceBoundaryClassification.Solved,
             calculation.LineLengthM,
+            Math.Max(0, calculation.BuoyancyKg) * G,
             qCapacityN,
             buoySteadyDragN,
             solved.Q0N,
@@ -553,6 +575,7 @@ internal static class SurfaceBoundaryShootingRegression
             name,
             classification,
             calculation.LineLengthM,
+            Math.Max(0, calculation.BuoyancyKg) * G,
             qCapacityN,
             buoySteadyDragN,
             q0N,
@@ -606,12 +629,29 @@ internal static class SurfaceBoundaryShootingRegression
         }
     }
 
-    private static void ValidateResultInvariants(SurfaceBoundaryResult result)
+    private static SurfaceBoundaryIntegrationSample RequireSolvedSample(SurfaceBoundaryResult result)
     {
-        if (!double.IsFinite(result.QCapacityN) || result.QCapacityN < 0)
+        if (result.Classification != SurfaceBoundaryClassification.Solved ||
+            result.SolvedSample is null ||
+            !result.SolvedSample.IsAvailable)
         {
             throw new InvalidOperationException(
-                $"surface-boundary {result.Name}: invalid Q_capacity={result.QCapacityN:R} N.");
+                $"surface-boundary {result.Name}: expected an available solved sample.");
+        }
+
+        return result.SolvedSample;
+    }
+
+    private static void ValidateResultInvariants(SurfaceBoundaryResult result)
+    {
+        if (!double.IsFinite(result.MaxBuoyancyN) ||
+            !double.IsFinite(result.QCapacityN) ||
+            result.MaxBuoyancyN < 0 ||
+            result.QCapacityN < 0 ||
+            result.QCapacityN > result.MaxBuoyancyN + VectorEpsilonN)
+        {
+            throw new InvalidOperationException(
+                $"surface-boundary {result.Name}: invalid B_max/Q_capacity pair ({result.MaxBuoyancyN:R}, {result.QCapacityN:R}) N.");
         }
 
         if (result.Q0N.HasValue &&
@@ -623,16 +663,18 @@ internal static class SurfaceBoundaryShootingRegression
 
         if (result.Classification == SurfaceBoundaryClassification.Solved)
         {
-            if (result.SolvedSample is null || !result.SolvedSample.IsAvailable)
+            var solved = RequireSolvedSample(result);
+            if (Math.Abs(solved.VerticalResidualM) > DepthToleranceM)
             {
                 throw new InvalidOperationException(
-                    $"surface-boundary {result.Name}: solved classification requires an available solved sample.");
+                    $"surface-boundary {result.Name}: solved residual {solved.VerticalResidualM:R} m exceeds numerical target {DepthToleranceM:R} m.");
             }
 
-            if (Math.Abs(result.SolvedSample.VerticalResidualM) > DepthToleranceM)
+            var bActualN = result.MaxBuoyancyN - result.QCapacityN + solved.Q0N;
+            if (bActualN < -VectorEpsilonN || bActualN > result.MaxBuoyancyN + VectorEpsilonN)
             {
                 throw new InvalidOperationException(
-                    $"surface-boundary {result.Name}: solved residual {result.SolvedSample.VerticalResidualM:R} m exceeds numerical target {DepthToleranceM:R} m.");
+                    $"surface-boundary {result.Name}: B_actual={bActualN:R} N lies outside [0, B_max={result.MaxBuoyancyN:R} N].");
             }
         }
     }
@@ -644,6 +686,9 @@ internal static class SurfaceBoundaryShootingRegression
         var qRatio = result.Q0N.HasValue && result.QCapacityN > 0
             ? result.Q0N.Value / result.QCapacityN
             : double.NaN;
+        var bActualRatio = solved is not null && result.MaxBuoyancyN > 0
+            ? (result.MaxBuoyancyN - result.QCapacityN + solved.Q0N) / result.MaxBuoyancyN
+            : double.NaN;
         var lowerResidual = result.LowerCapacitySample?.VerticalResidualM;
         var upperResidual = result.UpperCapacitySample?.VerticalResidualM;
 
@@ -654,6 +699,7 @@ internal static class SurfaceBoundaryShootingRegression
             $"Q0N={q0Text}; " +
             $"QCapacityN={result.QCapacityN:R}; " +
             $"QRatio={(double.IsFinite(qRatio) ? qRatio.ToString("R") : "n/a")}; " +
+            $"BActualToMaxRatio={(double.IsFinite(bActualRatio) ? bActualRatio.ToString("R") : "n/a")}; " +
             $"buoySteadyDragN={result.BuoySteadyDragN:R}; " +
             $"X={(solved?.EndpointXM.ToString("R") ?? "n/a")}; " +
             $"Z={(solved?.EndpointZM.ToString("R") ?? "n/a")}; " +
@@ -773,6 +819,7 @@ internal static class SurfaceBoundaryShootingRegression
         string Name,
         SurfaceBoundaryClassification Classification,
         double LineLengthM,
+        double MaxBuoyancyN,
         double QCapacityN,
         double BuoySteadyDragN,
         double? Q0N,
