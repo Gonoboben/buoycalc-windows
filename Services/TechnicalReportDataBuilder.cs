@@ -15,6 +15,10 @@ public static class TechnicalReportDataBuilder
         var sequencePositions = MooringSequencePositioner.Build(result);
         var discreteLoadTensions = MooringDiscreteLoadTensionAnalyzer.Build(result, tensionRows, sequencePositions);
         var discreteLoadShape = MooringDiscreteLoadShapeBuilder.Build(shape, discreteLoadTensions);
+        var signedNodeEquilibrium = MooringSignedNodeEquilibriumAnalyzer.Build(
+            sequencePositions,
+            discreteLoadTensions,
+            discreteLoadShape);
         var alternativeDiscreteNodes = MooringAlternativeDiscreteNodeProjector.Build(sequencePositions, discreteLoadShape, shape);
         var iterativeSolver = MooringIterativeSolver.Build(result, shape, sequencePositions, tensionRows);
         var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
@@ -30,6 +34,7 @@ public static class TechnicalReportDataBuilder
             sequencePositions,
             discreteLoadTensions,
             discreteLoadShape,
+            signedNodeEquilibrium,
             alternativeDiscreteNodes,
             iterativeSolver,
             diagnostics,
