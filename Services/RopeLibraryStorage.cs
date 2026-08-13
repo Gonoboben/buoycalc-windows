@@ -106,6 +106,7 @@ public static class RopeLibraryStorage
         var index = userRopes.FindIndex(x => x.Id == rope.Id || x.Name.Equals(rope.Name, StringComparison.OrdinalIgnoreCase));
         if (index >= 0)
         {
+            rope = RopeCoefficientMetadataResolver.MergeOptionalMetadata(userRopes[index], rope);
             userRopes[index] = rope;
         }
         else
