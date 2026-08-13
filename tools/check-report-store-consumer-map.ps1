@@ -31,7 +31,8 @@ Assert-FileExists "Services/MooringPrimaryShapeGate.cs"
 Assert-FileExists "validation/BuoyCalc.EngineeringRegression/Program.cs"
 
 $snapshot = Read-RepoText "ApplicationModel/CalculationSnapshot.cs"
-Assert-Contains $snapshot "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
+Assert-Contains $snapshot "return Build(environment, null, result);" "CalculationSnapshot compatibility overload"
+Assert-Contains $snapshot "var data = TechnicalReportDataBuilder.Build(environment, buoy, result);" "CalculationSnapshotBuilder"
 Assert-Contains $snapshot "SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver)" "CalculationSnapshotBuilder"
 Assert-NotContains $snapshot "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
 
