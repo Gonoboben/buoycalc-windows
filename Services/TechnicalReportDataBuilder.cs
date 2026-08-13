@@ -6,6 +6,12 @@ public static class TechnicalReportDataBuilder
 {
     public static TechnicalReportData Build(EnvironmentInput environment, CalculationResult result)
     {
+        return Build(environment, null, result);
+    }
+
+    public static TechnicalReportData Build(EnvironmentInput environment, BuoyInput? buoy, CalculationResult result)
+    {
+        _ = buoy;
         var tensionRows = SegmentTensionAnalyzer.Build(result);
         var signedOrientation = MooringSignedOrientationAnalyzer.Build(tensionRows);
         var shape = MooringShapeSolver.Build(environment, result);
@@ -17,19 +23,12 @@ public static class TechnicalReportDataBuilder
         var sequencePositions = MooringSequencePositioner.Build(result);
         var discreteLoadTensions = MooringDiscreteLoadTensionAnalyzer.Build(result, tensionRows, sequencePositions);
         var discreteLoadShape = MooringDiscreteLoadShapeBuilder.Build(shape, discreteLoadTensions);
-        var signedNodeEquilibrium = MooringSignedNodeEquilibriumAnalyzer.Build(
-            sequencePositions,
-            discreteLoadTensions,
-            discreteLoadShape);
+        var signedNodeEquilibrium = MooringSignedNodeEquilibriumAnalyzer.Build(sequencePositions, discreteLoadTensions, discreteLoadShape);
         var alternativeDiscreteNodes = MooringAlternativeDiscreteNodeProjector.Build(sequencePositions, discreteLoadShape, shape);
         var iterativeSolver = MooringIterativeSolver.Build(result, shape, sequencePositions, tensionRows);
         var finalIterationSignedNodeEquilibrium =
-            iterativeSolver.FinalDiscreteLoadTensions is not null &&
-            iterativeSolver.FinalDiscreteLoadShape is not null
-                ? MooringSignedNodeEquilibriumAnalyzer.Build(
-                    sequencePositions,
-                    iterativeSolver.FinalDiscreteLoadTensions,
-                    iterativeSolver.FinalDiscreteLoadShape)
+            iterativeSolver.FinalDiscreteLoadTensions is not null && iterativeSolver.FinalDiscreteLoadShape is not null
+                ? MooringSignedNodeEquilibriumAnalyzer.Build(sequencePositions, iterativeSolver.FinalDiscreteLoadTensions, iterativeSolver.FinalDiscreteLoadShape)
                 : null;
         var diagnostics = EngineeringDiagnostics.Build(environment, result, shape, tensionRows);
         var vectorBalance = MooringVectorBalance.Build(result);
