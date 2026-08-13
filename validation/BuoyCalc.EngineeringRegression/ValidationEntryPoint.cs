@@ -20,6 +20,7 @@ internal static class ValidationEntryPoint
             UniformCurrentReportRegression.Validate();
             RopeMetadataRegression.Validate();
             ProfilePlanarProjectionRegression.Validate();
+            ProfilePlanarProjectionReadModelRegression.Validate();
             ProjectDtoCompatibilityRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
