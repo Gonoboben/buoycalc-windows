@@ -27,7 +27,7 @@ public static class ApplicationCalculationRunner
             anchor,
             safetyFactor);
 
-        var snapshot = CalculationSnapshotBuilder.Build(environment, result);
+        var snapshot = CalculationSnapshotBuilder.Build(environment, buoy, result);
 
         return new ApplicationCalculationRun(result, snapshot);
     }
