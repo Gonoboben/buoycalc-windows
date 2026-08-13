@@ -10,6 +10,8 @@ public sealed class RopeLibraryItem
     public double BreakingLoadKn { get; set; }
     public double WeightWaterKgM { get; set; }
     public double DragCoefficient { get; set; }
+    public double? NormalDragCoefficient { get; set; }
+    public double? TangentialDragCoefficient { get; set; }
     public string Note { get; set; } = string.Empty;
 
     public string DisplayName => $"{Name} · {DiameterMm:0.##} мм · MBL={BreakingLoadKn:0.##} кН";
