@@ -4,6 +4,7 @@ namespace BuoyCalc.Windows.Services;
 
 public sealed record TechnicalReportData(
     IReadOnlyList<SegmentTensionRow> TensionRows,
+    MooringSignedOrientationResult SignedOrientation,
     MooringShapeResult Shape,
     MooringShapeProjectionResult ShapeProjection,
     MooringShapeForceResult ShapeForces,

@@ -6,6 +6,7 @@ internal static class ValidationEntryPoint
         {
             ShapeLineLengthSourceRegression.Validate();
             ForceShapeConsistencyRegression.Validate();
+            SignedOrientationRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
             FinalIterationSignedNodeEquilibriumRegression.Validate();
