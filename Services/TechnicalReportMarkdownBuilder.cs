@@ -28,6 +28,7 @@ public static class TechnicalReportMarkdownBuilder
         var shapeTensions = data.ShapeTensions;
         var forceShapeConsistency = data.ForceShapeConsistency;
         var sequencePositions = data.SequencePositions;
+        var surfaceBoundaryInfo = data.SurfaceBoundaryInfo;
         var discreteLoadTensions = data.DiscreteLoadTensions;
         var discreteLoadShape = data.DiscreteLoadShape;
         var signedNodeEquilibrium = data.SignedNodeEquilibrium;
@@ -53,6 +54,7 @@ public static class TechnicalReportMarkdownBuilder
         TechnicalReportMarkdownSectionBridge.Append("AppendVectorBalanceRows", sb, vectorBalance);
         TechnicalReportMarkdownSectionBridge.Append("AppendElementRows", sb, result);
         TechnicalReportMarkdownSectionBridge.Append("AppendSequencePositionRows", sb, sequencePositions);
+        TechnicalReportMarkdownSectionBridge.Append("AppendSurfaceBoundaryInfo", sb, surfaceBoundaryInfo);
         TechnicalReportMarkdownSectionBridge.Append("AppendModelCoverageRows", sb, result);
         TechnicalReportMarkdownSectionBridge.Append("AppendSegmentRows", sb, result);
         TechnicalReportMarkdownSectionBridge.Append("AppendTensionRows", sb, tensionRows);
@@ -61,7 +63,7 @@ public static class TechnicalReportMarkdownBuilder
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeForceRows", sb, shapeForces);
         TechnicalReportMarkdownSectionBridge.Append("AppendUniformCurrentNormalVectorRows", sb, uniformCurrentNormalVector);
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeTensionRows", sb, shapeTensions);
-        TechnicalReportMarkdownSectionBridge.Append("AppendForceShapeConsistencyRows", sb, forceShapeConsistency);
+     TechnicalReportMarkdownSectionBridge.Append("AppendForceShapeConsistencyRows", sb, forceShapeConsistency);
         TechnicalReportMarkdownSectionBridge.Append("AppendDiscreteLoadTensionRows", sb, discreteLoadTensions);
         TechnicalReportMarkdownSectionBridge.Append("AppendDiscreteLoadShapeRows", sb, discreteLoadShape);
         TechnicalReportMarkdownSectionBridge.Append("AppendSignedNodeEquilibriumRows", sb, signedNodeEquilibrium);
@@ -110,7 +112,7 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"- Профиль течения: {(environment.UseCurrentProfile ? "используется" : "не используется")}");
         sb.AppendLine($"- Волна: {environment.WaveHeightM:0.####} м / {environment.WavePeriodS:0.####} с");
         sb.AppendLine($"- Грунт: {environment.Seabed.Name}");
-        sb.AppendLine($"- Множитель грунта: {environment.Seabed.HoldingMultiplier:0.####}");
+     sb.AppendLine($"- Множитель грунта: {environment.Seabed.HoldingMultiplier:0.####}");
         sb.AppendLine($"- Примечание по грунту: {environment.Seabed.Note}");
         sb.AppendLine();
 
