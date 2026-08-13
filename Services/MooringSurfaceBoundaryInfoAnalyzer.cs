@@ -398,10 +398,10 @@ public static class MooringSurfaceBoundaryInfoAnalyzer
         int iterations,
         double? minimumQ)
     {
-        var qRatio = q0N.HasValue && input.QCapacityN > ForceEpsilonN
+        double? qRatio = q0N.HasValue && input.QCapacityN > ForceEpsilonN
             ? q0N.Value / input.QCapacityN
             : null;
-        var bActualRatio = q0N.HasValue && input.BMaxN > ForceEpsilonN
+        double? bActualRatio = q0N.HasValue && input.BMaxN > ForceEpsilonN
             ? (input.BuoyWeightN + q0N.Value) / input.BMaxN
             : null;
 
