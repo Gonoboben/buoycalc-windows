@@ -11,7 +11,6 @@ public static class TechnicalReportDataBuilder
 
     public static TechnicalReportData Build(EnvironmentInput environment, BuoyInput? buoy, CalculationResult result)
     {
-        _ = buoy;
         var tensionRows = SegmentTensionAnalyzer.Build(result);
         var signedOrientation = MooringSignedOrientationAnalyzer.Build(tensionRows);
         var shape = MooringShapeSolver.Build(environment, result);
@@ -21,6 +20,7 @@ public static class TechnicalReportDataBuilder
         var shapeTensions = MooringShapeTensionAnalyzer.Build(result, tensionRows, shapeForces);
         var forceShapeConsistency = MooringForceShapeConsistencyAnalyzer.Build(shapeProjection, shapeTensions);
         var sequencePositions = MooringSequencePositioner.Build(result);
+        var surfaceBoundaryInfo = MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, result, sequencePositions);
         var discreteLoadTensions = MooringDiscreteLoadTensionAnalyzer.Build(result, tensionRows, sequencePositions);
         var discreteLoadShape = MooringDiscreteLoadShapeBuilder.Build(shape, discreteLoadTensions);
         var signedNodeEquilibrium = MooringSignedNodeEquilibriumAnalyzer.Build(sequencePositions, discreteLoadTensions, discreteLoadShape);
@@ -43,6 +43,7 @@ public static class TechnicalReportDataBuilder
             shapeTensions,
             forceShapeConsistency,
             sequencePositions,
+            surfaceBoundaryInfo,
             discreteLoadTensions,
             discreteLoadShape,
             signedNodeEquilibrium,
