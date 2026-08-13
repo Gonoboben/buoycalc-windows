@@ -24,6 +24,7 @@ internal static class ValidationEntryPoint
             SegmentPlanarProjectionRegression.Validate();
             ProfilePlanarProjectionLossRegression.Validate();
             SurfaceBoundaryInfoAnalyzerRegression.Validate();
+            SurfaceBoundaryInfoDataWiringRegression.Validate();
             ProjectDtoCompatibilityRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
