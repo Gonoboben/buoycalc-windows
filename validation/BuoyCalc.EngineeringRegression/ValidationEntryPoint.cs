@@ -7,6 +7,7 @@ internal static class ValidationEntryPoint
             ShapeLineLengthSourceRegression.Validate();
             ForceShapeConsistencyRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
+            FinalIterationDiscreteStateRegression.Validate();
         }
         catch (Exception ex)
         {

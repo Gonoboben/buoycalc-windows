@@ -48,6 +48,8 @@ public sealed record MooringIterativeSolverIteration(
 public sealed record MooringIterativeSolverResult(
     IReadOnlyList<MooringIterativeSolverIteration> Rows,
     MooringShapeResult? FinalShape,
+    MooringDiscreteLoadTensionResult? FinalDiscreteLoadTensions,
+    MooringDiscreteLoadShapeResult? FinalDiscreteLoadShape,
     bool Converged,
     int IterationCount,
     double FinalOffsetChangeM,
@@ -89,6 +91,8 @@ public static class MooringIterativeSolver
         var rows = new List<MooringIterativeSolverIteration>();
         var currentShape = initialShape;
         var feedbackTensions = initialTensions;
+        MooringDiscreteLoadTensionResult? lastDiscreteTensions = null;
+        MooringDiscreteLoadShapeResult? lastDiscreteShape = null;
 
         for (var iteration = 1; iteration <= criteria.MaxIterations; iteration++)
         {
@@ -101,6 +105,8 @@ public static class MooringIterativeSolver
                 nextFeedbackTensions.Count > 0 ? nextFeedbackTensions : feedbackTensions,
                 sequencePositions);
             var nextShape = MooringDiscreteLoadShapeBuilder.Build(currentShape, discreteTensions);
+            lastDiscreteTensions = discreteTensions;
+            lastDiscreteShape = nextShape;
 
             var outputOffsetM = nextShape.DiscreteHorizontalOffsetM;
             var offsetChangeM = outputOffsetM - currentShape.HorizontalOffsetM;
@@ -191,6 +197,8 @@ public static class MooringIterativeSolver
         return new MooringIterativeSolverResult(
             rows,
             currentShape,
+            lastDiscreteTensions,
+            lastDiscreteShape,
             converged,
             rows.Count,
             last?.OffsetChangeM ?? 0,
@@ -221,6 +229,8 @@ public static class MooringIterativeSolver
     {
         return new MooringIterativeSolverResult(
             Array.Empty<MooringIterativeSolverIteration>(),
+            null,
+            null,
             null,
             false,
             0,
