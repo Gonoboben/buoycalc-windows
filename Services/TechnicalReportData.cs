@@ -12,6 +12,7 @@ public sealed record TechnicalReportData(
     MooringSequencePositionResult SequencePositions,
     MooringDiscreteLoadTensionResult DiscreteLoadTensions,
     MooringDiscreteLoadShapeResult DiscreteLoadShape,
+    MooringSignedNodeEquilibriumResult SignedNodeEquilibrium,
     MooringAlternativeDiscreteNodeResult AlternativeDiscreteNodes,
     MooringIterativeSolverResult IterativeSolver,
     EngineeringDiagnosticsResult Diagnostics,
