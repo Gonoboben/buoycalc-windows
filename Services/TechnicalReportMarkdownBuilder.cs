@@ -32,6 +32,7 @@ public static class TechnicalReportMarkdownBuilder
         var signedNodeEquilibrium = data.SignedNodeEquilibrium;
         var alternativeDiscreteNodes = data.AlternativeDiscreteNodes;
         var iterativeSolver = data.IterativeSolver;
+        var finalIterationSignedNodeEquilibrium = data.FinalIterationSignedNodeEquilibrium;
         var diagnostics = data.Diagnostics;
         var vectorBalance = data.VectorBalance;
 
@@ -64,6 +65,7 @@ public static class TechnicalReportMarkdownBuilder
         TechnicalReportMarkdownSectionBridge.Append("AppendSignedNodeEquilibriumRows", sb, signedNodeEquilibrium);
         TechnicalReportMarkdownSectionBridge.Append("AppendAlternativeDiscreteNodeRows", sb, alternativeDiscreteNodes);
         TechnicalReportMarkdownSectionBridge.Append("AppendIterativeSolverRows", sb, iterativeSolver);
+        TechnicalReportMarkdownSectionBridge.Append("AppendFinalIterationSignedNodeEquilibriumRows", sb, finalIterationSignedNodeEquilibrium);
         TechnicalReportMarkdownSectionBridge.Append("AppendChecks", sb, result);
 
         sb.AppendLine("## Ограничения");
@@ -77,6 +79,10 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine(signedNodeEquilibrium.MethodNote);
         sb.AppendLine(alternativeDiscreteNodes.MethodNote);
         sb.AppendLine(iterativeSolver.MethodNote);
+        if (finalIterationSignedNodeEquilibrium is not null)
+        {
+            sb.AppendLine(finalIterationSignedNodeEquilibrium.MethodNote);
+        }
         sb.AppendLine(vectorBalance.MethodNote);
         sb.AppendLine("Расчёт формы остаётся предварительным: итерационный solver формирует кандидатную форму с дискретными нагрузками. Только кандидат, прошедший MooringPrimaryShapeGate, становится основной выбранной формой; иначе используется fallback MooringShapeSolver. 2D читает выбранную форму, а PDF сохраняет собственный порядок источников: альтернативная форма, выбранная форма, метрики отчёта и визуализационный fallback.");
 
