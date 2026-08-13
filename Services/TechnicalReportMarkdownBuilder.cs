@@ -24,6 +24,7 @@ public static class TechnicalReportMarkdownBuilder
         var shape = data.Shape;
         var shapeProjection = data.ShapeProjection;
         var shapeForces = data.ShapeForces;
+        var uniformCurrentNormalVector = data.UniformCurrentNormalVector;
         var shapeTensions = data.ShapeTensions;
         var forceShapeConsistency = data.ForceShapeConsistency;
         var sequencePositions = data.SequencePositions;
@@ -58,6 +59,7 @@ public static class TechnicalReportMarkdownBuilder
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeRows", sb, shape);
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeProjectionRows", sb, shapeProjection);
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeForceRows", sb, shapeForces);
+        TechnicalReportMarkdownSectionBridge.Append("AppendUniformCurrentNormalVectorRows", sb, uniformCurrentNormalVector);
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeTensionRows", sb, shapeTensions);
         TechnicalReportMarkdownSectionBridge.Append("AppendForceShapeConsistencyRows", sb, forceShapeConsistency);
         TechnicalReportMarkdownSectionBridge.Append("AppendDiscreteLoadTensionRows", sb, discreteLoadTensions);
@@ -79,6 +81,7 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine(shape.MethodNote);
         sb.AppendLine(shapeProjection.MethodNote);
         sb.AppendLine(shapeForces.MethodNote);
+        sb.AppendLine(uniformCurrentNormalVector.MethodNote);
         sb.AppendLine(shapeTensions.MethodNote);
         sb.AppendLine(sequencePositions.MethodNote);
         sb.AppendLine(discreteLoadTensions.MethodNote);
