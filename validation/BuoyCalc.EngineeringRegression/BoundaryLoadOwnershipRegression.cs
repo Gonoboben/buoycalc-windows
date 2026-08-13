@@ -133,6 +133,12 @@ internal static class BoundaryLoadOwnershipRegression
                 $"buoyant-line: expected negative distributed water weight sum, got {state.SegmentWeightWaterKg:R} kg.");
         }
 
+        if (!state.LedgerRows.Any(x => x.Kind == LedgerEventKind.Segment && x.DeltaFzN < 0))
+        {
+            throw new InvalidOperationException(
+                "buoyant-line: top-to-bottom vector ledger must preserve negative segment Fz increments.");
+        }
+
         AssertOwnershipClosure(state);
     }
 
@@ -162,18 +168,18 @@ internal static class BoundaryLoadOwnershipRegression
                 "discrete-payload: expected non-zero point-load water weight and positive point-load steady drag.");
         }
 
-        var internalDiscreteRows = state.Sequence.Rows
-            .Where(x => x.IsDiscrete && x.Kind != "Буй" && x.Kind != "Якорь")
-            .ToList();
+        if (state.PointGroupCount != 1)
+        {
+            throw new InvalidOperationException(
+                $"discrete-payload: expected connector + payload to form one same-s ledger event, got {state.PointGroupCount}.");
+        }
 
-        AssertNear(
-            internalDiscreteRows.Sum(x => x.WeightWaterKg),
-            state.Sequence.DiscreteWeightWaterKg,
-            "discrete-payload point weight ownership");
-        AssertNear(
-            internalDiscreteRows.Sum(x => x.CurrentForceN),
-            state.Sequence.DiscreteCurrentForceN,
-            "discrete-payload point drag ownership");
+        var pointEvent = state.LedgerRows.Single(x => x.Kind == LedgerEventKind.PointLoad);
+        if (pointEvent.SourceCount != 2)
+        {
+            throw new InvalidOperationException(
+                $"discrete-payload: expected two sources in same-s point group, got {pointEvent.SourceCount}.");
+        }
 
         AssertOwnershipClosure(state);
     }
@@ -227,48 +233,134 @@ internal static class BoundaryLoadOwnershipRegression
 
         var segmentCurrentForceN = result.SegmentRows.Sum(x => x.CurrentForceN);
         var segmentWeightWaterKg = result.SegmentRows.Sum(x => x.WeightWaterKg);
+        var internalDiscreteRows = InternalDiscreteRows(sequence);
+
+        AssertNear(
+            sequence.DiscreteCurrentForceN,
+            internalDiscreteRows.Sum(x => x.CurrentForceN),
+            $"{name} sequence discrete-current provenance");
+        AssertNear(
+            sequence.DiscreteWeightWaterKg,
+            internalDiscreteRows.Sum(x => x.WeightWaterKg),
+            $"{name} sequence discrete-weight provenance");
 
         var reconstructedBuoySteadyDragN =
             result.CurrentForceN -
             segmentCurrentForceN -
             sequence.DiscreteCurrentForceN;
 
+        // This is only an ownership reconstruction under the current full-volume
+        // buoyancy-capacity model. It is not a solved surface-buoy equilibrium B_b.
         var reconstructedBuoySignedWeightWaterKg =
             -result.NetBuoyancyKg -
             segmentWeightWaterKg -
             sequence.DiscreteWeightWaterKg;
 
-        var terminalExternalFxN =
-            reconstructedBuoySteadyDragN +
-            segmentCurrentForceN +
-            sequence.DiscreteCurrentForceN;
+        var ledgerRows = BuildTopToBottomLedger(
+            result,
+            internalDiscreteRows,
+            reconstructedBuoySteadyDragN,
+            reconstructedBuoySignedWeightWaterKg);
 
-        var terminalExternalFzN =
-            (reconstructedBuoySignedWeightWaterKg +
-             segmentWeightWaterKg +
-             sequence.DiscreteWeightWaterKg) * G;
-
-        var buoyRows = result.ElementRows
-            .Where(x => string.Equals(x.Kind, "Буй", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        if (buoyRows.Count != 1)
-        {
-            throw new InvalidOperationException(
-                $"{name}: validation provenance expected exactly one existing buoy ElementRow, got {buoyRows.Count}.");
-        }
+        var terminal = ledgerRows.Last();
+        var buoyRow = result.ElementRows.OrderBy(x => x.Number).First();
 
         return new BoundaryOwnershipState(
             name,
             result,
             sequence,
-            buoyRows[0],
+            buoyRow,
             segmentCurrentForceN,
             segmentWeightWaterKg,
             reconstructedBuoySteadyDragN,
             reconstructedBuoySignedWeightWaterKg,
-            terminalExternalFxN,
-            terminalExternalFzN);
+            internalDiscreteRows.GroupBy(x => x.PositionAlongLineM).Count(),
+            ledgerRows,
+            terminal.CumulativeFxN,
+            terminal.CumulativeFzN);
+    }
+
+    private static IReadOnlyList<BoundaryLedgerRow> BuildTopToBottomLedger(
+        CalculationResult result,
+        IReadOnlyList<MooringSequencePositionRow> internalDiscreteRows,
+        double buoySteadyDragN,
+        double buoySignedWeightWaterKg)
+    {
+        var rows = new List<BoundaryLedgerRow>();
+        var cumulativeFxN = buoySteadyDragN;
+        var cumulativeFzN = buoySignedWeightWaterKg * G;
+
+        rows.Add(new BoundaryLedgerRow(
+            0,
+            LedgerEventKind.BuoyBoundary,
+            0,
+            1,
+            buoySteadyDragN,
+            buoySignedWeightWaterKg * G,
+            cumulativeFxN,
+            cumulativeFzN));
+
+        var events = new List<BoundaryLedgerEvent>();
+
+        // Crossing each distributed segment from top toward the anchor adds its
+        // signed load once. The event is recorded at the segment lower end.
+        events.AddRange(result.SegmentRows.Select(segment => new BoundaryLedgerEvent(
+            segment.EndLengthM,
+            0,
+            LedgerEventKind.Segment,
+            1,
+            segment.CurrentForceN,
+            segment.WeightWaterKg * G)));
+
+        // Connector/payload rows at the same s form one mechanical point event.
+        events.AddRange(internalDiscreteRows
+            .GroupBy(x => x.PositionAlongLineM)
+            .Select(group => new BoundaryLedgerEvent(
+                group.Key,
+                1,
+                LedgerEventKind.PointLoad,
+                group.Count(),
+                group.Sum(x => x.CurrentForceN),
+                group.Sum(x => x.WeightWaterKg) * G)));
+
+        foreach (var item in events
+                     .OrderBy(x => x.AlongLineM)
+                     .ThenBy(x => x.OrderAtSamePosition))
+        {
+            cumulativeFxN += item.DeltaFxN;
+            cumulativeFzN += item.DeltaFzN;
+
+            rows.Add(new BoundaryLedgerRow(
+                rows.Count,
+                item.Kind,
+                item.AlongLineM,
+                item.SourceCount,
+                item.DeltaFxN,
+                item.DeltaFzN,
+                cumulativeFxN,
+                cumulativeFzN));
+        }
+
+        return rows;
+    }
+
+    private static IReadOnlyList<MooringSequencePositionRow> InternalDiscreteRows(
+        MooringSequencePositionResult sequence)
+    {
+        if (sequence.Rows.Count < 2)
+        {
+            return Array.Empty<MooringSequencePositionRow>();
+        }
+
+        // BuildSystemRows owns buoy as the first boundary row and anchor as the
+        // last boundary row. Avoid adding a new dependency on localized Kind text.
+        var firstNumber = sequence.Rows.Min(x => x.Number);
+        var lastNumber = sequence.Rows.Max(x => x.Number);
+
+        return sequence.Rows
+            .Where(x => x.IsDiscrete && x.Number != firstNumber && x.Number != lastNumber)
+            .OrderBy(x => x.Number)
+            .ToList();
     }
 
     private static void AssertOwnershipClosure(BoundaryOwnershipState state)
@@ -291,21 +383,36 @@ internal static class BoundaryLoadOwnershipRegression
             state.TerminalExternalFzN,
             $"{state.Name} terminal signed Fz ownership");
 
-        var elementInternalCurrentForceN = state.Result.ElementRows
-            .Where(x => x.Kind != "Буй" && x.Kind != "Якорь" && x.Kind != "Линия")
-            .Sum(x => x.CurrentForceN);
-        var elementInternalWeightWaterKg = state.Result.ElementRows
-            .Where(x => x.Kind != "Буй" && x.Kind != "Якорь" && x.Kind != "Линия")
-            .Sum(x => x.WeightWaterKg);
+        var segmentRows = state.LedgerRows.Where(x => x.Kind == LedgerEventKind.Segment).ToList();
+        var pointRows = state.LedgerRows.Where(x => x.Kind == LedgerEventKind.PointLoad).ToList();
 
         AssertNear(
-            elementInternalCurrentForceN,
-            state.Sequence.DiscreteCurrentForceN,
-            $"{state.Name} sequence point-drag ownership");
+            state.SegmentCurrentForceN,
+            segmentRows.Sum(x => x.DeltaFxN),
+            $"{state.Name} segment Fx exactly once");
         AssertNear(
-            elementInternalWeightWaterKg,
-            state.Sequence.DiscreteWeightWaterKg,
-            $"{state.Name} sequence point-weight ownership");
+            state.SegmentWeightWaterKg * G,
+            segmentRows.Sum(x => x.DeltaFzN),
+            $"{state.Name} segment Fz exactly once");
+        AssertNear(
+            state.Sequence.DiscreteCurrentForceN,
+            pointRows.Sum(x => x.DeltaFxN),
+            $"{state.Name} point Fx exactly once");
+        AssertNear(
+            state.Sequence.DiscreteWeightWaterKg * G,
+            pointRows.Sum(x => x.DeltaFzN),
+            $"{state.Name} point Fz exactly once");
+
+        var previousS = -1.0;
+        foreach (var row in state.LedgerRows)
+        {
+            if (row.AlongLineM + 1e-12 < previousS)
+            {
+                throw new InvalidOperationException(
+                    $"boundary-load ownership {state.Name}: ledger moved backward from s={previousS:R} to s={row.AlongLineM:R}.");
+            }
+            previousS = row.AlongLineM;
+        }
     }
 
     private static void AssertNear(double expected, double actual, string label)
@@ -395,6 +502,31 @@ internal static class BoundaryLoadOwnershipRegression
             dragCoefficient);
     }
 
+    private enum LedgerEventKind
+    {
+        BuoyBoundary,
+        Segment,
+        PointLoad
+    }
+
+    private sealed record BoundaryLedgerEvent(
+        double AlongLineM,
+        int OrderAtSamePosition,
+        LedgerEventKind Kind,
+        int SourceCount,
+        double DeltaFxN,
+        double DeltaFzN);
+
+    private sealed record BoundaryLedgerRow(
+        int Number,
+        LedgerEventKind Kind,
+        double AlongLineM,
+        int SourceCount,
+        double DeltaFxN,
+        double DeltaFzN,
+        double CumulativeFxN,
+        double CumulativeFzN);
+
     private sealed record BoundaryOwnershipState(
         string Name,
         CalculationResult Result,
@@ -404,6 +536,8 @@ internal static class BoundaryLoadOwnershipRegression
         double SegmentWeightWaterKg,
         double ReconstructedBuoySteadyDragN,
         double ReconstructedBuoySignedWeightWaterKg,
+        int PointGroupCount,
+        IReadOnlyList<BoundaryLedgerRow> LedgerRows,
         double TerminalExternalFxN,
         double TerminalExternalFzN);
 }
