@@ -10,6 +10,7 @@ internal static class ValidationEntryPoint
             FinalIterationDiscreteStateRegression.Validate();
             FinalIterationSignedNodeEquilibriumRegression.Validate();
             IterativeFeedbackCouplingRegression.Validate();
+            FeedbackGoldenDiffEvidence.Print(args);
         }
         catch (Exception ex)
         {
