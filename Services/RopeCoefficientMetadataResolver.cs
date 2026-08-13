@@ -31,21 +31,6 @@ public static class RopeCoefficientMetadataResolver
             "Data-only metadata resolver. Existing production calculations continue to consume RopePreset.DragCoefficient; explicit normal/tangential metadata is not wired into force or solver physics.");
     }
 
-    public static RopeLibraryItem PreserveOptionalMetadata(RopeLibraryItem existing, RopeLibraryItem incoming)
-    {
-        if (!incoming.NormalDragCoefficient.HasValue)
-        {
-            incoming.NormalDragCoefficient = existing.NormalDragCoefficient;
-        }
-
-        if (!incoming.TangentialDragCoefficient.HasValue)
-        {
-            incoming.TangentialDragCoefficient = existing.TangentialDragCoefficient;
-        }
-
-        return incoming;
-    }
-
     private static double? FiniteNullable(double? value)
     {
         return value.HasValue && double.IsFinite(value.Value) ? value.Value : null;
