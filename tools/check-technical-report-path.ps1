@@ -45,7 +45,7 @@ Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
 Assert-FileExists "ApplicationModel/ApplicationCalculationRunner.cs"
 $applicationRunner = Read-RepoText "ApplicationModel/ApplicationCalculationRunner.cs"
 Assert-Contains $applicationRunner "var result = BuoyCalculator.Calculate(" "ApplicationCalculationRunner"
-Assert-Contains $applicationRunner "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "var snapshot = CalculationSnapshotBuilder.Build(environment, buoy, result);" "ApplicationCalculationRunner"
 
 Assert-FileExists "ViewModels/MainWindowCalculationDisplayBuilder.cs"
 $displayBuilder = Read-RepoText "ViewModels/MainWindowCalculationDisplayBuilder.cs"
@@ -66,12 +66,13 @@ Assert-Contains $snapshotBoundary "public sealed record CalculationSnapshot(" "C
 Assert-Contains $snapshotBoundary "CalculationResult Result," "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "TechnicalReportData TechnicalReportData," "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "SelectedShapeReadModel? SelectedShape);" "CalculationSnapshot"
-Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
+Assert-Contains $snapshotBoundary "return Build(environment, null, result);" "CalculationSnapshotBuilder compatibility overload"
+Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, buoy, result);" "CalculationSnapshotBuilder"
 Assert-Contains $snapshotBoundary "var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);" "CalculationSnapshotBuilder"
 Assert-NotContains $snapshotBoundary "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
 Assert-NotContains $snapshotBoundary "SelectedShapeStore.Current" "CalculationSnapshotBuilder"
 
-$dataBuildIndex = $snapshotBoundary.IndexOf("var data = TechnicalReportDataBuilder.Build(environment, result);")
+$dataBuildIndex = $snapshotBoundary.IndexOf("var data = TechnicalReportDataBuilder.Build(environment, buoy, result);")
 $selectedShapeIndex = $snapshotBoundary.IndexOf("var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);")
 if ($dataBuildIndex -lt 0 -or $selectedShapeIndex -le $dataBuildIndex) {
     throw "CalculationSnapshotBuilder must preserve Build -> stateless selected X/Z order."
