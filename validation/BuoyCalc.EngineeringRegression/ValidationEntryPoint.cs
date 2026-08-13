@@ -11,6 +11,7 @@ internal static class ValidationEntryPoint
             ConstantLoadAnalyticalReferenceRegression.Validate();
             PiecewisePointLoadAnalyticalReferenceRegression.Validate();
             BerteauxVectorOverlapRegression.Validate();
+            BerteauxConstitutiveDragBoundaryRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
             FinalIterationSignedNodeEquilibriumRegression.Validate();
