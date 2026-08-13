@@ -131,12 +131,31 @@ internal static class CandidateBMeasurementEvidence
         Console.Error.WriteLine($"Scenario={name}");
         PrintResidual("Pre", data.SignedNodeEquilibrium);
         PrintResidual("Final", data.FinalIterationSignedNodeEquilibrium);
+        Console.Error.WriteLine($"FallbackOffsetM={data.Shape.HorizontalOffsetM:R}");
+        Console.Error.WriteLine($"PreCandidateOffsetM={data.DiscreteLoadShape.DiscreteHorizontalOffsetM:R}");
+        Console.Error.WriteLine($"FinalShapeOffsetM={Format(data.IterativeSolver.FinalShape?.HorizontalOffsetM)}");
+        Console.Error.WriteLine($"PreTopDiscreteTensionKn={data.DiscreteLoadTensions.TopDiscreteTensionKn:R}");
+        Console.Error.WriteLine($"FinalTopDiscreteTensionKn={Format(data.IterativeSolver.FinalDiscreteLoadTensions?.TopDiscreteTensionKn)}");
         Console.Error.WriteLine($"IterationCount={data.IterativeSolver.IterationCount}");
         Console.Error.WriteLine($"Converged={data.IterativeSolver.Converged}");
         Console.Error.WriteLine($"StopReason={data.IterativeSolver.StopReason}");
         Console.Error.WriteLine($"FinalOffsetChangeM={data.IterativeSolver.FinalOffsetChangeM:R}");
         Console.Error.WriteLine($"FinalMaxNodeDeltaM={data.IterativeSolver.FinalMaxNodeDeltaM:R}");
         Console.Error.WriteLine($"FinalGeometryResidualM={data.IterativeSolver.FinalGeometryResidualM:R}");
+        foreach (var iteration in data.IterativeSolver.Rows)
+        {
+            Console.Error.WriteLine(
+                $"Iteration{iteration.IterationNumber}=" +
+                $"InputX:{iteration.InputOffsetM:R};" +
+                $"OutputX:{iteration.OutputOffsetM:R};" +
+                $"DeltaX:{iteration.OffsetChangeM:R};" +
+                $"ShapeLineForceN:{iteration.ShapeLineForceN:R};" +
+                $"TopShapeTensionKn:{iteration.TopShapeTensionKn:R};" +
+                $"TopDiscreteTensionKn:{iteration.TopDiscreteTensionKn:R};" +
+                $"MaxNodeDeltaM:{iteration.MaxNodeDeltaM:R};" +
+                $"GeometryResidualM:{iteration.GeometryResidualM:R};" +
+                $"StopReason:{iteration.StopReason}");
+        }
         Console.Error.WriteLine("END_CANDIDATE_B_MEASUREMENT");
     }
 
