@@ -94,7 +94,7 @@ Assert-NotContains $displayBuilder "CalculationSnapshotBuilder.Build(" "MainWind
 $applicationRunner = Read-RepoText "ApplicationModel/ApplicationCalculationRunner.cs"
 Assert-Contains $applicationRunner "public static ApplicationCalculationRun Run(" "ApplicationCalculationRunner"
 Assert-Contains $applicationRunner "var result = BuoyCalculator.Calculate(" "ApplicationCalculationRunner"
-Assert-Contains $applicationRunner "var snapshot = CalculationSnapshotBuilder.Build(environment, result);" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "var snapshot = CalculationSnapshotBuilder.Build(environment, buoy, result);" "ApplicationCalculationRunner"
 Assert-Contains $applicationRunner "return new ApplicationCalculationRun(result, snapshot);" "ApplicationCalculationRunner"
 
 Assert-CSharpDirectoryNotContains "ViewModels" "BuoyCalculator.Calculate(" "ViewModel presentation layer"
@@ -123,7 +123,8 @@ Assert-Contains $snapshotBoundary "public sealed record CalculationSnapshot(" "C
 Assert-Contains $snapshotBoundary "CalculationResult Result," "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "TechnicalReportData TechnicalReportData," "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "SelectedShapeReadModel? SelectedShape);" "CalculationSnapshot"
-Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, result);" "CalculationSnapshotBuilder"
+Assert-Contains $snapshotBoundary "return Build(environment, null, result);" "CalculationSnapshot compatibility overload"
+Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, buoy, result);" "CalculationSnapshotBuilder"
 Assert-Contains $snapshotBoundary "var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);" "CalculationSnapshotBuilder"
 Assert-NotContains $snapshotBoundary "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
 Assert-NotContains $snapshotBoundary "SelectedShapeStore.Current" "CalculationSnapshotBuilder"
@@ -159,6 +160,8 @@ foreach ($rendererPath in $rendererPaths) {
 
 $dataBuilder = Read-RepoText "Services/TechnicalReportDataBuilder.cs"
 Assert-Contains $dataBuilder "public static TechnicalReportData Build(EnvironmentInput environment, CalculationResult result)" "TechnicalReportDataBuilder"
+Assert-Contains $dataBuilder "return Build(environment, null, result);" "TechnicalReportDataBuilder compatibility overload"
+Assert-Contains $dataBuilder "public static TechnicalReportData Build(EnvironmentInput environment, BuoyInput? buoy, CalculationResult result)" "TechnicalReportDataBuilder typed overload"
 Assert-Contains $dataBuilder "return new TechnicalReportData(" "TechnicalReportDataBuilder"
 Assert-NotContains $dataBuilder "TechnicalReportStorePublisher" "TechnicalReportDataBuilder"
 
