@@ -29,6 +29,7 @@ public static class TechnicalReportMarkdownBuilder
         var sequencePositions = data.SequencePositions;
         var discreteLoadTensions = data.DiscreteLoadTensions;
         var discreteLoadShape = data.DiscreteLoadShape;
+        var signedNodeEquilibrium = data.SignedNodeEquilibrium;
         var alternativeDiscreteNodes = data.AlternativeDiscreteNodes;
         var iterativeSolver = data.IterativeSolver;
         var diagnostics = data.Diagnostics;
@@ -60,6 +61,7 @@ public static class TechnicalReportMarkdownBuilder
         TechnicalReportMarkdownSectionBridge.Append("AppendForceShapeConsistencyRows", sb, forceShapeConsistency);
         TechnicalReportMarkdownSectionBridge.Append("AppendDiscreteLoadTensionRows", sb, discreteLoadTensions);
         TechnicalReportMarkdownSectionBridge.Append("AppendDiscreteLoadShapeRows", sb, discreteLoadShape);
+        TechnicalReportMarkdownSectionBridge.Append("AppendSignedNodeEquilibriumRows", sb, signedNodeEquilibrium);
         TechnicalReportMarkdownSectionBridge.Append("AppendAlternativeDiscreteNodeRows", sb, alternativeDiscreteNodes);
         TechnicalReportMarkdownSectionBridge.Append("AppendIterativeSolverRows", sb, iterativeSolver);
         TechnicalReportMarkdownSectionBridge.Append("AppendChecks", sb, result);
@@ -72,6 +74,7 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine(sequencePositions.MethodNote);
         sb.AppendLine(discreteLoadTensions.MethodNote);
         sb.AppendLine(discreteLoadShape.MethodNote);
+        sb.AppendLine(signedNodeEquilibrium.MethodNote);
         sb.AppendLine(alternativeDiscreteNodes.MethodNote);
         sb.AppendLine(iterativeSolver.MethodNote);
         sb.AppendLine(vectorBalance.MethodNote);
