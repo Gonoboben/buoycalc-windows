@@ -10,6 +10,7 @@ public sealed class BuoyProjectDto
     public string Depth { get; set; } = string.Empty;
     public string CurrentSpeed { get; set; } = string.Empty;
     public string UseCurrentProfile { get; set; } = string.Empty;
+    public string PlanarXAxisAzimuthDeg { get; set; } = string.Empty;
     public string WaveHeight { get; set; } = string.Empty;
     public string WavePeriod { get; set; } = string.Empty;
     public string SelectedSeabedPresetId { get; set; } = string.Empty;
