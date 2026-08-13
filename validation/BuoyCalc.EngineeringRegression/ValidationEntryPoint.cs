@@ -9,7 +9,6 @@ internal static class ValidationEntryPoint
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
             FinalIterationSignedNodeEquilibriumRegression.Validate();
-            CandidateBMeasurementEvidence.Print();
         }
         catch (Exception ex)
         {
