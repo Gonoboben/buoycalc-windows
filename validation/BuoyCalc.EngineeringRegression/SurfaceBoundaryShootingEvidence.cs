@@ -453,11 +453,11 @@ internal static class SurfaceBoundaryShootingEvidence
         BuoyInput buoy,
         CalculationResult result)
     {
-        var qRatio = q0N.HasValue && qCapacityN > ForceEpsilonN
+        double? qRatio = q0N.HasValue && qCapacityN > ForceEpsilonN
             ? q0N.Value / qCapacityN
             : null;
         var bMaxN = result.BuoyancyKg * G;
-        var bActualRatio = q0N.HasValue && bMaxN > ForceEpsilonN
+        double? bActualRatio = q0N.HasValue && bMaxN > ForceEpsilonN
             ? (buoy.WeightKg * G + q0N.Value) / bMaxN
             : null;
 
