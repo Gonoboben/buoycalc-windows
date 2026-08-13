@@ -13,7 +13,10 @@ internal sealed record MainWindowProjectEnvironmentSaveSource(
     bool UseCurrentProfile,
     string WaveHeight,
     string WavePeriod,
-    string? SelectedSeabedPresetId);
+    string? SelectedSeabedPresetId)
+{
+    public string PlanarXAxisAzimuthDeg { get; init; } = string.Empty;
+}
 
 internal sealed record MainWindowProjectBuoySaveSource(
     string Name,
@@ -48,7 +51,10 @@ internal sealed record MainWindowProjectEnvironmentRestoreModel(
     bool UseCurrentProfile,
     string WaveHeight,
     string WavePeriod,
-    string SelectedSeabedPresetId);
+    string SelectedSeabedPresetId)
+{
+    public string PlanarXAxisAzimuthDeg { get; init; } = string.Empty;
+}
 
 internal sealed record MainWindowProjectBuoyRestoreModel(
     string Name,
@@ -82,6 +88,7 @@ internal static class MainWindowProjectDtoMapper
             Depth = source.Environment.Depth,
             CurrentSpeed = source.Environment.CurrentSpeed,
             UseCurrentProfile = source.Environment.UseCurrentProfile ? "true" : "false",
+            PlanarXAxisAzimuthDeg = source.Environment.PlanarXAxisAzimuthDeg,
             WaveHeight = source.Environment.WaveHeight,
             WavePeriod = source.Environment.WavePeriod,
             SelectedSeabedPresetId = source.Environment.SelectedSeabedPresetId ?? "unknown",
@@ -133,7 +140,10 @@ internal static class MainWindowProjectDtoMapper
                 string.Equals(dto.UseCurrentProfile, "true", StringComparison.OrdinalIgnoreCase),
                 dto.WaveHeight,
                 dto.WavePeriod,
-                dto.SelectedSeabedPresetId),
+                dto.SelectedSeabedPresetId)
+            {
+                PlanarXAxisAzimuthDeg = dto.PlanarXAxisAzimuthDeg
+            },
             new MainWindowProjectBuoyRestoreModel(
                 string.IsNullOrWhiteSpace(dto.BuoyName) ? "Буй" : dto.BuoyName,
                 dto.SelectedBuoyPresetId),
