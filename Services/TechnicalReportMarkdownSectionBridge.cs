@@ -21,6 +21,11 @@ internal static class TechnicalReportMarkdownSectionBridge
             return;
         }
 
+        if (TechnicalReportMarkdownSignedNodeSections.TryAppend(methodName, args))
+        {
+            return;
+        }
+
         if (TechnicalReportMarkdownDiscreteTensionSections.TryAppend(methodName, args))
         {
             return;
