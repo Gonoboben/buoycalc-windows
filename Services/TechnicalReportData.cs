@@ -13,6 +13,7 @@ public sealed record TechnicalReportData(
     MooringForceShapeConsistencyResult ForceShapeConsistency,
     MooringSequencePositionResult SequencePositions,
     MooringSurfaceBoundaryInfoResult SurfaceBoundaryInfo,
+    MooringSurfaceBoundaryTensionTraceResult SurfaceBoundaryTensionTrace,
     MooringDiscreteLoadTensionResult DiscreteLoadTensions,
     MooringDiscreteLoadShapeResult DiscreteLoadShape,
     MooringSignedNodeEquilibriumResult SignedNodeEquilibrium,
