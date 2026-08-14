@@ -28,6 +28,7 @@ internal static class ValidationEntryPoint
             SurfaceBoundaryInfoReportRegression.Validate();
             SurfaceBoundaryCanonicalMeasurementRegression.Validate();
             SurfaceBoundarySelectedShapeImpactRegression.Validate();
+            SurfaceBoundaryIterationPathRegression.Validate();
             ProjectDtoCompatibilityRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
