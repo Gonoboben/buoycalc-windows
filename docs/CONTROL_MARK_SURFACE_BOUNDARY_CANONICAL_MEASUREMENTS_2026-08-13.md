@@ -1,6 +1,6 @@
 # Control mark: canonical surface-boundary INFO measurements
 
-Date: 2026-08-13
+Date: 2026-08-14
 Issue: #413
 Depends on: #407
 Scope: validation-only measurements of the already merged frozen-load surface-boundary INFO read model. No production physics or selected-X/Z change.
@@ -10,6 +10,8 @@ Scope: validation-only measurements of the already merged frozen-load surface-bo
 Run the existing canonical engineering scenarios A–E through the runtime `MooringSurfaceBoundaryInfoAnalyzer` using the typed `BuoyInput` snapshot path and record the resulting boundary classification and capacity measurements.
 
 The scenarios are the same A–E inputs already used by the engineering golden regression harness. This package does not invent new deployment inputs and does not alter the golden baseline.
+
+The values below are copied from the successful GitHub Actions `.NET Build` run #876 for PR #457 on exact head `00ed3ade61ebe1e6dafee070e946f85eb368891a`.
 
 The INFO model remains:
 
@@ -24,15 +26,15 @@ The INFO model remains:
 
 | Scenario | Classification | D_b, N | Q_capacity, N | Q0, N | Q0/Q_capacity | B_actual/B_max | Xdiag, m | Zdiag, m | Iterations | Internal point loads |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| A | SolvedByBoundedBisection | 268.96 | 4241.8761 | 382.5564 | 0.09019 | 0.15340 | 24.6360 | 49.9910 | 13 | 1 |
-| B | SolvedByBoundedBisection | 492.00 | 10594.5821 | 844.4892 | 0.07971 | 0.20757 | 54.0876 | 119.9965 | 15 | 2 |
-| C | SolvedByBoundedBisection | 297.4199 | 19132.9675 | 1256.0010 | 0.06565 | 0.19468 | 137.0576 | 379.9924 | 14 | 2 |
-| D | SolvedByBoundedBisection | 1619.2859 | 19132.9675 | 1990.2272 | 0.10402 | 0.27535 | 152.8158 | 379.9983 | 15 | 2 |
-| E | SolvedByBoundedBisection | 864.4610 | 19132.9675 | 1459.5015 | 0.07628 | 0.22712 | 143.1204 | 380.0086 | 14 | 2 |
+| A | SolvedByBoundedBisection | 131.2000 | 4241.3761 | 855.3166 | 0.20166 | 0.32628 | 21.6460 | 50.0003 | 11 | 3 |
+| B | SolvedByBoundedBisection | 369.0000 | 10591.1820 | 2518.5086 | 0.23779 | 0.33075 | 57.8485 | 120.0022 | 11 | 4 |
+| C | SolvedByBoundedBisection | 203.8725 | 19172.0008 | 3196.8937 | 0.16675 | 0.27760 | 139.1318 | 379.9917 | 12 | 4 |
+| D | SolvedByBoundedBisection | 1109.9725 | 19172.0008 | 7423.5335 | 0.38721 | 0.46873 | 150.7430 | 379.9943 | 11 | 4 |
+| E | SolvedByBoundedBisection | 523.9004 | 19174.5897 | 4001.3380 | 0.20868 | 0.31394 | 149.5170 | 379.9971 | 14 | 4 |
 
 All five solved `Q0` values are strictly inside `[0, Q_capacity]` and all solved endpoint depth residuals satisfy the existing INFO integration tolerance of approximately `0.01 m`.
 
-The measured `Q0/Q_capacity` range for these five canonical inputs is approximately `0.0656 ... 0.1040`. This is an observed range only; it is **not** an engineering acceptance threshold.
+The measured `Q0/Q_capacity` range for these five canonical inputs is approximately `0.1667 ... 0.3872`. This is an observed range only; it is **not** an engineering acceptance threshold.
 
 ## 3. Boundary residuals
 
@@ -40,11 +42,11 @@ The endpoint residuals at the two allowed `Q0` boundaries were:
 
 | Scenario | Z(Q0=0)-Depth, m | Z(Q_capacity)-Depth, m |
 |---|---:|---:|
-| A | -43.3923 | +4.8786 |
-| B | -111.3581 | +9.9351 |
-| C | -357.9440 | +29.8938 |
-| D | -362.2051 | +29.8253 |
-| E | -358.8295 | +29.8785 |
+| A | -60.5808 | +4.7851 |
+| B | -131.1161 | +13.9894 |
+| C | -454.3866 | +29.1369 |
+| D | -407.3093 | +25.1754 |
+| E | -431.9140 | +28.6531 |
 
 Thus the frozen-load depth root was bracketed inside the buoy-capacity interval for every canonical A–E case.
 
@@ -61,7 +63,7 @@ The validation requires equality to numerical tolerance (`1e-10`) for:
 - lower and capacity depth residuals;
 - diagnostic endpoint X/Z.
 
-The check passed. This confirms that the runtime INFO boundary is independent of the existing wave term, as required by the Chapter-2 steady-current contract. This does not change the existing wave contribution elsewhere in `BuoyCalculator`.
+The check passed in `.NET Build` run #876. This confirms that the runtime INFO boundary is independent of the existing wave term, as required by the Chapter-2 steady-current contract. This does not change the existing wave contribution elsewhere in `BuoyCalculator`.
 
 ## 5. Interpretation limits
 
