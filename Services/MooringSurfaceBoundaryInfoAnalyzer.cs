@@ -63,10 +63,10 @@ public sealed record MooringSurfaceBoundaryInfoResult(
 
 public static class MooringSurfaceBoundaryInfoAnalyzer
 {
-    private const double G = 9.80665;
+    private const double G = MooringSurfaceBoundaryIntegrationKernel.GravityMS2;
     private const double DepthToleranceM = 0.01;
-    private const double LengthToleranceM = 1e-9;
-    private const double ForceEpsilonN = 1e-9;
+    private const double LengthToleranceM = MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM;
+    private const double ForceEpsilonN = MooringSurfaceBoundaryIntegrationKernel.ForceEpsilonN;
     private const int MaxRootIterations = 80;
     private const string Method =
         "INFO only: frozen-load midpoint integration; steady current; wave excluded; +Z down; " +
@@ -459,81 +459,11 @@ public static class MooringSurfaceBoundaryInfoAnalyzer
         double q0N,
         double initialHN)
     {
-        var hN = initialHN;
-        var vN = q0N;
-        var xM = 0.0;
-        var zM = 0.0;
-        var minHN = hN;
-        var maxHN = hN;
-        var minVN = vN;
-        var maxVN = vN;
-        var sawPositiveV = vN > ForceEpsilonN;
-        var sawNegativeV = vN < -ForceEpsilonN;
-        var pointIndex = 0;
-        var pointCrossings = 0;
-        var indeterminateSegments = 0;
-
-        foreach (var segment in input.Segments)
-        {
-            while (pointIndex < input.Points.Count &&
-                   input.Points[pointIndex].PositionAlongLineM <= segment.StartLengthM + LengthToleranceM)
-            {
-                ApplyPoint(input.Points[pointIndex++]);
-            }
-
-            var hMidN = hN + 0.5 * segment.CurrentForceN;
-            var vMidN = vN - 0.5 * segment.WeightWaterKg * G;
-            var tensionMidN = Math.Sqrt(hMidN * hMidN + vMidN * vMidN);
-
-            Track(hMidN, vMidN);
-            if (!double.IsFinite(tensionMidN) || tensionMidN <= ForceEpsilonN)
-            {
-                indeterminateSegments++;
-            }
-            else
-            {
-                xM += segment.SegmentLengthM * hMidN / tensionMidN;
-                zM += segment.SegmentLengthM * vMidN / tensionMidN;
-            }
-
-            hN += segment.CurrentForceN;
-            vN -= segment.WeightWaterKg * G;
-            Track(hN, vN);
-        }
-
-        while (pointIndex < input.Points.Count)
-            ApplyPoint(input.Points[pointIndex++]);
-
-        return new MooringSurfaceBoundaryIntegrationState(
-            xM,
-            zM,
-            hN,
-            vN,
-            minHN,
-            maxHN,
-            minVN,
-            maxVN,
-            sawPositiveV && sawNegativeV,
-            pointCrossings,
-            indeterminateSegments);
-
-        void ApplyPoint(MooringSequencePositionRow point)
-        {
-            hN += point.CurrentForceN;
-            vN -= point.WeightWaterKg * G;
-            pointCrossings++;
-            Track(hN, vN);
-        }
-
-        void Track(double h, double v)
-        {
-            minHN = Math.Min(minHN, h);
-            maxHN = Math.Max(maxHN, h);
-            minVN = Math.Min(minVN, v);
-            maxVN = Math.Max(maxVN, v);
-            sawPositiveV |= v > ForceEpsilonN;
-            sawNegativeV |= v < -ForceEpsilonN;
-        }
+        return MooringSurfaceBoundaryIntegrationKernel.Integrate(
+            input.Segments,
+            input.Points,
+            q0N,
+            initialHN);
     }
 
     private static bool SampleMonotonicity(PreparedInput input)
