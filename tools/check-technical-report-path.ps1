@@ -101,6 +101,7 @@ Assert-Contains $markdownBuilder "var forceShapeConsistency = data.ForceShapeCon
 Assert-Contains $markdownBuilder "var signedNodeEquilibrium = data.SignedNodeEquilibrium;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var finalIterationSignedNodeEquilibrium = data.FinalIterationSignedNodeEquilibrium;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "var surfaceBoundaryInfo = data.SurfaceBoundaryInfo;" "TechnicalReportMarkdownBuilder"
+Assert-Contains $markdownBuilder "var surfaceBoundaryTensionTrace = data.SurfaceBoundaryTensionTrace;" "TechnicalReportMarkdownBuilder"
 Assert-Contains $markdownBuilder "if (finalIterationSignedNodeEquilibrium is null)" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "CalculationSnapshotBuilder.Build" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "TechnicalReportDataBuilder.Build" "TechnicalReportMarkdownBuilder"
@@ -111,6 +112,7 @@ $bridgeCalls = @(
     "AppendElementRows",
     "AppendSequencePositionRows",
     "AppendSurfaceBoundaryInfo",
+    "AppendSurfaceBoundaryTensionTrace",
     "AppendModelCoverageRows",
     "AppendSegmentRows",
     "AppendTensionRows",
@@ -188,8 +190,12 @@ Assert-NotContains $forceShapeRenderer "MooringShapeTensionAnalyzer.Build" "Forc
 $surfaceBoundaryRenderer = Read-RepoText "Services/TechnicalReportMarkdownSurfaceBoundarySections.cs"
 Assert-Contains $surfaceBoundaryRenderer "MooringSurfaceBoundaryInfoResult" "Surface-boundary Markdown renderer"
 Assert-Contains $surfaceBoundaryRenderer "AppendSurfaceBoundaryInfo" "Surface-boundary Markdown renderer"
+Assert-Contains $surfaceBoundaryRenderer "MooringSurfaceBoundaryTensionTraceResult" "Surface-boundary Markdown renderer"
+Assert-Contains $surfaceBoundaryRenderer "AppendSurfaceBoundaryTensionTrace" "Surface-boundary Markdown renderer"
 Assert-Contains $surfaceBoundaryRenderer "не участвуют в solver feedback" "Surface-boundary Markdown renderer"
 Assert-NotContains $surfaceBoundaryRenderer "MooringSurfaceBoundaryInfoAnalyzer.Build" "Surface-boundary Markdown renderer"
+Assert-NotContains $surfaceBoundaryRenderer "MooringSurfaceBoundaryTensionTraceBuilder.Build" "Surface-boundary Markdown renderer"
+Assert-NotContains $surfaceBoundaryRenderer "MooringSurfaceBoundaryIntegrationKernel" "Surface-boundary Markdown renderer"
 Assert-NotContains $surfaceBoundaryRenderer "CalculationSnapshotBuilder.Build" "Surface-boundary Markdown renderer"
 Assert-NotContains $surfaceBoundaryRenderer "TechnicalReportDataBuilder.Build" "Surface-boundary Markdown renderer"
 
