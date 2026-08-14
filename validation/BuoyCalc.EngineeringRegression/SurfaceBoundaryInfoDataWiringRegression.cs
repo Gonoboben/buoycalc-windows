@@ -58,6 +58,15 @@ internal static class SurfaceBoundaryInfoDataWiringRegression
                 $"Surface-boundary data wiring regression: compatibility path must remain unavailable without typed buoy; got {compatibilityInfo.Classification} / Available={compatibilityInfo.Available}.");
         }
 
+        var compatibilityTrace = compatibility.TechnicalReportData.SurfaceBoundaryTensionTrace;
+        if (compatibilityTrace.Available ||
+            compatibilityTrace.Rows.Count != 0 ||
+            compatibilityTrace.ParentClassification != compatibilityInfo.Classification)
+        {
+            throw new InvalidOperationException(
+                "Surface-boundary data wiring regression: compatibility tension trace must remain unavailable and preserve the parent classification.");
+        }
+
         var typedInfo = typed.TechnicalReportData.SurfaceBoundaryInfo;
         if (!typedInfo.Available ||
             typedInfo.Classification == MooringSurfaceBoundaryInfoClassification.UnavailableMissingBuoyInput)
@@ -66,7 +75,42 @@ internal static class SurfaceBoundaryInfoDataWiringRegression
                 $"Surface-boundary data wiring regression: typed path must reach the INFO analyzer; got {typedInfo.Classification} / Available={typedInfo.Available}.");
         }
 
+        var typedTrace = typed.TechnicalReportData.SurfaceBoundaryTensionTrace;
+        if (typedInfo.Solved)
+        {
+            if (!typedTrace.Available || typedTrace.Rows.Count != result.SegmentRows.Count)
+            {
+                throw new InvalidOperationException(
+                    $"Surface-boundary data wiring regression: solved typed path must store an available trace with one row per segment; Available={typedTrace.Available}, Rows={typedTrace.Rows.Count}, Segments={result.SegmentRows.Count}.");
+            }
+
+            var solution = typedInfo.SolutionState
+                ?? throw new InvalidOperationException("Surface-boundary data wiring regression: solved parent is missing SolutionState.");
+            Near(solution.EndHN, typedTrace.EndHN, "terminal H");
+            Near(solution.EndVN, typedTrace.EndVN, "terminal V");
+            if (typedTrace.ParentClassification != typedInfo.Classification ||
+                !typedTrace.MethodNote.Contains("not selected-shape authority", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Surface-boundary data wiring regression: trace provenance/classification is not preserved.");
+            }
+        }
+        else if (typedTrace.Available)
+        {
+            throw new InvalidOperationException(
+                "Surface-boundary data wiring regression: unsolved typed parent must not publish an available tension trace.");
+        }
+
         RequireSameSelectedShape(compatibility.SelectedShape, typed.SelectedShape);
+    }
+
+    private static void Near(double expected, double? actual, string label)
+    {
+        if (!actual.HasValue || Math.Abs(expected - actual.Value) > 1e-10)
+        {
+            throw new InvalidOperationException(
+                $"Surface-boundary data wiring regression: {label} changed; expected {expected:R}, got {(actual.HasValue ? actual.Value.ToString("R") : "null")}.");
+        }
     }
 
     private static void RequireSameSelectedShape(SelectedShapeReadModel? expected, SelectedShapeReadModel? actual)
