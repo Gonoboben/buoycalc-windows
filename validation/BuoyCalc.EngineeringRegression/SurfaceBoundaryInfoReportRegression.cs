@@ -62,6 +62,15 @@ internal static class SurfaceBoundaryInfoReportRegression
         RequireContains(typedReport, "wave excluded", "typed method provenance");
         RequireContains(typedReport, "diagnostic X/Z is not a selected-shape source", "typed selected-shape disclaimer");
 
+        RequireContains(typedReport, "## Boundary-conditioned trace натяжения — INFO", "typed trace heading");
+        RequireContains(typedReport, "Сегментов trace:", "typed trace segment count");
+        RequireContains(typedReport, "H на поверхности, Н", "typed trace start H");
+        RequireContains(typedReport, "V на якорной стороне, Н", "typed trace terminal V");
+        RequireContains(typedReport, "Макс. midpoint tension:", "typed trace max tension");
+        RequireContains(typedReport, "Реперные строки trace (0 / 25 / 50 / 75 / 100% по списку сегментов):", "typed trace compact samples");
+        RequireContains(typedReport, "signed angle от +Z, °", "typed trace signed-angle convention");
+        RequireContains(typedReport, "not selected-shape authority", "typed trace authority disclaimer");
+
         var compatibilitySnapshot = CalculationSnapshotBuilder.Build(environment, run.Result);
         var compatibilityReport = TechnicalReportMarkdownBuilder.Build(
             "Surface boundary compatibility report regression",
@@ -73,6 +82,8 @@ internal static class SurfaceBoundaryInfoReportRegression
         RequireContains(compatibilityReport, "нет типизированного BuoyInput", "compatibility classification");
         RequireContains(compatibilityReport, "Доступно: нет", "compatibility availability");
         RequireContains(compatibilityReport, "Решение Q0 найдено: нет", "compatibility solved state");
+        RequireContains(compatibilityReport, "## Boundary-conditioned trace натяжения — INFO", "compatibility trace heading");
+        RequireContains(compatibilityReport, "Parent surface-boundary state is not a solved bounded Q0 state.", "compatibility trace unavailable reason");
     }
 
     private static void RequireContains(string text, string expected, string label)
