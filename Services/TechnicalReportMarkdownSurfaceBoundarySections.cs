@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text;
 
 namespace BuoyCalc.Windows.Services;
@@ -6,15 +7,23 @@ internal static class TechnicalReportMarkdownSurfaceBoundarySections
 {
     public static bool TryAppend(string methodName, object[] args)
     {
-        if (methodName != "AppendSurfaceBoundaryInfo")
+        if (methodName == "AppendSurfaceBoundaryInfo")
         {
-            return false;
+            AppendSurfaceBoundaryInfo(
+                (StringBuilder)args[0],
+                (MooringSurfaceBoundaryInfoResult)args[1]);
+            return true;
         }
 
-        AppendSurfaceBoundaryInfo(
-            (StringBuilder)args[0],
-            (MooringSurfaceBoundaryInfoResult)args[1]);
-        return true;
+        if (methodName == "AppendSurfaceBoundaryTensionTrace")
+        {
+            AppendSurfaceBoundaryTensionTrace(
+                (StringBuilder)args[0],
+                (MooringSurfaceBoundaryTensionTraceResult)args[1]);
+            return true;
+        }
+
+        return false;
     }
 
     private static void AppendSurfaceBoundaryInfo(
@@ -65,6 +74,70 @@ internal static class TechnicalReportMarkdownSurfaceBoundarySections
         }
 
         sb.AppendLine();
+    }
+
+    private static void AppendSurfaceBoundaryTensionTrace(
+        StringBuilder sb,
+        MooringSurfaceBoundaryTensionTraceResult trace)
+    {
+        sb.AppendLine("## Boundary-conditioned trace натяжения — INFO");
+        sb.AppendLine("Renderer отображает только сохранённый passive read model и не вызывает integration kernel, SurfaceBoundaryInfoAnalyzer или tension-trace builder.");
+        sb.AppendLine($"- Доступно: {(trace.Available ? "да" : "нет")}");
+        sb.AppendLine($"- Parent classification: {trace.ParentClassification}");
+        sb.AppendLine($"- Метод: {Escape(trace.MethodNote)}");
+
+        if (!trace.Available)
+        {
+            sb.AppendLine($"- Причина недоступности: {Escape(trace.UnavailableReason)}");
+            sb.AppendLine();
+            return;
+        }
+
+        sb.AppendLine($"- Сегментов trace: {trace.Rows.Count}");
+        sb.AppendLine($"- Пересечений внутренних point-load: {trace.PointLoadCrossings}");
+        sb.AppendLine($"- Неопределённых сегментов: {trace.IndeterminateSegmentCount}");
+        AppendValue(sb, "H на поверхности, Н", trace.StartHN);
+        AppendValue(sb, "V на поверхности, Н", trace.StartVN);
+        AppendValue(sb, "H на якорной стороне, Н", trace.EndHN);
+        AppendValue(sb, "V на якорной стороне, Н", trace.EndVN);
+
+        if (trace.Rows.Count == 0)
+        {
+            sb.AppendLine();
+            return;
+        }
+
+        var maxTension = trace.Rows.OrderByDescending(x => x.MidTensionN).First();
+        sb.AppendLine($"- Макс. midpoint tension: {maxTension.MidTensionN:0.####} Н, сегмент №{maxTension.SegmentNumber}, s≈{maxTension.MidLengthM:0.####} м");
+        sb.AppendLine();
+        sb.AppendLine("Реперные строки trace (0 / 25 / 50 / 75 / 100% по списку сегментов):");
+        sb.AppendLine("| Сегмент | s mid, м | z source, м | H mid, Н | V mid, Н | |T| mid, Н | tx | tz | signed angle от +Z, ° | crossed point-load |");
+        sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+        foreach (var row in RepresentativeRows(trace))
+        {
+            sb.AppendLine($"| {row.SegmentNumber} | {row.MidLengthM:0.####} | {row.EstimatedDepthM:0.####} | {row.MidHN:0.####} | {row.MidVN:0.####} | {row.MidTensionN:0.####} | {FormatNullable(row.TangentX)} | {FormatNullable(row.TangentZ)} | {FormatNullable(row.SignedAngleFromDownwardVerticalDeg)} | {row.PointLoadCrossingsAppliedBeforeSegment} |");
+        }
+        sb.AppendLine();
+    }
+
+    private static MooringSurfaceBoundaryTensionTraceRow[] RepresentativeRows(
+        MooringSurfaceBoundaryTensionTraceResult trace)
+    {
+        var count = trace.Rows.Count;
+        var indices = new[]
+        {
+            0,
+            (int)System.Math.Round((count - 1) * 0.25),
+            (int)System.Math.Round((count - 1) * 0.50),
+            (int)System.Math.Round((count - 1) * 0.75),
+            count - 1
+        };
+        return indices.Distinct().Select(index => trace.Rows[index]).ToArray();
+    }
+
+    private static string FormatNullable(double? value)
+    {
+        return value.HasValue ? value.Value.ToString("0.####") : "н/д";
     }
 
     private static void AppendValue(StringBuilder sb, string label, double? value)

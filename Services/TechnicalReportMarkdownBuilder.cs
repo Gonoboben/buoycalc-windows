@@ -29,6 +29,7 @@ public static class TechnicalReportMarkdownBuilder
         var forceShapeConsistency = data.ForceShapeConsistency;
         var sequencePositions = data.SequencePositions;
         var surfaceBoundaryInfo = data.SurfaceBoundaryInfo;
+        var surfaceBoundaryTensionTrace = data.SurfaceBoundaryTensionTrace;
         var discreteLoadTensions = data.DiscreteLoadTensions;
         var discreteLoadShape = data.DiscreteLoadShape;
         var signedNodeEquilibrium = data.SignedNodeEquilibrium;
@@ -55,6 +56,7 @@ public static class TechnicalReportMarkdownBuilder
         TechnicalReportMarkdownSectionBridge.Append("AppendElementRows", sb, result);
         TechnicalReportMarkdownSectionBridge.Append("AppendSequencePositionRows", sb, sequencePositions);
         TechnicalReportMarkdownSectionBridge.Append("AppendSurfaceBoundaryInfo", sb, surfaceBoundaryInfo);
+        TechnicalReportMarkdownSectionBridge.Append("AppendSurfaceBoundaryTensionTrace", sb, surfaceBoundaryTensionTrace);
         TechnicalReportMarkdownSectionBridge.Append("AppendModelCoverageRows", sb, result);
         TechnicalReportMarkdownSectionBridge.Append("AppendSegmentRows", sb, result);
         TechnicalReportMarkdownSectionBridge.Append("AppendTensionRows", sb, tensionRows);
