@@ -6,9 +6,9 @@ internal static class SurfaceBoundaryCanonicalMeasurementRegression
 {
     private const double ResidualToleranceM = 0.011;
 
-    public static void Validate()
+    internal static IReadOnlyList<CanonicalScenario> BuildCanonicalScenarios()
     {
-        var scenarios = new[]
+        return new[]
         {
             BuildA(),
             BuildB(),
@@ -16,6 +16,11 @@ internal static class SurfaceBoundaryCanonicalMeasurementRegression
             BuildD(),
             BuildE()
         };
+    }
+
+    public static void Validate()
+    {
+        var scenarios = BuildCanonicalScenarios();
 
         var measured = new Dictionary<string, MooringSurfaceBoundaryInfoResult>(StringComparer.Ordinal);
         foreach (var scenario in scenarios)
@@ -304,7 +309,7 @@ internal static class SurfaceBoundaryCanonicalMeasurementRegression
         return items;
     }
 
-    private sealed record CanonicalScenario(
+    internal sealed record CanonicalScenario(
         string Label,
         EnvironmentInput Environment,
         BuoyInput Buoy,
