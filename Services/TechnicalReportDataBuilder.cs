@@ -21,6 +21,7 @@ public static class TechnicalReportDataBuilder
         var forceShapeConsistency = MooringForceShapeConsistencyAnalyzer.Build(shapeProjection, shapeTensions);
         var sequencePositions = MooringSequencePositioner.Build(result);
         var surfaceBoundaryInfo = MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, result, sequencePositions);
+        var surfaceBoundaryTensionTrace = MooringSurfaceBoundaryTensionTraceBuilder.Build(result, sequencePositions, surfaceBoundaryInfo);
         var discreteLoadTensions = MooringDiscreteLoadTensionAnalyzer.Build(result, tensionRows, sequencePositions);
         var discreteLoadShape = MooringDiscreteLoadShapeBuilder.Build(shape, discreteLoadTensions);
         var signedNodeEquilibrium = MooringSignedNodeEquilibriumAnalyzer.Build(sequencePositions, discreteLoadTensions, discreteLoadShape);
@@ -44,6 +45,7 @@ public static class TechnicalReportDataBuilder
             forceShapeConsistency,
             sequencePositions,
             surfaceBoundaryInfo,
+            surfaceBoundaryTensionTrace,
             discreteLoadTensions,
             discreteLoadShape,
             signedNodeEquilibrium,
