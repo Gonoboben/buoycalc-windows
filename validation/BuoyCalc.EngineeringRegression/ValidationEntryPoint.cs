@@ -34,6 +34,7 @@ internal static class ValidationEntryPoint
             SurfaceBoundaryPerSegmentTraceRegression.Validate();
             SurfaceBoundaryGlobalReactionAccountingRegression.Validate();
             SurfaceBoundaryTensionTraceReadModelRegression.Validate();
+            BoundaryConditionedSignedGeometryRegression.Validate();
             ProjectDtoCompatibilityRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
