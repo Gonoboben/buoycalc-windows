@@ -37,6 +37,7 @@ internal static class ValidationEntryPoint
             BoundaryConditionedSignedGeometryRegression.Validate();
             BoundaryConditionedFeedbackRollupRegression.Validate();
             BoundaryFeedbackIndependentReferenceRegression.Validate();
+            HistoricalGoldenImpactRegression.Validate();
             ProjectDtoCompatibilityRegression.Validate();
             SignedNodeEquilibriumRegression.Validate();
             FinalIterationDiscreteStateRegression.Validate();
