@@ -64,14 +64,16 @@ internal static class VerticalLimitingForceStateRegression
             3.0);
 
         var boundary = run.Snapshot.TechnicalReportData.SurfaceBoundaryInfo;
-        if (boundary.Classification != MooringSurfaceBoundaryInfoClassification.VerticalGeometryBoundaryNonUnique)
+        if (boundary.Classification != MooringSurfaceBoundaryInfoClassification.VerticalGeometryUniqueForceStateFamily)
         {
             throw new InvalidOperationException(
-                $"Vertical limiting force-state historical fixture: expected current production classification VerticalGeometryBoundaryNonUnique, got {boundary.Classification}.");
+                $"Vertical limiting force-state historical fixture: expected production classification VerticalGeometryUniqueForceStateFamily, got {boundary.Classification}.");
         }
 
         if (boundary.Solved)
-            throw new InvalidOperationException("Vertical limiting force-state historical fixture: current production analyzer unexpectedly marked the non-unique force-state branch as solved.");
+            throw new InvalidOperationException("Vertical limiting force-state historical fixture: force-state family must not be represented as a unique solved Q0 state.");
+        if (boundary.Q0N.HasValue || boundary.SolutionState is not null)
+            throw new InvalidOperationException("Vertical limiting force-state historical fixture: force-state family must keep Q0N and SolutionState unset.");
 
         Near(run.Result.CurrentForceN, 0.0, NumericTolerance, "historical steady current force");
         Near(run.Result.LineLengthM, 50.0, NumericTolerance, "historical line length");
@@ -93,6 +95,9 @@ internal static class VerticalLimitingForceStateRegression
             throw new InvalidOperationException(
                 $"Vertical limiting force-state historical fixture: current analyzer minimum Q {currentAnalyzerMinimumQ:R} is not the expected signed-weight lower bound {qRequiredN:R} plus only numerical epsilon.");
         }
+
+        if (!(expectedQCapacityN > currentAnalyzerMinimumQ + 1e-9))
+            throw new InvalidOperationException("Vertical limiting force-state historical fixture: strict force-state family requires capacity above minimum Q.");
 
         var capacityState = boundary.CapacityBoundaryState
             ?? throw new InvalidOperationException("Vertical limiting force-state historical fixture: missing capacity boundary state.");
@@ -133,6 +138,7 @@ internal static class VerticalLimitingForceStateRegression
         Console.WriteLine(string.Join("|",
             "VERTICAL_LIMITING_FORCE_STATE",
             "vertical-zero-current",
+            $"Classification={boundary.Classification}",
             $"QRequiredN={Format(qRequiredN)}",
             $"QCapacityN={Format(expectedQCapacityN)}",
             $"CurrentAnalyzerMinimumQN={Format(currentAnalyzerMinimumQ)}",
@@ -147,7 +153,7 @@ internal static class VerticalLimitingForceStateRegression
             $"GeometryIdentity={NearValue(strict.EndpointZM, limiting.EndpointZM) && NearValue(strict.EndpointXM, limiting.EndpointXM)}",
             "ForceStateUnique=False",
             "EndpointZeroTensionLimit=True",
-            "ProductionAnalyzerChanged=False"));
+            "ProductionAnalyzerChanged=True"));
     }
 
     private static void ValidateControlledForceFamilies()
