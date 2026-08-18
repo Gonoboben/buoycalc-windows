@@ -13,6 +13,7 @@ public enum MooringSurfaceBoundaryInfoClassification
     LineShorterThanDepth,
     TautNonZeroHorizontalLoadNoFiniteRoot,
     VerticalGeometryBoundaryNonUnique,
+    VerticalGeometryUniqueForceStateFamily,
     VerticalGeometryCapacityInsufficient,
     IndeterminateEndpointState,
     NonMonotoneDepthResponse,
@@ -122,12 +123,15 @@ public static class MooringSurfaceBoundaryInfoAnalyzer
         if (tautLength)
         {
             var minimumQ = MinimumQForStrictlyDownwardVerticalGeometry(prepared);
-            var classification =
+            var verticalGeometryAvailable =
                 prepared.QCapacityN + ForceEpsilonN >= minimumQ &&
                 high.IndeterminateSegmentCount == 0 &&
-                Math.Abs(high.EndpointZM - prepared.DepthM) <= DepthToleranceM
-                    ? MooringSurfaceBoundaryInfoClassification.VerticalGeometryBoundaryNonUnique
-                    : MooringSurfaceBoundaryInfoClassification.VerticalGeometryCapacityInsufficient;
+                Math.Abs(high.EndpointZM - prepared.DepthM) <= DepthToleranceM;
+            var classification = verticalGeometryAvailable
+                ? prepared.QCapacityN > minimumQ + ForceEpsilonN
+                    ? MooringSurfaceBoundaryInfoClassification.VerticalGeometryUniqueForceStateFamily
+                    : MooringSurfaceBoundaryInfoClassification.VerticalGeometryBoundaryNonUnique
+                : MooringSurfaceBoundaryInfoClassification.VerticalGeometryCapacityInsufficient;
 
             return Result(
                 classification,
