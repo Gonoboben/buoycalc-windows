@@ -105,12 +105,9 @@ jobs:
               throw "Selected shape consumer map check failed with exit code $LASTEXITCODE"
             }
 
-            $regressionLogPath = "validation/BuoyCalc.EngineeringRegression/historical-golden-impact.log"
-            dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json *> $regressionLogPath
-            $regressionExitCode = $LASTEXITCODE
-            Get-Content $regressionLogPath
-            if ($regressionExitCode -ne 0) {
-              throw "Engineering regression verification failed with exit code $regressionExitCode"
+            dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json
+            if ($LASTEXITCODE -ne 0) {
+              throw "Engineering regression verification failed with exit code $LASTEXITCODE"
             }
 
             Set-BuoyCalcStatus "success" "Build succeeded"
@@ -119,11 +116,3 @@ jobs:
             Set-BuoyCalcStatus "failure" "Build failed"
             throw
           }
-
-      - name: Upload historical golden impact audit log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: historical-golden-impact-${{ github.sha }}
-          path: validation/BuoyCalc.EngineeringRegression/historical-golden-impact.log
-          if-no-files-found: ignore
