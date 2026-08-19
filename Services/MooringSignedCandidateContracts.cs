@@ -104,6 +104,20 @@ public sealed record MooringSignedCandidateResult
                 nameof(pointLoadCrossings));
         }
 
+        var anchor = shape.AnchorPoint
+            ?? throw new ArgumentException(
+                "Accepted signed candidate shape requires an anchor/end point.",
+                nameof(shape));
+
+        if (shape.HorizontalOffsetM != anchor.XOffsetM ||
+            anchor.XOffsetM != boundary.SolutionState.EndpointXM ||
+            anchor.ZDepthM != boundary.SolutionState.EndpointZM)
+        {
+            throw new ArgumentException(
+                "Accepted signed candidate shape endpoint must exactly match the solved boundary endpoint.",
+                nameof(shape));
+        }
+
         return new MooringSignedCandidateResult(
             MooringSignedCandidateStatus.Accepted,
             shape,
