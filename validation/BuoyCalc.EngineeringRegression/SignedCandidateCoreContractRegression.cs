@@ -44,7 +44,7 @@ internal static class SignedCandidateCoreContractRegression
             if (name == "vertical-zero-current")
                 ValidateIndeterminateContract(name, data.SurfaceBoundaryInfo);
             else
-                ValidateAcceptedStructure(name, data.SurfaceBoundaryInfo, data.SurfaceBoundaryTensionTrace);
+                ValidateAcceptedStructure(name, run.Result, data.SurfaceBoundaryInfo, data.SurfaceBoundaryTensionTrace);
         }
 
         if (measured != RequiredFixtures.Count)
@@ -68,6 +68,7 @@ internal static class SignedCandidateCoreContractRegression
 
     private static void ValidateAcceptedStructure(
         string name,
+        CalculationResult result,
         MooringSurfaceBoundaryInfoResult boundary,
         MooringSurfaceBoundaryTensionTraceResult trace)
     {
@@ -77,7 +78,7 @@ internal static class SignedCandidateCoreContractRegression
                 $"Signed core contract {name}: structural fixture requires solved boundary/trace, got {boundary.Classification}.");
         }
 
-        var shape = BuildContractShape(boundary, trace);
+        var shape = BuildContractShape(result, boundary, trace);
         var pointLoads = trace.PointLoadCrossings;
         var containsDiscreteLoads = pointLoads > 0;
 
@@ -226,10 +227,12 @@ internal static class SignedCandidateCoreContractRegression
     }
 
     private static MooringShapeResult BuildContractShape(
+        CalculationResult result,
         MooringSurfaceBoundaryInfoResult boundary,
         MooringSurfaceBoundaryTensionTraceResult trace)
     {
         var nodes = new List<MooringShapePoint>();
+        var segments = result.SegmentRows.ToDictionary(x => x.Number);
         var x = 0.0;
         var z = 0.0;
 
@@ -247,13 +250,28 @@ internal static class SignedCandidateCoreContractRegression
 
         foreach (var row in trace.Rows)
         {
-            var ds = row.EndLengthM - row.StartLengthM;
+            if (!segments.TryGetValue(row.SegmentNumber, out var segment))
+            {
+                throw new InvalidOperationException(
+                    $"Signed core contract: segment {row.SegmentNumber} is missing from CalculationResult.");
+            }
+
             var tx = row.TangentX
                 ?? throw new InvalidOperationException($"Signed core contract: missing tangent X on segment {row.SegmentNumber}.");
             var tz = row.TangentZ
                 ?? throw new InvalidOperationException($"Signed core contract: missing tangent Z on segment {row.SegmentNumber}.");
-            x += ds * tx;
-            z += ds * tz;
+            if (!double.IsFinite(row.MidTensionN) || row.MidTensionN <= 0.0)
+            {
+                throw new InvalidOperationException(
+                    $"Signed core contract: invalid mid-tension on segment {row.SegmentNumber}.");
+            }
+
+            // Match MooringSurfaceBoundaryIntegrationKernel operation order exactly:
+            // x += SegmentLengthM * MidH / MidTension and likewise for z.
+            // Rewriting this as SegmentLengthM * (MidH / MidTension) is
+            // mathematically equivalent but not guaranteed bit-identical in floating point.
+            x += segment.SegmentLengthM * row.MidHN / row.MidTensionN;
+            z += segment.SegmentLengthM * row.MidVN / row.MidTensionN;
             var angle = Math.Atan2(Math.Abs(tx), Math.Max(1e-12, Math.Abs(tz))) * 180.0 / Math.PI;
 
             nodes.Add(new MooringShapePoint(
@@ -263,7 +281,7 @@ internal static class SignedCandidateCoreContractRegression
                 row.EndLengthM,
                 x,
                 z,
-                ds,
+                segment.SegmentLengthM,
                 angle,
                 row.MidTensionN / 1000.0,
                 "INFO: structural contract fixture"));
@@ -274,13 +292,13 @@ internal static class SignedCandidateCoreContractRegression
             z != boundary.SolutionState.EndpointZM)
         {
             throw new InvalidOperationException(
-                "Signed core contract: trace-derived structural shape endpoint does not exactly match boundary endpoint.");
+                "Signed core contract: kernel-order structural shape endpoint does not exactly match boundary endpoint.");
         }
 
         var top = nodes[0];
         var bottom = nodes[^1];
         var targetDepth = boundary.TargetDepthM ?? z;
-        var lineLength = boundary.LineLengthM ?? trace.Rows.Sum(row => row.EndLengthM - row.StartLengthM);
+        var lineLength = boundary.LineLengthM ?? result.SegmentRows.Sum(segment => segment.SegmentLengthM);
 
         return new MooringShapeResult(
             nodes,
