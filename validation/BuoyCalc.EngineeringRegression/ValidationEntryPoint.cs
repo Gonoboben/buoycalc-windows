@@ -40,6 +40,7 @@ internal static class ValidationEntryPoint
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();
+            SignedCandidateShadowArbitrationRegression.Validate();
             DownstreamAuthorityOwnershipRegression.Validate();
             SignedGeometryProductionBlockerFeasibilityRegression.Validate();
             VerticalLimitingForceStateRegression.Validate();
