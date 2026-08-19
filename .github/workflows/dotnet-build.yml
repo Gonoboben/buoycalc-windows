@@ -34,7 +34,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $diagnosticLogPath = Join-Path $env:RUNNER_TEMP "package-1-build-diagnostic.log"
-          Start-Transcript -Path $diagnosticLogPath -Force | Out-Null
+          "Package 1 build diagnostic for ${{ github.sha }}" | Set-Content $diagnosticLogPath
           $statusUrl = "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}"
           $targetUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $headers = @{
@@ -54,60 +54,75 @@ jobs:
             Invoke-RestMethod -Uri $statusUrl -Method Post -Headers $headers -ContentType "application/json" -Body $body | Out-Null
           }
 
+          function Write-Stage([string]$label) {
+            "`n=== $label ===" | Tee-Object -FilePath $diagnosticLogPath -Append
+          }
+
           Set-BuoyCalcStatus "pending" "Build started"
 
           try {
-            dotnet restore BuoyCalc.Windows.csproj
+            Write-Stage "dotnet restore app"
+            dotnet restore BuoyCalc.Windows.csproj *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "dotnet restore failed with exit code $LASTEXITCODE"
             }
 
-            dotnet restore validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj
+            Write-Stage "dotnet restore engineering regression"
+            dotnet restore validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "engineering regression restore failed with exit code $LASTEXITCODE"
             }
 
-            dotnet build BuoyCalc.Windows.csproj --configuration Release --no-restore
+            Write-Stage "dotnet build app"
+            dotnet build BuoyCalc.Windows.csproj --configuration Release --no-restore *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "dotnet build failed with exit code $LASTEXITCODE"
             }
 
-            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-reportbuilder-usage.ps1
+            Write-Stage "check-reportbuilder-usage"
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-reportbuilder-usage.ps1 *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "ReportBuilder usage check failed with exit code $LASTEXITCODE"
             }
 
-            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-technical-report-path.ps1
+            Write-Stage "check-technical-report-path"
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-technical-report-path.ps1 *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "Technical report path smoke check failed with exit code $LASTEXITCODE"
             }
 
-            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-readmodel-boundary.ps1
+            Write-Stage "check-readmodel-boundary"
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-readmodel-boundary.ps1 *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "Read-model boundary smoke check failed with exit code $LASTEXITCODE"
             }
 
-            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-repository-governance.ps1
+            Write-Stage "check-repository-governance"
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-repository-governance.ps1 *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "Repository governance smoke check failed with exit code $LASTEXITCODE"
             }
 
-            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scan-report-store-consumers.ps1
+            Write-Stage "scan-report-store-consumers"
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scan-report-store-consumers.ps1 *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "Report store consumer scan failed with exit code $LASTEXITCODE"
             }
 
-            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-report-store-consumer-map.ps1
+            Write-Stage "check-report-store-consumer-map"
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-report-store-consumer-map.ps1 *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "Report store consumer map check failed with exit code $LASTEXITCODE"
             }
 
-            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-selected-shape-consumer-map.ps1
+            Write-Stage "check-selected-shape-consumer-map"
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-selected-shape-consumer-map.ps1 *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "Selected shape consumer map check failed with exit code $LASTEXITCODE"
             }
 
-            dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json
+            Write-Stage "engineering regression verify"
+            dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json *>&1 | Tee-Object -FilePath $diagnosticLogPath -Append
             if ($LASTEXITCODE -ne 0) {
               throw "Engineering regression verification failed with exit code $LASTEXITCODE"
             }
@@ -115,11 +130,9 @@ jobs:
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
+            "`n=== workflow exception ===`n$($_ | Out-String)" | Tee-Object -FilePath $diagnosticLogPath -Append
             Set-BuoyCalcStatus "failure" "Build failed"
             throw
-          }
-          finally {
-            try { Stop-Transcript | Out-Null } catch { }
           }
 
       - name: Upload package 1 build diagnostic
