@@ -161,7 +161,7 @@ internal static class SignedGeometryProductionBlockerFeasibilityRegression
                 50.0,
                 50.0,
                 0.0,
-                MooringSurfaceBoundaryInfoClassification.VerticalGeometryBoundaryNonUnique,
+                MooringSurfaceBoundaryInfoClassification.VerticalGeometryUniqueForceStateFamily,
                 AnalyticalFixtureClassification.SolvableUnique),
 
             new BlockedHistoricalFixture(
