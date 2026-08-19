@@ -33,6 +33,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = "Stop"
+          $diagnosticLogPath = Join-Path $env:RUNNER_TEMP "package-1-build-diagnostic.log"
+          Start-Transcript -Path $diagnosticLogPath -Force | Out-Null
           $statusUrl = "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}"
           $targetUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $headers = @{
@@ -116,3 +118,14 @@ jobs:
             Set-BuoyCalcStatus "failure" "Build failed"
             throw
           }
+          finally {
+            try { Stop-Transcript | Out-Null } catch { }
+          }
+
+      - name: Upload package 1 build diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-1-build-diagnostic-${{ github.sha }}
+          path: ${{ runner.temp }}/package-1-build-diagnostic.log
+          if-no-files-found: error
