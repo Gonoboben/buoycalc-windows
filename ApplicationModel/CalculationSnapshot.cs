@@ -10,10 +10,12 @@ namespace BuoyCalc.Windows.ApplicationModel;
 /// User-facing consumers do not require mutable shape/report store publication.
 /// Signed-candidate/shadow state is diagnostic only until the explicit authority-switch package.
 /// </summary>
-public sealed record CalculationSnapshot(
+public sealed partial record CalculationSnapshot(
     CalculationResult Result,
     TechnicalReportData TechnicalReportData,
-    SelectedShapeReadModel? SelectedShape)
+    SelectedShapeReadModel? SelectedShape);
+
+public sealed partial record CalculationSnapshot
 {
     public MooringSignedCandidateResult? SignedCandidate { get; init; }
     public MooringSelectedShapeResult? ShadowSelectedCore { get; init; }
