@@ -62,20 +62,29 @@ Assert-NotContains $technicalReportBuilder "CalculationResult result" "Technical
 Assert-FileExists "ApplicationModel/CalculationSnapshot.cs"
 Assert-FileExists "ApplicationModel/SelectedMooringShapeProvider.cs"
 $snapshotBoundary = Read-RepoText "ApplicationModel/CalculationSnapshot.cs"
-Assert-Contains $snapshotBoundary "public sealed record CalculationSnapshot(" "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "public sealed partial record CalculationSnapshot(" "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "CalculationResult Result," "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "TechnicalReportData TechnicalReportData," "CalculationSnapshot"
 Assert-Contains $snapshotBoundary "SelectedShapeReadModel? SelectedShape);" "CalculationSnapshot"
+Assert-Contains $snapshotBoundary "MooringSignedCandidateResult? SignedCandidate { get; init; }" "CalculationSnapshot diagnostic shadow state"
+Assert-Contains $snapshotBoundary "MooringSelectedShapeResult? ShadowSelectedCore { get; init; }" "CalculationSnapshot diagnostic shadow state"
 Assert-Contains $snapshotBoundary "return Build(environment, null, result);" "CalculationSnapshotBuilder compatibility overload"
 Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, buoy, result);" "CalculationSnapshotBuilder"
 Assert-Contains $snapshotBoundary "var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);" "CalculationSnapshotBuilder"
+Assert-Contains $snapshotBoundary "var signedCandidate = MooringSignedCandidateEvaluator.Build(" "CalculationSnapshotBuilder shadow candidate"
+Assert-Contains $snapshotBoundary "SignedCandidate = signedCandidate" "CalculationSnapshotBuilder shadow candidate retention"
+Assert-Contains $snapshotBoundary "ShadowSelectedCore = shadowSelectedCore" "CalculationSnapshotBuilder shadow selection retention"
 Assert-NotContains $snapshotBoundary "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
 Assert-NotContains $snapshotBoundary "SelectedShapeStore.Current" "CalculationSnapshotBuilder"
 
 $dataBuildIndex = $snapshotBoundary.IndexOf("var data = TechnicalReportDataBuilder.Build(environment, buoy, result);")
 $selectedShapeIndex = $snapshotBoundary.IndexOf("var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);")
+$signedCandidateIndex = $snapshotBoundary.IndexOf("var signedCandidate = MooringSignedCandidateEvaluator.Build(")
 if ($dataBuildIndex -lt 0 -or $selectedShapeIndex -le $dataBuildIndex) {
     throw "CalculationSnapshotBuilder must preserve Build -> stateless selected X/Z order."
+}
+if ($signedCandidateIndex -le $selectedShapeIndex) {
+    throw "CalculationSnapshotBuilder must construct the legacy SelectedShape before shadow signed-candidate evaluation."
 }
 
 $selectedShapeProvider = Read-RepoText "ApplicationModel/SelectedMooringShapeProvider.cs"
@@ -92,6 +101,8 @@ Assert-Contains $reportBoundary "CalculationSnapshot snapshot" "ReportBuildBound
 Assert-Contains $reportBoundary "UserReportBuilder.Build(environment, snapshot.Result)" "ReportBuildBoundary"
 Assert-Contains $reportBoundary "TechnicalReportBuilder.Build(projectName, environment, buoy, anchor, snapshot)" "ReportBuildBoundary"
 Assert-NotContains $reportBoundary "CalculationSnapshotBuilder.Build" "ReportBuildBoundary"
+Assert-NotContains $reportBoundary "SignedCandidate" "ReportBuildBoundary"
+Assert-NotContains $reportBoundary "ShadowSelectedCore" "ReportBuildBoundary"
 
 $markdownBuilder = Read-RepoText "Services/TechnicalReportMarkdownBuilder.cs"
 Assert-Contains $markdownBuilder "CalculationSnapshot snapshot" "TechnicalReportMarkdownBuilder"
@@ -106,6 +117,8 @@ Assert-Contains $markdownBuilder "if (finalIterationSignedNodeEquilibrium is nul
 Assert-NotContains $markdownBuilder "CalculationSnapshotBuilder.Build" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "TechnicalReportDataBuilder.Build" "TechnicalReportMarkdownBuilder"
 Assert-NotContains $markdownBuilder "TechnicalReportStorePublisher.Publish" "TechnicalReportMarkdownBuilder"
+Assert-NotContains $markdownBuilder "snapshot.SignedCandidate" "TechnicalReportMarkdownBuilder"
+Assert-NotContains $markdownBuilder "snapshot.ShadowSelectedCore" "TechnicalReportMarkdownBuilder"
 
 $bridgeCalls = @(
     "AppendVectorBalanceRows",
