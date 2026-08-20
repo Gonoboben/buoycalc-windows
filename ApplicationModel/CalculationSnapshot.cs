@@ -60,15 +60,9 @@ public static class CalculationSnapshotBuilder
             result,
             data.SequencePositions);
 
-        var shadowSelectedCore = signedCandidate.Status == MooringSignedCandidateStatus.Accepted &&
-                                 signedCandidate.Shape is not null
-            ? MooringSelectedShapeResult.Create(
-                signedCandidate.Shape,
-                MooringShapeSourceIdentity.SignedBoundaryFeedback,
-                selectedConverged: true,
-                selectedUsesDiscreteLoads: signedCandidate.ContainsDiscreteLoads,
-                "Shadow-only signed selection: candidate is Accepted. SelectedShapeReadModel remains on current production authority.")
-            : currentSelectedCore;
+        var shadowSelectedCore = MooringSelectedShapeArbitrator.Arbitrate(
+            currentSelectedCore,
+            signedCandidate);
 
         return new CalculationSnapshot(
             result,
