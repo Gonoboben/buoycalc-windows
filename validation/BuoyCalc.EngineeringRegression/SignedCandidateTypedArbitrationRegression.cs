@@ -131,11 +131,15 @@ internal static class SignedCandidateTypedArbitrationRegression
             var legacyExpected = SelectedMooringShapeProvider.Build(
                 snapshot.TechnicalReportData.Shape,
                 snapshot.TechnicalReportData.IterativeSolver);
-            if (!ReferenceEquals(productionSelected.Shape, legacyExpected.Shape) &&
-                (productionSelected.Source != legacyExpected.Source ||
-                 productionSelected.UsesDiscreteLoads != legacyExpected.UsesDiscreteLoads ||
-                 productionSelected.Shape.HorizontalOffsetM != legacyExpected.Shape.HorizontalOffsetM ||
-                 productionSelected.Shape.Nodes.Count != legacyExpected.Shape.Nodes.Count))
+            if (productionSelected.Source != legacyExpected.Source ||
+                productionSelected.UsesDiscreteLoads != legacyExpected.UsesDiscreteLoads ||
+                productionSelected.HasGateSelection != legacyExpected.HasGateSelection ||
+                productionSelected.GateDecision != legacyExpected.GateDecision ||
+                productionSelected.DecisionText != legacyExpected.DecisionText ||
+                productionSelected.MethodNote != legacyExpected.MethodNote ||
+                productionSelected.Shape.HorizontalOffsetM != legacyExpected.Shape.HorizontalOffsetM ||
+                productionSelected.Shape.VerticalResidualM != legacyExpected.Shape.VerticalResidualM ||
+                productionSelected.Shape.Nodes.Count != legacyExpected.Shape.Nodes.Count)
             {
                 throw new InvalidOperationException(
                     $"Typed arbitration {name}: user-facing selected-shape authority changed in Package 4.");
@@ -168,7 +172,10 @@ internal static class SignedCandidateTypedArbitrationRegression
             expected.SelectedConverged != actual.SelectedConverged ||
             expected.SelectedUsesDiscreteLoads != actual.SelectedUsesDiscreteLoads ||
             expected.MethodNote != actual.MethodNote ||
-            !ReferenceEquals(expected.Shape, actual.Shape))
+            expected.Shape.HorizontalOffsetM != actual.Shape.HorizontalOffsetM ||
+            expected.Shape.VerticalResidualM != actual.Shape.VerticalResidualM ||
+            expected.Shape.Converged != actual.Shape.Converged ||
+            expected.Shape.Nodes.Count != actual.Shape.Nodes.Count)
         {
             throw new InvalidOperationException(
                 $"Typed arbitration {name}: snapshot shadow differs from direct typed arbitrator output.");
