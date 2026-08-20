@@ -8,7 +8,7 @@ namespace BuoyCalc.Windows.ApplicationModel;
 ///
 /// Technical report data and selected engineering X/Z are retained directly in the snapshot.
 /// User-facing consumers do not require mutable shape/report store publication.
-/// Signed-candidate/shadow state is diagnostic only until the explicit authority-switch package.
+/// Signed-candidate state and the typed selected-core decision are retained for diagnostics.
 /// </summary>
 public sealed partial record CalculationSnapshot(
     CalculationResult Result,
@@ -35,9 +35,10 @@ public static class CalculationSnapshotBuilder
     {
         var data = TechnicalReportDataBuilder.Build(environment, buoy, result);
 
-        // Preserve the existing user-facing read-model path exactly. Signed candidate state
-        // is retained separately below and cannot affect SelectedShape in this package.
-        var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);
+        // Keep the complete legacy read model available as the exact fallback path.
+        // Package 5 only replaces it when typed core arbitration selects the accepted
+        // SignedBoundaryFeedback source.
+        var legacySelectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);
 
         var currentSelection = MooringPrimaryShapeSelector.Select(data.Shape, data.IterativeSolver);
         MooringSelectedShapeResult? currentSelectedCore = null;
@@ -51,7 +52,7 @@ public static class CalculationSnapshotBuilder
                 currentSource,
                 currentSelection.Shape.Converged,
                 currentSelection.UsesDiscreteLoads,
-                "Typed shadow mirror of the existing production primary-shape selection; user-facing authority is unchanged.");
+                "Typed mirror of the legacy production primary-shape selection.");
         }
 
         var signedCandidate = MooringSignedCandidateEvaluator.Build(
@@ -60,9 +61,13 @@ public static class CalculationSnapshotBuilder
             result,
             data.SequencePositions);
 
-        var shadowSelectedCore = MooringSelectedShapeArbitrator.Arbitrate(
+        var selectedCore = MooringSelectedShapeArbitrator.Arbitrate(
             currentSelectedCore,
             signedCandidate);
+
+        var selectedShape = SelectedMooringShapeReadModelProjector.Project(
+            legacySelectedShape,
+            selectedCore);
 
         return new CalculationSnapshot(
             result,
@@ -70,7 +75,7 @@ public static class CalculationSnapshotBuilder
             selectedShape)
         {
             SignedCandidate = signedCandidate,
-            ShadowSelectedCore = shadowSelectedCore
+            ShadowSelectedCore = selectedCore
         };
     }
 }
