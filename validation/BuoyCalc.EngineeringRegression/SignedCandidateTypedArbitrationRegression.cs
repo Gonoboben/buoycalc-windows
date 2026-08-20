@@ -67,7 +67,7 @@ internal static class SignedCandidateTypedArbitrationRegression
                 currentSource,
                 currentSelection.Shape.Converged,
                 currentSelection.UsesDiscreteLoads,
-                "Typed mirror of the legacy production primary-shape selection.");
+                "Typed shadow mirror of the existing production primary-shape selection; user-facing authority is unchanged.");
             var direct = MooringSelectedShapeArbitrator.Arbitrate(currentCore, candidate)
                 ?? throw new InvalidOperationException($"Typed arbitration {name}: direct result is null.");
 
