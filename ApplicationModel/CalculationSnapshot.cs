@@ -35,10 +35,10 @@ public static class CalculationSnapshotBuilder
     {
         var data = TechnicalReportDataBuilder.Build(environment, buoy, result);
 
-        // Keep the complete legacy read model available as the exact fallback path.
-        // Package 5 only replaces it when typed core arbitration selects the accepted
-        // SignedBoundaryFeedback source.
-        var legacySelectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);
+        // Build the complete legacy read model first so it remains the exact fallback path.
+        // Package 5 replaces it only after typed core arbitration selects an accepted
+        // SignedBoundaryFeedback result.
+        var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);
 
         var currentSelection = MooringPrimaryShapeSelector.Select(data.Shape, data.IterativeSolver);
         MooringSelectedShapeResult? currentSelectedCore = null;
@@ -61,13 +61,13 @@ public static class CalculationSnapshotBuilder
             result,
             data.SequencePositions);
 
-        var selectedCore = MooringSelectedShapeArbitrator.Arbitrate(
+        var shadowSelectedCore = MooringSelectedShapeArbitrator.Arbitrate(
             currentSelectedCore,
             signedCandidate);
 
-        var selectedShape = SelectedMooringShapeReadModelProjector.Project(
-            legacySelectedShape,
-            selectedCore);
+        selectedShape = SelectedMooringShapeReadModelProjector.Project(
+            selectedShape,
+            shadowSelectedCore);
 
         return new CalculationSnapshot(
             result,
@@ -75,7 +75,7 @@ public static class CalculationSnapshotBuilder
             selectedShape)
         {
             SignedCandidate = signedCandidate,
-            ShadowSelectedCore = selectedCore
+            ShadowSelectedCore = shadowSelectedCore
         };
     }
 }
