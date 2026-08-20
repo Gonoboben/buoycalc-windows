@@ -40,15 +40,19 @@ public static class CalculationSnapshotBuilder
         var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);
 
         var currentSelection = MooringPrimaryShapeSelector.Select(data.Shape, data.IterativeSolver);
-        var currentSource = currentSelection.UsesDiscreteLoads
-            ? MooringShapeSourceIdentity.IterativeDiscreteSolver
-            : MooringShapeSourceIdentity.FallbackShapeSolver;
-        var currentSelectedCore = MooringSelectedShapeResult.Create(
-            currentSelection.Shape,
-            currentSource,
-            currentSelection.Shape.Converged,
-            currentSelection.UsesDiscreteLoads,
-            "Typed shadow mirror of the existing production primary-shape selection; user-facing authority is unchanged.");
+        MooringSelectedShapeResult? currentSelectedCore = null;
+        if (currentSelection.Shape.Nodes.Count >= 2)
+        {
+            var currentSource = currentSelection.UsesDiscreteLoads
+                ? MooringShapeSourceIdentity.IterativeDiscreteSolver
+                : MooringShapeSourceIdentity.FallbackShapeSolver;
+            currentSelectedCore = MooringSelectedShapeResult.Create(
+                currentSelection.Shape,
+                currentSource,
+                currentSelection.Shape.Converged,
+                currentSelection.UsesDiscreteLoads,
+                "Typed shadow mirror of the existing production primary-shape selection; user-facing authority is unchanged.");
+        }
 
         var signedCandidate = MooringSignedCandidateEvaluator.Build(
             environment,
