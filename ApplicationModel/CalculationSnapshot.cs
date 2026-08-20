@@ -52,7 +52,7 @@ public static class CalculationSnapshotBuilder
                 currentSource,
                 currentSelection.Shape.Converged,
                 currentSelection.UsesDiscreteLoads,
-                "Typed mirror of the legacy production primary-shape selection.");
+                "Typed shadow mirror of the existing production primary-shape selection; user-facing authority is unchanged.");
         }
 
         var signedCandidate = MooringSignedCandidateEvaluator.Build(
