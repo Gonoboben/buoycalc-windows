@@ -17,7 +17,7 @@ public static class ReportBuildBoundary
         CalculationSnapshot snapshot)
     {
         return new ReportBuildResult(
-            UserReportBuilder.Build(environment, snapshot.Result),
+            UserReportBuilder.Build(environment, snapshot),
             TechnicalReportBuilder.Build(projectName, environment, buoy, anchor, snapshot));
     }
 }
