@@ -22,17 +22,39 @@ internal static class TechnicalReportIdempotencyDiagnostic
         var anchor = Property<AnchorInput>(definition, "Anchor");
         var safetyFactor = Property<double>(definition, "SafetyFactor");
         var run = ApplicationCalculationRunner.Run(environment, buoy, assembly, anchor, safetyFactor);
+        var snapshot = run.Snapshot;
 
-        var first = TechnicalReportBuilder.Build("F4-B1 idempotency", environment, buoy, anchor, run.Snapshot);
-        var second = TechnicalReportBuilder.Build("F4-B1 idempotency", environment, buoy, anchor, run.Snapshot);
-        if (first == second)
-        {
-            Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|DirectDoubleRender=Exact");
+        var baseline = Render(environment, buoy, anchor, snapshot);
+        AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "direct second render");
+        Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|DirectDoubleRender=Exact");
+
+        _ = UserReportBuilder.Build(environment, run.Result);
+        AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after legacy user summary");
+        Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterLegacySummary=Exact");
+
+        _ = UserReportBuilder.Build(environment, snapshot);
+        AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after selected user summary");
+        Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterSelectedSummary=Exact");
+
+        _ = SelectedElementCalculationDisplayProjector.Project(snapshot);
+        AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after selected element projector");
+        Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterElementProjector=Exact");
+    }
+
+    private static string Render(
+        EnvironmentInput environment,
+        BuoyInput buoy,
+        AnchorInput anchor,
+        CalculationSnapshot snapshot) =>
+        TechnicalReportBuilder.Build("F4-B1 idempotency", environment, buoy, anchor, snapshot);
+
+    private static void AssertExact(string expected, string actual, string stage)
+    {
+        if (expected == actual)
             return;
-        }
 
-        var a = Normalize(first);
-        var b = Normalize(second);
+        var a = Normalize(expected);
+        var b = Normalize(actual);
         var count = Math.Max(a.Length, b.Length);
         for (var i = 0; i < count; i++)
         {
@@ -40,17 +62,14 @@ internal static class TechnicalReportIdempotencyDiagnostic
             var right = i < b.Length ? b[i] : "<missing>";
             if (left == right) continue;
 
-            var firstHeading = FindHeading(a, i);
-            var secondHeading = FindHeading(b, i);
-            var firstContext = Context(a, i);
-            var secondContext = Context(b, i);
             throw new InvalidOperationException(
-                $"F4-B1 direct technical report render is not idempotent at line {i + 1}. " +
-                $"First heading='{firstHeading}', second heading='{secondHeading}'. " +
-                $"FIRST CONTEXT: {firstContext} SECOND CONTEXT: {secondContext}");
+                $"F4-B1 technical report changed {stage} at line {i + 1}. " +
+                $"Expected heading='{FindHeading(a, i)}', actual heading='{FindHeading(b, i)}'. " +
+                $"EXPECTED CONTEXT: {Context(a, i)} ACTUAL CONTEXT: {Context(b, i)}");
         }
 
-        throw new InvalidOperationException("F4-B1 direct technical report render differs only by trailing representation.");
+        throw new InvalidOperationException(
+            $"F4-B1 technical report changed {stage}; lengths expected/actual={expected.Length}/{actual.Length}.");
     }
 
     private static string[] Normalize(string value) =>
