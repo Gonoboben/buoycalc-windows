@@ -140,14 +140,47 @@ internal static class SignedCandidateTypedArbitrationRegression
 
     private static void AssertSelectedCoreEquivalent(string name, MooringSelectedShapeResult expected, MooringSelectedShapeResult actual)
     {
+        var shapeEquivalent = expected.SourceIdentity == MooringShapeSourceIdentity.SignedBoundaryFeedback
+            ? ReferenceEquals(expected.Shape, actual.Shape)
+            : AreShapesEquivalent(expected.Shape, actual.Shape);
+
         if (expected.SourceIdentity != actual.SourceIdentity ||
             expected.SelectedConverged != actual.SelectedConverged ||
             expected.SelectedUsesDiscreteLoads != actual.SelectedUsesDiscreteLoads ||
             expected.MethodNote != actual.MethodNote ||
-            !ReferenceEquals(expected.Shape, actual.Shape))
+            !shapeEquivalent)
         {
             throw new InvalidOperationException($"Typed arbitration {name}: snapshot selected core differs from direct arbitrator output.");
         }
+    }
+
+    private static bool AreShapesEquivalent(MooringShapeResult expected, MooringShapeResult actual)
+    {
+        if (expected.BuoyState != actual.BuoyState ||
+            expected.DepthM != actual.DepthM ||
+            expected.LineLengthM != actual.LineLengthM ||
+            expected.HorizontalOffsetM != actual.HorizontalOffsetM ||
+            expected.VerticalResidualM != actual.VerticalResidualM ||
+            expected.Converged != actual.Converged ||
+            expected.MethodNote != actual.MethodNote ||
+            expected.IterationCount != actual.IterationCount ||
+            expected.ConvergenceResidualM != actual.ConvergenceResidualM ||
+            expected.AngleScale != actual.AngleScale ||
+            expected.ConvergenceCriterion != actual.ConvergenceCriterion ||
+            expected.BuoyPoint != actual.BuoyPoint ||
+            expected.AnchorPoint != actual.AnchorPoint ||
+            expected.Nodes.Count != actual.Nodes.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < expected.Nodes.Count; i++)
+        {
+            if (expected.Nodes[i] != actual.Nodes[i])
+                return false;
+        }
+
+        return true;
     }
 
     private static void AssertReadModelEquivalent(string name, SelectedShapeReadModel expected, SelectedShapeReadModel actual)
