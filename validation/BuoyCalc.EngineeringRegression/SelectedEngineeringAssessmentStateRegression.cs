@@ -49,6 +49,7 @@ internal static class SelectedEngineeringAssessmentStateRegression
             var legacyElementRows = run.Result.ElementRows.ToArray();
             var selectedShapeBefore = snapshot.ShadowSelectedCore?.Shape;
             var legacyUserReport = UserReportBuilder.Build(environment, run.Result);
+            var selectedUserReport = UserReportBuilder.Build(environment, snapshot);
             var boundaryUserReport = ReportBuildBoundary.Build(
                 "F4-A regression",
                 environment,
@@ -68,13 +69,17 @@ internal static class SelectedEngineeringAssessmentStateRegression
                     throw new InvalidOperationException($"F4-A {name}: non-Accepted selection exposed selected F1-F4 authority state.");
                 }
 
+                if (selectedUserReport != legacyUserReport || boundaryUserReport != legacyUserReport)
+                    throw new InvalidOperationException($"F4-B1 {name}: non-Accepted user summary did not preserve exact legacy fallback.");
+
                 unavailable++;
                 Console.WriteLine(string.Join("|",
                     "F4A_SELECTED_ENGINEERING_ASSESSMENT",
                     name,
                     $"CandidateStatus={candidate.Status}",
                     "Available=False",
-                    "PresentationMigration=False"));
+                    "PresentationMigration=False",
+                    "LegacyPresentationFallback=True"));
             }
             else
             {
@@ -82,6 +87,9 @@ internal static class SelectedEngineeringAssessmentStateRegression
                 available++;
                 syntheticBaseRun ??= run;
                 syntheticBaseEnvironment ??= environment;
+
+                if (boundaryUserReport != selectedUserReport)
+                    throw new InvalidOperationException($"F4-B1 {name}: Accepted report boundary did not use selected user summary.");
 
                 var assessment = snapshot.SelectedEngineeringAssessment!;
                 Console.WriteLine(string.Join("|",
@@ -97,7 +105,7 @@ internal static class SelectedEngineeringAssessmentStateRegression
                     $"StructuralInsufficient={snapshot.SelectedLocalStructuralCapacity.InsufficientElementCount}",
                     $"AnchorHorizontalCapacity={assessment.AnchorHorizontalCapacityDisposition}",
                     "LegacyAnchorReserveAuthority=False",
-                    "PresentationMigration=False"));
+                    "PresentationMigration=True"));
             }
 
             if (run.Result.Verdict != legacyVerdict || run.Result.MainRisk != legacyMainRisk)
@@ -116,8 +124,6 @@ internal static class SelectedEngineeringAssessmentStateRegression
                 throw new InvalidOperationException($"F4-A {name}: legacy element reserve/status rows changed.");
             if (!ReferenceEquals(snapshot.ShadowSelectedCore?.Shape, selectedShapeBefore))
                 throw new InvalidOperationException($"F4-A {name}: selected X/Z identity changed.");
-            if (boundaryUserReport != legacyUserReport)
-                throw new InvalidOperationException($"F4-A {name}: user report was migrated before F4-B.");
         }
 
         if (definitions.Count != 5 || available != 2 || unavailable != 3)
@@ -132,7 +138,7 @@ internal static class SelectedEngineeringAssessmentStateRegression
         ValidateAssessmentPolicy(syntheticBaseEnvironment, syntheticBaseRun);
 
         Console.WriteLine(
-            "F4A_SELECTED_ENGINEERING_ASSESSMENT_ROLLUP|CanonicalScenarios=5|Available=2|Unavailable=3|HardPreconditions=DirectInputs|AnchorContact=F2|LocalStructuralCapacity=F3|AnchorHorizontalCapacity=RequiresAdditionalPhysicalModel|LegacyAnchorReserveAuthorizesPass=False|LegacyChecksVerdictChanged=False|PresentationMigration=False|SelectedGeometryChanged=False");
+            "F4A_SELECTED_ENGINEERING_ASSESSMENT_ROLLUP|CanonicalScenarios=5|Available=2|Unavailable=3|HardPreconditions=DirectInputs|AnchorContact=F2|LocalStructuralCapacity=F3|AnchorHorizontalCapacity=RequiresAdditionalPhysicalModel|LegacyAnchorReserveAuthorizesPass=False|LegacyChecksVerdictChanged=False|PresentationMigration=AcceptedOnly|LegacyPresentationFallback=NonAccepted|SelectedGeometryChanged=False");
         Console.WriteLine("F4A_SELECTED_ENGINEERING_ASSESSMENT_END");
     }
 
