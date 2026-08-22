@@ -36,9 +36,10 @@ function Assert-PowerShellParses([string]$relativePath) {
 $publishPath = "scripts/publish-windows.ps1"
 $packagePath = "scripts/package-windows-rc.ps1"
 $verifyPath = "scripts/verify-windows-rc.ps1"
+$gatePath = "scripts/verify-exact-main-ci-gates.ps1"
 $workflowPath = ".github/workflows/release-windows.yml"
 
-foreach ($script in @($publishPath, $packagePath, $verifyPath)) {
+foreach ($script in @($publishPath, $packagePath, $verifyPath, $gatePath)) {
     Assert-PowerShellParses $script
 }
 
@@ -69,6 +70,17 @@ Assert-Contains $verify 'RC ZIP must contain exactly one entry' "Windows RC veri
 Assert-Contains $verify 'RC ZIP entry timestamp is not normalized' "Windows RC verifier normalized timestamp"
 Assert-Contains $verify 'Manifest executable SHA-256 mismatch' "Windows RC verifier executable hash"
 
+$gate = Read-RepoText $gatePath
+Assert-Contains $gate '/actions/runs?head_sha=$SourceCommit&event=push&per_page=100' "Exact-main RC gate Actions query"
+Assert-Contains $gate '".NET Build"' "Exact-main RC gate .NET workflow"
+Assert-Contains $gate '"Selected Shape Consumer Scan"' "Exact-main RC gate selected-shape workflow"
+Assert-Contains $gate '"Report Store Consumer Scan"' "Exact-main RC gate report-store workflow"
+Assert-Contains $gate '$_.head_sha -eq $SourceCommit' "Exact-main RC gate source identity"
+Assert-Contains $gate '$_.event -eq "push"' "Exact-main RC gate push-run filter"
+Assert-Contains $gate '$run.status -ne "completed" -or $run.conclusion -ne "success"' "Exact-main RC gate completed/success contract"
+Assert-Contains $gate 'Required exact-main CI workflow' "Exact-main RC gate failure contract"
+Assert-Contains $gate '${SourceCommit}: status=' "Exact-main RC gate safe diagnostic interpolation"
+
 $workflow = Read-RepoText $workflowPath
 Assert-Contains $workflow "workflow_dispatch:" "Windows release workflow manual trigger"
 Assert-Contains $workflow "release-candidate/v1.0.0" "Windows release workflow RC trigger"
@@ -80,13 +92,10 @@ Assert-NotContains $workflow "actions: write" "Windows release workflow Actions 
 Assert-Contains $workflow "fetch-depth: 0" "Windows release workflow full source identity"
 Assert-Contains $workflow "git fetch origin main --depth=1" "Windows release workflow main verification"
 Assert-Contains $workflow 'if ($head -ne $main)' "Windows release workflow exact-main guard"
-Assert-Contains $workflow '/actions/runs?head_sha=$sourceSha&event=push&per_page=100' "Windows release workflow exact-main Actions query"
-Assert-Contains $workflow '".NET Build"' "Windows release workflow .NET gate"
-Assert-Contains $workflow '"Selected Shape Consumer Scan"' "Windows release workflow selected-shape gate"
-Assert-Contains $workflow '"Report Store Consumer Scan"' "Windows release workflow report-store gate"
-Assert-Contains $workflow '$_.event -eq "push"' "Windows release workflow push-run filter"
-Assert-Contains $workflow '$run.status -ne "completed" -or $run.conclusion -ne "success"' "Windows release workflow success gate"
-Assert-Contains $workflow 'Required exact-main CI workflow' "Windows release workflow missing/failing gate"
+Assert-Contains $workflow "./scripts/verify-exact-main-ci-gates.ps1" "Windows release workflow parsed exact-main gate"
+Assert-Contains $workflow '-Repository "${{ github.repository }}"' "Windows release workflow gate repository input"
+Assert-Contains $workflow '-SourceCommit "${{ github.sha }}"' "Windows release workflow gate source input"
+Assert-NotContains $workflow '/actions/runs?head_sha=' "Windows release workflow inline Actions query"
 Assert-Contains $workflow 'context = "BuoyCalc Windows RC"' "Windows release workflow RC status context"
 Assert-Contains $workflow 'state = "pending"' "Windows release workflow pending RC status"
 Assert-Contains $workflow '$state = if ($jobStatus -eq "success") { "success" } else { "failure" }' "Windows release workflow final RC status"
@@ -99,7 +108,7 @@ Assert-Contains $workflow "BuoyCalc-Windows-v1.0.0-win-x64.zip" "Windows release
 Assert-Contains $workflow "BuoyCalc-Windows-v1.0.0-win-x64.sha256" "Windows release workflow checksum upload"
 Assert-Contains $workflow "BuoyCalc-Windows-v1.0.0-win-x64-manifest.json" "Windows release workflow manifest upload"
 
-$releaseFiles = $publish + "`n" + $package + "`n" + $verify + "`n" + $workflow
+$releaseFiles = $publish + "`n" + $package + "`n" + $verify + "`n" + $gate + "`n" + $workflow
 foreach ($forbidden in @(
     "git tag ",
     "gh release ",
@@ -115,7 +124,7 @@ foreach ($forbidden in @(
     "id-token: write",
     "permissions: write-all"
 )) {
-    Assert-NotContains $releaseFiles $forbidden "F5-E RC-only release boundary"
+    Assert-NotContains $releaseFiles $forbidden "F5-F RC-only release boundary"
 }
 
 Write-Host "Windows RC packaging smoke check passed."
