@@ -32,6 +32,25 @@ internal static class TechnicalReportIdempotencyDiagnostic
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after legacy user summary");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterLegacySummary=Exact");
 
+        _ = run.Result.ElementRows.Select(ElementCalculationDisplayRow.From).ToList();
+        AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after legacy element rows");
+        Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterLegacyElementRows=Exact");
+
+        _ = run.Result.Verdict;
+        _ = run.Result.MainRisk;
+        _ = run.Result.Checks.ToArray();
+        _ = run.Result.WeakLinkBreakingLoadKn;
+        _ = run.Result.WeakLinkName;
+        _ = run.Result.TensionReserve;
+        _ = run.Result.AnchorHoldingKg;
+        _ = run.Result.RequiredAnchorHoldingKg;
+        _ = run.Result.AnchorReserve;
+        _ = run.Result.ElementRows.ToArray();
+        _ = snapshot.SelectedShape;
+        _ = snapshot.ShadowSelectedCore?.Shape;
+        AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after regression capture reads");
+        Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterCaptureReads=Exact");
+
         _ = UserReportBuilder.Build(environment, snapshot);
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after selected user summary");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterSelectedSummary=Exact");
@@ -39,6 +58,15 @@ internal static class TechnicalReportIdempotencyDiagnostic
         _ = SelectedElementCalculationDisplayProjector.Project(snapshot);
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after selected element projector");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterElementProjector=Exact");
+
+        _ = ReportBuildBoundary.Build(
+            "F4-B1 idempotency",
+            environment,
+            buoy,
+            anchor,
+            snapshot);
+        AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after report build boundary");
+        Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterReportBuildBoundary=Exact");
     }
 
     private static string Render(
