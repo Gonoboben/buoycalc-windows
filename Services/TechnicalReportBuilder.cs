@@ -12,6 +12,7 @@ public static class TechnicalReportBuilder
         AnchorInput anchor,
         CalculationSnapshot snapshot)
     {
-        return TechnicalReportMarkdownBuilder.Build(projectName, environment, buoy, anchor, snapshot);
+        var legacyReport = TechnicalReportMarkdownBuilder.Build(projectName, environment, buoy, anchor, snapshot);
+        return SelectedTechnicalReportProjector.Project(legacyReport, snapshot);
     }
 }
