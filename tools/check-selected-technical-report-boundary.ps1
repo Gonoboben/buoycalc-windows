@@ -39,7 +39,7 @@ Assert-Contains $projector "snapshot.SelectedDesignTensionDemand" "SelectedTechn
 Assert-Contains $projector "snapshot.SelectedAnchorReaction" "SelectedTechnicalReportProjector F2"
 Assert-Contains $projector "snapshot.SelectedLocalStructuralCapacity" "SelectedTechnicalReportProjector F3"
 Assert-Contains $projector "SelectedElementCalculationDisplayProjector.Project(snapshot)" "SelectedTechnicalReportProjector selected element read model"
-Assert-Contains $projector "RequiresAdditionalPhysicalModel" "SelectedTechnicalReportProjector anchor capacity disposition"
+Assert-Contains $projector "assessment.AnchorHorizontalCapacityDisposition" "SelectedTechnicalReportProjector retained anchor capacity disposition"
 Assert-Contains $projector "compatibility-only" "SelectedTechnicalReportProjector legacy labeling"
 Assert-Contains $projector "legacy AnchorReserve не является selected-authority основанием для прохода" "SelectedTechnicalReportProjector legacy anchor disposition"
 
