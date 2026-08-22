@@ -41,6 +41,7 @@ public sealed record MooringSignedCandidateResult
         MooringSignedCandidateStatus status,
         MooringShapeResult? shape,
         MooringSurfaceBoundaryInfoResult? boundary,
+        MooringSurfaceBoundaryTensionTraceResult? finalTensionTrace,
         bool exactFixedPointReached,
         int feedbackIterations,
         bool containsDiscreteLoads,
@@ -52,6 +53,7 @@ public sealed record MooringSignedCandidateResult
         Status = status;
         Shape = shape;
         Boundary = boundary;
+        FinalTensionTrace = finalTensionTrace;
         ExactFixedPointReached = exactFixedPointReached;
         FeedbackIterations = feedbackIterations;
         ContainsDiscreteLoads = containsDiscreteLoads;
@@ -64,6 +66,15 @@ public sealed record MooringSignedCandidateResult
     public MooringSignedCandidateStatus Status { get; }
     public MooringShapeResult? Shape { get; }
     public MooringSurfaceBoundaryInfoResult? Boundary { get; }
+
+    /// <summary>
+    /// Exact final steady-current tension trace retained only when supplied by an
+    /// Accepted fixed-point evaluation. Production Accepted candidates retain the
+    /// same trace that was used to construct their accepted shape. This is solver
+    /// provenance for later local-demand projection, not a new scalar authority.
+    /// </summary>
+    public MooringSurfaceBoundaryTensionTraceResult? FinalTensionTrace { get; }
+
     public bool ExactFixedPointReached { get; }
     public int FeedbackIterations { get; }
     public bool ContainsDiscreteLoads { get; }
@@ -78,7 +89,8 @@ public sealed record MooringSignedCandidateResult
         bool containsDiscreteLoads,
         int pointLoadCrossings,
         string diagnosticCode,
-        string diagnosticText)
+        string diagnosticText,
+        MooringSurfaceBoundaryTensionTraceResult? finalTensionTrace = null)
     {
         ArgumentNullException.ThrowIfNull(shape);
         ArgumentNullException.ThrowIfNull(boundary);
@@ -118,10 +130,14 @@ public sealed record MooringSignedCandidateResult
                 nameof(shape));
         }
 
+        if (finalTensionTrace is not null)
+            ValidateFinalTraceIdentity(shape, boundary, finalTensionTrace, pointLoadCrossings);
+
         return new MooringSignedCandidateResult(
             MooringSignedCandidateStatus.Accepted,
             shape,
             boundary,
+            finalTensionTrace,
             true,
             feedbackIterations,
             containsDiscreteLoads,
@@ -168,12 +184,62 @@ public sealed record MooringSignedCandidateResult
             status,
             shape,
             boundary,
+            null,
             false,
             feedbackIterations,
             containsDiscreteLoads,
             pointLoadCrossings,
             diagnosticCode,
             diagnosticText);
+    }
+
+    private static void ValidateFinalTraceIdentity(
+        MooringShapeResult shape,
+        MooringSurfaceBoundaryInfoResult boundary,
+        MooringSurfaceBoundaryTensionTraceResult trace,
+        int pointLoadCrossings)
+    {
+        var solution = boundary.SolutionState
+            ?? throw new ArgumentException("Accepted final trace requires one solved boundary state.", nameof(boundary));
+
+        if (!trace.Available ||
+            trace.ParentClassification != boundary.Classification ||
+            trace.PointLoadCrossings != pointLoadCrossings ||
+            trace.Rows.Count != shape.Nodes.Count - 1 ||
+            !trace.StartHN.HasValue ||
+            !trace.StartVN.HasValue ||
+            !trace.EndHN.HasValue ||
+            !trace.EndVN.HasValue ||
+            !boundary.BuoySteadyDragN.HasValue)
+        {
+            throw new ArgumentException(
+                "Accepted final tension trace availability/classification/count identity differs from shape/boundary state.",
+                nameof(trace));
+        }
+
+        if (trace.StartHN.Value != boundary.BuoySteadyDragN.Value ||
+            trace.StartVN.Value != boundary.Q0N!.Value ||
+            trace.EndHN.Value != solution.EndHN ||
+            trace.EndVN.Value != solution.EndVN)
+        {
+            throw new ArgumentException(
+                "Accepted final tension trace boundary H/V identity differs from the solved Accepted boundary.",
+                nameof(trace));
+        }
+
+        for (var i = 0; i < trace.Rows.Count; i++)
+        {
+            var row = trace.Rows[i];
+            var node = shape.Nodes[i + 1];
+            if (row.SegmentNumber != node.SegmentNumber ||
+                row.EndLengthM != node.AlongLineM ||
+                row.MidTensionN / 1000.0 != node.SegmentTensionKn)
+            {
+                throw new ArgumentException(
+                    $"Accepted final tension trace differs from the Accepted shape at segment {row.SegmentNumber}.",
+                    nameof(trace));
+            }
+        }
     }
 
     private static void ValidateIterations(int feedbackIterations)

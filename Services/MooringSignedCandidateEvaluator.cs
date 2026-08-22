@@ -185,7 +185,8 @@ public static class MooringSignedCandidateEvaluator
                     nextTrace.PointLoadCrossings > 0,
                     nextTrace.PointLoadCrossings,
                     "SignedCandidateExactFixedPoint",
-                    $"Signed boundary/shape-force feedback reached an exact deterministic fixed point at iteration {iteration} within the fixed production budget {MooringSignedCandidateResult.ProductionFeedbackBudget}.");
+                    $"Signed boundary/shape-force feedback reached an exact deterministic fixed point at iteration {iteration} within the fixed production budget {MooringSignedCandidateResult.ProductionFeedbackBudget}.",
+                    nextTrace);
             }
 
             currentResult = nextResult;
