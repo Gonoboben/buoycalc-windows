@@ -160,7 +160,7 @@ Assert-NotContains $selectedShapeProvider "MooringPrimaryShapeSelectionStore" "S
 
 $reportBoundary = Read-RepoText "Services/ReportBuildBoundary.cs"
 Assert-Contains $reportBoundary "CalculationSnapshot snapshot" "ReportBuildBoundary"
-Assert-Contains $reportBoundary "UserReportBuilder.Build(environment, snapshot.Result)" "ReportBuildBoundary"
+Assert-Contains $reportBoundary "UserReportBuilder.Build(environment, snapshot)" "ReportBuildBoundary"
 Assert-Contains $reportBoundary "TechnicalReportBuilder.Build(projectName, environment, buoy, anchor, snapshot)" "ReportBuildBoundary"
 Assert-NotContains $reportBoundary "CalculationSnapshotBuilder.Build" "ReportBuildBoundary"
 Assert-NotContains $reportBoundary "SignedCandidate" "ReportBuildBoundary"
