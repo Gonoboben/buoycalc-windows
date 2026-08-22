@@ -68,8 +68,7 @@ internal static class SelectedUserPresentationReadModelRegression
                 if (boundary.UserResultText != legacySummary)
                     throw new InvalidOperationException($"F4-B1 {name}: non-selected user summary is not exact legacy fallback.");
                 AssertRowsEqual(projectedRows, legacyRows, name + " legacy rows");
-                if (boundary.TechnicalReportText != legacyTechnical)
-                    throw new InvalidOperationException($"F4-B1 {name}: technical report changed before F4-B2.");
+                AssertTechnicalUnchanged(boundary.TechnicalReportText, legacyTechnical, name);
 
                 fallbackCount++;
                 Console.WriteLine(string.Join("|",
@@ -92,8 +91,7 @@ internal static class SelectedUserPresentationReadModelRegression
                 ValidateSelectedSummary(name, boundary.UserResultText, assessment, capacity, anchorReaction, legacySummary);
                 ValidateSelectedRows(name, run.Result, projectedRows, assessment, capacity);
 
-                if (boundary.TechnicalReportText != legacyTechnical)
-                    throw new InvalidOperationException($"F4-B1 {name}: technical report changed before F4-B2.");
+                AssertTechnicalUnchanged(boundary.TechnicalReportText, legacyTechnical, name);
 
                 selectedCount++;
                 Console.WriteLine(string.Join("|",
@@ -286,6 +284,29 @@ internal static class SelectedUserPresentationReadModelRegression
                 throw new InvalidOperationException($"F4-B1 {label}: display row {i + 1} is not exact legacy fallback.");
             }
         }
+    }
+
+    private static void AssertTechnicalUnchanged(string actual, string expected, string scenario)
+    {
+        if (actual == expected)
+            return;
+
+        var actualLines = actual.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var expectedLines = expected.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var count = Math.Max(actualLines.Length, expectedLines.Length);
+        for (var i = 0; i < count; i++)
+        {
+            var actualLine = i < actualLines.Length ? actualLines[i] : "<missing>";
+            var expectedLine = i < expectedLines.Length ? expectedLines[i] : "<missing>";
+            if (!string.Equals(actualLine, expectedLine, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"F4-B1 {scenario}: technical report changed before F4-B2 at line {i + 1}; expected '{expectedLine}', got '{actualLine}'.");
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"F4-B1 {scenario}: technical report changed before F4-B2; lengths expected/actual={expected.Length}/{actual.Length}.");
     }
 
     private static void RequireContains(string text, string expected, string scenario)
