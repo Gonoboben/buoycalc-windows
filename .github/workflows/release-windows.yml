@@ -2,31 +2,91 @@ name: BuoyCalc Windows Release
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - release-candidate/v1.0.0
+
+permissions:
+  contents: read
 
 jobs:
   publish-windows:
-    name: Publish Windows x64
+    name: Publish Windows x64 RC
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout exact source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup .NET
+      - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore
-        run: dotnet restore BuoyCalc.Windows.csproj
-
-      - name: Publish win-x64 self-contained
+      - name: Verify checked-out commit is exact main
         shell: pwsh
-        run: ./scripts/publish-windows.ps1 -Runtime win-x64 -Configuration Release -Output artifacts/publish/BuoyCalc-Windows-win-x64
+        run: |
+          $ErrorActionPreference = "Stop"
+          git fetch origin main --depth=1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to fetch origin/main."
+          }
 
-      - name: Upload release artifact
+          $head = (git rev-parse HEAD).Trim()
+          $main = (git rev-parse origin/main).Trim()
+          $eventSha = "${{ github.sha }}"
+
+          if ($head -ne $eventSha) {
+            throw "Checked-out HEAD $head does not match workflow source $eventSha."
+          }
+          if ($head -ne $main) {
+            throw "Release Candidate source $head is not exact main $main."
+          }
+
+          Write-Host "Exact-main RC source verified: $head"
+
+      - name: Build deterministic win-x64 RC package
+        shell: pwsh
+        run: |
+          ./scripts/package-windows-rc.ps1 `
+            -Version v1.0.0 `
+            -Runtime win-x64 `
+            -Configuration Release `
+            -SourceCommit "${{ github.sha }}" `
+            -PublishOutput artifacts/publish/BuoyCalc-Windows-v1.0.0-win-x64 `
+            -ReleaseOutput artifacts/release
+
+      - name: Verify RC manifest and SHA-256
+        shell: pwsh
+        run: |
+          ./scripts/verify-windows-rc.ps1 `
+            -Version v1.0.0 `
+            -Runtime win-x64 `
+            -SourceCommit "${{ github.sha }}" `
+            -ReleaseOutput artifacts/release
+
+      - name: Add RC evidence to job summary
+        shell: pwsh
+        run: |
+          $manifest = Get-Content artifacts/release/BuoyCalc-Windows-v1.0.0-win-x64-manifest.json -Raw | ConvertFrom-Json
+          @"
+          ## BuoyCalc Windows v1.0.0 Release Candidate
+
+          - Source commit: ``$($manifest.sourceCommit)``
+          - Runtime: ``$($manifest.runtime)``
+          - Package: ``$($manifest.packageFile)``
+          - SHA-256: ``$($manifest.packageSha256)``
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload versioned RC evidence artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BuoyCalc-Windows-win-x64
-          path: artifacts/publish/BuoyCalc-Windows-win-x64
+          name: BuoyCalc-Windows-v1.0.0-win-x64-RC
+          path: |
+            artifacts/release/BuoyCalc-Windows-v1.0.0-win-x64.zip
+            artifacts/release/BuoyCalc-Windows-v1.0.0-win-x64.sha256
+            artifacts/release/BuoyCalc-Windows-v1.0.0-win-x64-manifest.json
           if-no-files-found: error
+          retention-days: 30
