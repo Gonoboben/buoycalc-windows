@@ -12,6 +12,17 @@ public static class TechnicalReportBuilder
         AnchorInput anchor,
         CalculationSnapshot snapshot)
     {
+        var legacyReport = BuildLegacy(projectName, environment, buoy, anchor, snapshot);
+        return SelectedTechnicalReportProjector.Project(legacyReport, snapshot);
+    }
+
+    private static string BuildLegacy(
+        string projectName,
+        EnvironmentInput environment,
+        BuoyInput buoy,
+        AnchorInput anchor,
+        CalculationSnapshot snapshot)
+    {
         return TechnicalReportMarkdownBuilder.Build(projectName, environment, buoy, anchor, snapshot);
     }
 }
