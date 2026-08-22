@@ -60,19 +60,67 @@ internal static class SignedTensionBoundaryOwnershipRegression
                 .OrderBy(x => x.PositionAlongLineM)
                 .ThenBy(x => x.Number)
                 .ToList();
-            var segments = run.Result.SegmentRows.OrderBy(x => x.Number).ToList();
-
-            var segmentCurrentN = segments.Sum(x => x.CurrentForceN);
+            var baseSegments = run.Result.SegmentRows.OrderBy(x => x.Number).ToList();
+            var baseSegmentCurrentN = baseSegments.Sum(x => x.CurrentForceN);
             var pointCurrentN = internalPoints.Sum(x => x.CurrentForceN);
-            var expectedSurfaceHN = run.Result.CurrentForceN - segmentCurrentN - pointCurrentN;
-            Near(selectedState.BuoySteadyDragN, expectedSurfaceHN, ForceToleranceN, name + " surface H ownership");
 
-            var expectedEndHN = selectedState.BuoySteadyDragN + segmentCurrentN + pointCurrentN;
-            Near(selectedState.EndHN, expectedEndHN, ForceToleranceN, name + " end H force balance");
-            Near(selectedState.EndHN, run.Result.CurrentForceN, ForceToleranceN, name + " steady-current end H");
+            // The snapshot's technical-report boundary is the pre-feedback boundary built from
+            // this exact CalculationResult. It is the correct place to prove the base H balance.
+            var baseBoundary = run.Snapshot.TechnicalReportData.SurfaceBoundaryInfo;
+            if (!baseBoundary.Solved ||
+                baseBoundary.SolutionState is null ||
+                !baseBoundary.BuoySteadyDragN.HasValue ||
+                !baseBoundary.Q0N.HasValue)
+            {
+                throw new InvalidOperationException($"E1-A {name}: base production boundary is not uniquely solved.");
+            }
 
-            var expectedEndVN = IntegrateExpectedEndV(selectedState.Q0N, segments, internalPoints);
-            Near(selectedState.EndVN, expectedEndVN, ForceToleranceN, name + " end V signed-weight balance");
+            var expectedBaseSurfaceHN = run.Result.CurrentForceN - baseSegmentCurrentN - pointCurrentN;
+            Near(
+                baseBoundary.BuoySteadyDragN.Value,
+                expectedBaseSurfaceHN,
+                ForceToleranceN,
+                name + " base surface H ownership");
+            Near(
+                baseBoundary.SolutionState.EndHN,
+                run.Result.CurrentForceN,
+                ForceToleranceN,
+                name + " base steady-current end H");
+            var expectedBaseEndVN = IntegrateExpectedEndV(baseBoundary.Q0N.Value, baseSegments, internalPoints);
+            Near(
+                baseBoundary.SolutionState.EndVN,
+                expectedBaseEndVN,
+                ForceToleranceN,
+                name + " base end V signed-weight balance");
+
+            // Accepted signed state is the result of the feedback-updated current-force path.
+            // MooringSignedCandidateEvaluator changes SegmentRows.CurrentForceN/CurrentForceN
+            // between iterations while preserving signed submerged weights. Therefore its EndH
+            // must not be compared to the original run.Result.CurrentForceN.
+            var candidateBoundary = candidate.Boundary
+                ?? throw new InvalidOperationException($"E1-A {name}: Accepted candidate boundary is missing.");
+            if (!ReferenceEquals(candidateBoundary, candidate.Boundary) ||
+                !candidateBoundary.Solved ||
+                candidateBoundary.SolutionState is null ||
+                !candidateBoundary.BuoySteadyDragN.HasValue ||
+                !candidateBoundary.Q0N.HasValue)
+            {
+                throw new InvalidOperationException($"E1-A {name}: Accepted candidate boundary is incomplete.");
+            }
+
+            Near(selectedState.BuoySteadyDragN, candidateBoundary.BuoySteadyDragN.Value, 0.0, name + " selected start H identity");
+            Near(selectedState.Q0N, candidateBoundary.Q0N.Value, 0.0, name + " selected start V identity");
+            Near(selectedState.EndHN, candidateBoundary.SolutionState.EndHN, 0.0, name + " selected end H identity");
+            Near(selectedState.EndVN, candidateBoundary.SolutionState.EndVN, 0.0, name + " selected end V identity");
+
+            // Feedback changes only current-force rows; signed submerged weights and discrete
+            // point weights remain those of the base CalculationResult/sequence.
+            var expectedSelectedEndVN = IntegrateExpectedEndV(selectedState.Q0N, baseSegments, internalPoints);
+            Near(
+                selectedState.EndVN,
+                expectedSelectedEndVN,
+                ForceToleranceN,
+                name + " selected end V signed-weight balance");
 
             if (selectedState.PointLoadCrossings != internalPoints.Count ||
                 selectedState.ContainsDiscreteLoads != (internalPoints.Count > 0))
@@ -81,8 +129,11 @@ internal static class SignedTensionBoundaryOwnershipRegression
                     $"E1-A {name}: selected signed point-load identity differs from internal sequence ownership.");
             }
 
-            if (!candidate.Boundary!.MethodNote.Contains("wave excluded", StringComparison.Ordinal))
-                throw new InvalidOperationException($"E1-A {name}: boundary method no longer states wave exclusion.");
+            if (!baseBoundary.MethodNote.Contains("wave excluded", StringComparison.Ordinal) ||
+                !candidateBoundary.MethodNote.Contains("wave excluded", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"E1-A {name}: signed boundary method no longer states wave exclusion.");
+            }
             if (run.Result.WaveForceN <= ForceToleranceN)
                 throw new InvalidOperationException($"E1-A {name}: canonical fixture no longer supplies a non-zero legacy wave force.");
             Near(
@@ -90,10 +141,12 @@ internal static class SignedTensionBoundaryOwnershipRegression
                 run.Result.CurrentForceN + run.Result.WaveForceN,
                 ForceToleranceN,
                 name + " legacy horizontal-force composition");
-            if (Math.Abs(selectedState.EndHN - run.Result.HorizontalForceN) <= ForceToleranceN)
+
+            var impliedSelectedLineCurrentN = selectedState.EndHN - selectedState.BuoySteadyDragN - pointCurrentN;
+            if (!double.IsFinite(impliedSelectedLineCurrentN) || impliedSelectedLineCurrentN < -ForceToleranceN)
             {
                 throw new InvalidOperationException(
-                    $"E1-A {name}: signed steady-current end H unexpectedly equals wave-inclusive legacy HorizontalForceN.");
+                    $"E1-A {name}: selected feedback-updated implied line current force is invalid: {impliedSelectedLineCurrentN:R} N.");
             }
 
             acceptedChecked++;
@@ -106,17 +159,20 @@ internal static class SignedTensionBoundaryOwnershipRegression
                 "E1A_BOUNDARY_OWNERSHIP",
                 name,
                 "Direction=BuoyToAnchor",
-                "StartHNSource=BuoySteadyDragN",
-                "StartVNSource=Q0N",
-                $"StartHN={F(selectedState.BuoySteadyDragN)}",
-                $"StartVN={F(selectedState.Q0N)}",
-                $"EndHN={F(selectedState.EndHN)}",
-                $"EndVN={F(selectedState.EndVN)}",
-                $"SteadyCurrentForceN={F(run.Result.CurrentForceN)}",
+                "SelectedStartHNSource=BuoySteadyDragN",
+                "SelectedStartVNSource=Q0N",
+                $"BaseCurrentForceN={F(run.Result.CurrentForceN)}",
+                $"BaseBoundaryEndHN={F(baseBoundary.SolutionState.EndHN)}",
+                $"SelectedStartHN={F(selectedState.BuoySteadyDragN)}",
+                $"SelectedStartVN={F(selectedState.Q0N)}",
+                $"SelectedEndHN={F(selectedState.EndHN)}",
+                $"SelectedEndVN={F(selectedState.EndVN)}",
+                $"SelectedImpliedLineCurrentN={F(impliedSelectedLineCurrentN)}",
                 $"LegacyWaveForceN={F(run.Result.WaveForceN)}",
                 $"LegacyHorizontalForceN={F(run.Result.HorizontalForceN)}",
                 $"InternalPointLoads={internalPoints.Count}",
                 $"PointLoadCrossings={selectedState.PointLoadCrossings}",
+                "SelectedHStage=FeedbackUpdatedCurrentForces",
                 "WaveIncludedInSignedBoundary=False",
                 "ScalarTensionAuthority=LegacyUnchanged"));
         }
@@ -130,7 +186,7 @@ internal static class SignedTensionBoundaryOwnershipRegression
         }
 
         Console.WriteLine(
-            "E1A_BOUNDARY_OWNERSHIP_ROLLUP|AcceptedChecked=2|WithoutInternalPoints=1|WithInternalPoints=1|Direction=BuoyToAnchor|WaveIncludedInSignedBoundary=False|NegativeSignedWeightConvention=Validated|ScalarTensionAuthority=LegacyUnchanged");
+            "E1A_BOUNDARY_OWNERSHIP_ROLLUP|AcceptedChecked=2|WithoutInternalPoints=1|WithInternalPoints=1|Direction=BuoyToAnchor|SelectedHStage=FeedbackUpdatedCurrentForces|WaveIncludedInSignedBoundary=False|NegativeSignedWeightConvention=Validated|ScalarTensionAuthority=LegacyUnchanged");
         Console.WriteLine("E1A_BOUNDARY_OWNERSHIP_END");
     }
 
@@ -229,7 +285,7 @@ internal static class SignedTensionBoundaryOwnershipRegression
             ?? throw new InvalidOperationException("E1-A buoyant-line: Q capacity is unavailable.");
         var signedLineWeightKg = run.Result.SegmentRows.Sum(x => x.WeightWaterKg);
         if (signedLineWeightKg >= 0.0)
-            throw new InvalidOperationException("E1-A buoyant-line: canonical line is no longer negatively buoyant in signed-water-weight convention.");
+            throw new InvalidOperationException("E1-A buoyant-line: canonical line no longer has negative signed submerged weight.");
 
         var orderedRows = sequence.Rows.OrderBy(x => x.Number).ToList();
         var topNumber = orderedRows[0].Number;
