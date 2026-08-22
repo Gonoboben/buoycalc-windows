@@ -65,7 +65,7 @@ Assert-Contains $notes "F1" "v1 release notes"
 Assert-Contains $notes "F2" "v1 release notes"
 Assert-Contains $notes "F3" "v1 release notes"
 Assert-Contains $notes "F4" "v1 release notes"
-Assert-Contains $notes "только then create tag `v1.0.0`" "v1 release notes manual gate"
+Assert-Contains $notes "only then create tag `v1.0.0`" "v1 release notes manual gate"
 
 $control = Read-RepoText "docs/CONTROL_MARK_F5A_V1_ENGINEERING_FREEZE_2026-08-23.md"
 Assert-Contains $control "5ecc0ac913ff203ea3a1015cb3e3665c74a7d6f4" "F5-A control mark base"
