@@ -34,7 +34,7 @@ internal static class SelectedUserPresentationReadModelRegression
             var snapshot = run.Snapshot;
             var legacySummary = UserReportBuilder.Build(environment, run.Result);
             var legacyRows = run.Result.ElementRows.Select(ElementCalculationDisplayRow.From).ToList();
-            var legacyTechnical = TechnicalReportBuilder.Build("F4-B1 regression", environment, buoy, anchor, snapshot);
+            var legacyTechnical = TechnicalReportMarkdownBuilder.Build("F4-B1 regression", environment, buoy, anchor, snapshot);
 
             var resultVerdict = run.Result.Verdict;
             var resultMainRisk = run.Result.MainRisk;
@@ -90,8 +90,7 @@ internal static class SelectedUserPresentationReadModelRegression
 
                 ValidateSelectedSummary(name, boundary.UserResultText, assessment, capacity, anchorReaction, legacySummary);
                 ValidateSelectedRows(name, run.Result, projectedRows, assessment, capacity);
-
-                AssertTechnicalUnchanged(boundary.TechnicalReportText, legacyTechnical, name);
+                AssertTechnicalMigrated(boundary.TechnicalReportText, legacyTechnical, assessment, name);
 
                 selectedCount++;
                 Console.WriteLine(string.Join("|",
@@ -103,7 +102,7 @@ internal static class SelectedUserPresentationReadModelRegression
                     $"GoverningElement={assessment.GoverningWeakLinkElementNumber?.ToString(CultureInfo.InvariantCulture) ?? "None"}",
                     $"GoverningReserve={F(assessment.GoverningWeakLinkReserve)}",
                     "LegacyAnchorReserveDisplayed=False",
-                    "TechnicalReportMigration=False"));
+                    "TechnicalReportMigration=F4B2Selected"));
             }
 
             if (run.Result.Verdict != resultVerdict || run.Result.MainRisk != resultMainRisk)
@@ -133,7 +132,7 @@ internal static class SelectedUserPresentationReadModelRegression
         }
 
         Console.WriteLine(
-            "F4B1_SELECTED_USER_PRESENTATION_ROLLUP|CanonicalScenarios=5|Selected=2|LegacyFallback=3|UserSummarySelectedAuthority=True|ElementTableSelectedAuthority=True|PdfRendererPhysicsChanged=False|TechnicalReportMigration=False|CalculationResultMutated=False|SelectedGeometryChanged=False");
+            "F4B1_SELECTED_USER_PRESENTATION_ROLLUP|CanonicalScenarios=5|Selected=2|LegacyFallback=3|UserSummarySelectedAuthority=True|ElementTableSelectedAuthority=True|PdfRendererPhysicsChanged=False|TechnicalReportMigration=F4B2Selected|CalculationResultMutated=False|SelectedGeometryChanged=False");
         Console.WriteLine("F4B1_SELECTED_USER_PRESENTATION_END");
     }
 
@@ -291,22 +290,23 @@ internal static class SelectedUserPresentationReadModelRegression
         if (actual == expected)
             return;
 
-        var actualLines = actual.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        var expectedLines = expected.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        var count = Math.Max(actualLines.Length, expectedLines.Length);
-        for (var i = 0; i < count; i++)
-        {
-            var actualLine = i < actualLines.Length ? actualLines[i] : "<missing>";
-            var expectedLine = i < expectedLines.Length ? expectedLines[i] : "<missing>";
-            if (!string.Equals(actualLine, expectedLine, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"F4-B1 {scenario}: technical report changed before F4-B2 at line {i + 1}; expected '{expectedLine}', got '{actualLine}'.");
-            }
-        }
+        throw new InvalidOperationException($"F4-B1 {scenario}: non-selected technical report is not exact legacy fallback after F4-B2.");
+    }
 
-        throw new InvalidOperationException(
-            $"F4-B1 {scenario}: technical report changed before F4-B2; lengths expected/actual={expected.Length}/{actual.Length}.");
+    private static void AssertTechnicalMigrated(
+        string actual,
+        string legacy,
+        MooringSelectedEngineeringAssessmentState assessment,
+        string scenario)
+    {
+        if (actual == legacy)
+            throw new InvalidOperationException($"F4-B1 {scenario}: Accepted technical report did not migrate in F4-B2.");
+        if (!actual.Contains("## Выбранная инженерная оценка", StringComparison.Ordinal) ||
+            !actual.Contains($"Вердикт: {assessment.Verdict}", StringComparison.Ordinal) ||
+            !actual.Contains($"Главный риск: {assessment.MainRisk}", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"F4-B1 {scenario}: F4-B2 selected technical authority marker/verdict is missing.");
+        }
     }
 
     private static void RequireContains(string text, string expected, string scenario)
