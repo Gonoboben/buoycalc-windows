@@ -74,6 +74,7 @@ Assert-Contains $workflow "workflow_dispatch:" "Windows release workflow manual 
 Assert-Contains $workflow "release-candidate/v1.0.0" "Windows release workflow RC trigger"
 Assert-Contains $workflow "contents: read" "Windows release workflow repository permission"
 Assert-Contains $workflow "actions: read" "Windows release workflow Actions permission"
+Assert-Contains $workflow "statuses: write" "Windows release workflow status permission"
 Assert-NotContains $workflow "contents: write" "Windows release workflow repository permission"
 Assert-NotContains $workflow "actions: write" "Windows release workflow Actions permission"
 Assert-Contains $workflow "fetch-depth: 0" "Windows release workflow full source identity"
@@ -86,6 +87,11 @@ Assert-Contains $workflow '"Report Store Consumer Scan"' "Windows release workfl
 Assert-Contains $workflow '$_.event -eq "push"' "Windows release workflow push-run filter"
 Assert-Contains $workflow '$run.status -ne "completed" -or $run.conclusion -ne "success"' "Windows release workflow success gate"
 Assert-Contains $workflow 'Required exact-main CI workflow' "Windows release workflow missing/failing gate"
+Assert-Contains $workflow 'context = "BuoyCalc Windows RC"' "Windows release workflow RC status context"
+Assert-Contains $workflow 'state = "pending"' "Windows release workflow pending RC status"
+Assert-Contains $workflow '$state = if ($jobStatus -eq "success") { "success" } else { "failure" }' "Windows release workflow final RC status"
+Assert-Contains $workflow 'if: always()' "Windows release workflow final status guarantee"
+Assert-Contains $workflow '/actions/runs/${{ github.run_id }}' "Windows release workflow status target URL"
 Assert-Contains $workflow "./scripts/package-windows-rc.ps1" "Windows release workflow package step"
 Assert-Contains $workflow "./scripts/verify-windows-rc.ps1" "Windows release workflow verify step"
 Assert-Contains $workflow "BuoyCalc-Windows-v1.0.0-win-x64-RC" "Windows release workflow artifact name"
@@ -100,9 +106,16 @@ foreach ($forbidden in @(
     "softprops/action-gh-release",
     "actions/create-release",
     "contents: write",
-    "actions: write"
+    "actions: write",
+    "checks: write",
+    "deployments: write",
+    "issues: write",
+    "packages: write",
+    "pull-requests: write",
+    "id-token: write",
+    "permissions: write-all"
 )) {
-    Assert-NotContains $releaseFiles $forbidden "F5-D RC-only release boundary"
+    Assert-NotContains $releaseFiles $forbidden "F5-E RC-only release boundary"
 }
 
 Write-Host "Windows RC packaging smoke check passed."
