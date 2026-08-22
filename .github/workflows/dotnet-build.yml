@@ -85,6 +85,11 @@ jobs:
               throw "Selected technical report boundary smoke check failed with exit code $LASTEXITCODE"
             }
 
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-v1-release-freeze.ps1
+            if ($LASTEXITCODE -ne 0) {
+              throw "v1 release freeze identity/baseline smoke check failed with exit code $LASTEXITCODE"
+            }
+
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-readmodel-boundary.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Read-model boundary smoke check failed with exit code $LASTEXITCODE"
