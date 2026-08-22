@@ -113,6 +113,13 @@ jobs:
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
-            Set-BuoyCalcStatus "failure" "Build failed"
+            $failureDescription = "Build failed"
+            if (Test-Path "f4b1-diagnostic-stage.txt") {
+              $diagnosticStage = (Get-Content "f4b1-diagnostic-stage.txt" -Raw).Trim()
+              if (-not [string]::IsNullOrWhiteSpace($diagnosticStage)) {
+                $failureDescription = "Build failed: F4B1 $diagnosticStage"
+              }
+            }
+            Set-BuoyCalcStatus "failure" $failureDescription
             throw
           }
