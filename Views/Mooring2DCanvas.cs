@@ -117,7 +117,7 @@ public sealed class Mooring2DCanvas : Control
         DrawLabel(context, "выбранная расчётная форма X/Z", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
         DrawLabel(
             context,
-            selectedShape.UsesDiscreteLoads ? "учтены дискретные нагрузки" : "используется выбранная резервная форма",
+            $"источник: {selectedShape.SourceDescription}",
             new Point(padding + 12, surfaceY + 50),
             10,
             false,

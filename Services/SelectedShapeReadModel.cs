@@ -7,4 +7,12 @@ public sealed record SelectedShapeReadModel(
     bool HasGateSelection,
     MooringPrimaryShapeGateDecision? GateDecision,
     string DecisionText,
-    string MethodNote);
+    string MethodNote)
+{
+    public string SourceDescription =>
+        string.Equals(Source, MooringShapeSourceIdentity.SignedBoundaryFeedback.ToString(), StringComparison.Ordinal)
+            ? "signed boundary-feedback форма"
+            : UsesDiscreteLoads
+                ? "дискретно-массовая форма"
+                : "резервная форма";
+}

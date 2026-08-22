@@ -8,7 +8,7 @@ namespace BuoyCalc.Windows.ApplicationModel;
 ///
 /// Technical report data and selected engineering X/Z are retained directly in the snapshot.
 /// User-facing consumers do not require mutable shape/report store publication.
-/// Signed-candidate/shadow state is diagnostic only until the explicit authority-switch package.
+/// Signed-candidate state and the typed selected-core decision are retained for diagnostics.
 /// </summary>
 public sealed partial record CalculationSnapshot(
     CalculationResult Result,
@@ -35,8 +35,9 @@ public static class CalculationSnapshotBuilder
     {
         var data = TechnicalReportDataBuilder.Build(environment, buoy, result);
 
-        // Preserve the existing user-facing read-model path exactly. Signed candidate state
-        // is retained separately below and cannot affect SelectedShape in this package.
+        // Build the complete legacy read model first so it remains the exact fallback path.
+        // Package 5 replaces it only after typed core arbitration selects an accepted
+        // SignedBoundaryFeedback result.
         var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);
 
         var currentSelection = MooringPrimaryShapeSelector.Select(data.Shape, data.IterativeSolver);
@@ -63,6 +64,10 @@ public static class CalculationSnapshotBuilder
         var shadowSelectedCore = MooringSelectedShapeArbitrator.Arbitrate(
             currentSelectedCore,
             signedCandidate);
+
+        selectedShape = SelectedMooringShapeReadModelProjector.Project(
+            selectedShape,
+            shadowSelectedCore);
 
         return new CalculationSnapshot(
             result,

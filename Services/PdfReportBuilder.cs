@@ -253,7 +253,7 @@ public static class PdfReportBuilder
             DrawLegendLine(x + 14, y + 18, linePaint, "выбранная расчётная форма X/Z", new SKColor(49, 91, 154));
             DrawTextAt(userShapeStatus, x + 250, y + 23, 9.2f, false, shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
             DrawTextAt($"снос X/Z {shape.HorizontalOffsetM:0.##} м", x + 390, y + 23, 9.2f, false, new SKColor(80, 92, 112));
-            DrawTextAt(selectedShape.UsesDiscreteLoads ? "выбранная форма учитывает дискретные нагрузки" : "используется выбранная резервная форма", x + 14, bottomLineY + 52, 9, false, new SKColor(80, 92, 112));
+            DrawTextAt($"источник: {selectedShape.SourceDescription}", x + 14, bottomLineY + 52, 9, false, new SKColor(80, 92, 112));
             DrawTextAt("масштаб X=Z; координаты взяты только из выбранных расчётных X/Z-узлов", x + 14, bottomLineY + 72, 8.5f, false, new SKColor(80, 92, 112));
 
             _y += diagramHeight + 10;

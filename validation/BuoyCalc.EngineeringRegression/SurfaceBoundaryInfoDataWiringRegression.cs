@@ -101,7 +101,17 @@ internal static class SurfaceBoundaryInfoDataWiringRegression
                 "Surface-boundary data wiring regression: unsolved typed parent must not publish an available tension trace.");
         }
 
-        RequireSameSelectedShape(compatibility.SelectedShape, typed.SelectedShape);
+        // Surface-boundary INFO/trace wiring remains passive with respect to the legacy
+        // current-shape selector. Package 5 may subsequently replace the typed snapshot's
+        // selected read model only through the separate signed-candidate arbitrator path.
+        var compatibilityLegacySelected = SelectedMooringShapeProvider.Build(
+            compatibility.TechnicalReportData.Shape,
+            compatibility.TechnicalReportData.IterativeSolver);
+        var typedLegacySelected = SelectedMooringShapeProvider.Build(
+            typed.TechnicalReportData.Shape,
+            typed.TechnicalReportData.IterativeSolver);
+        RequireSameSelectedShape(compatibilityLegacySelected, typedLegacySelected);
+        RequireSameSelectedShape(compatibilityLegacySelected, compatibility.SelectedShape);
     }
 
     private static void Near(double expected, double? actual, string label)
@@ -130,7 +140,7 @@ internal static class SurfaceBoundaryInfoDataWiringRegression
             Math.Abs(expected.Shape.HorizontalOffsetM - actual.Shape.HorizontalOffsetM) > 1e-12 ||
             Math.Abs(expected.Shape.VerticalResidualM - actual.Shape.VerticalResidualM) > 1e-12)
         {
-            throw new InvalidOperationException("Surface-boundary data wiring regression: passive INFO wiring changed selected X/Z state.");
+            throw new InvalidOperationException("Surface-boundary data wiring regression: passive INFO wiring changed legacy selected X/Z state.");
         }
     }
 }

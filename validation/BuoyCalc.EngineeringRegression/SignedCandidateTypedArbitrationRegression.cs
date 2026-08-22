@@ -23,10 +23,8 @@ internal static class SignedCandidateTypedArbitrationRegression
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException(
                 "Typed arbitration: HistoricalGoldenImpactRegression.BuildHistoricalScenarios was not found.");
-
         var definitions = scenarioBuilder.Invoke(null, null) as IEnumerable
-            ?? throw new InvalidOperationException(
-                "Typed arbitration: historical fixture definitions are unavailable.");
+            ?? throw new InvalidOperationException("Typed arbitration: historical fixtures are unavailable.");
 
         var total = 0;
         var accepted = 0;
@@ -45,33 +43,21 @@ internal static class SignedCandidateTypedArbitrationRegression
             var assembly = RequireProperty<IReadOnlyList<AssemblyItemInput>>(definition, "Assembly");
             var anchor = RequireProperty<AnchorInput>(definition, "Anchor");
             var safetyFactor = RequireProperty<double>(definition, "SafetyFactor");
-
-            var run = ApplicationCalculationRunner.Run(
-                environment,
-                buoy,
-                assembly,
-                anchor,
-                safetyFactor);
+            var run = ApplicationCalculationRunner.Run(environment, buoy, assembly, anchor, safetyFactor);
             var snapshot = run.Snapshot;
             var candidate = snapshot.SignedCandidate
                 ?? throw new InvalidOperationException($"Typed arbitration {name}: signed candidate is null.");
-            var snapshotShadow = snapshot.ShadowSelectedCore
-                ?? throw new InvalidOperationException($"Typed arbitration {name}: snapshot shadow is null.");
+            var snapshotSelectedCore = snapshot.ShadowSelectedCore
+                ?? throw new InvalidOperationException($"Typed arbitration {name}: selected core is null.");
 
             if (candidate.Status != expectedStatus)
-            {
-                throw new InvalidOperationException(
-                    $"Typed arbitration {name}: expected {expectedStatus}, got {candidate.Status}.");
-            }
+                throw new InvalidOperationException($"Typed arbitration {name}: expected {expectedStatus}, got {candidate.Status}.");
 
             var currentSelection = MooringPrimaryShapeSelector.Select(
                 snapshot.TechnicalReportData.Shape,
                 snapshot.TechnicalReportData.IterativeSolver);
             if (currentSelection.Shape.Nodes.Count < 2)
-            {
-                throw new InvalidOperationException(
-                    $"Typed arbitration {name}: canonical current selection is not representable as typed selected-core state.");
-            }
+                throw new InvalidOperationException($"Typed arbitration {name}: canonical current selection is not typed-representable.");
 
             var currentSource = currentSelection.UsesDiscreteLoads
                 ? MooringShapeSourceIdentity.IterativeDiscreteSolver
@@ -82,67 +68,57 @@ internal static class SignedCandidateTypedArbitrationRegression
                 currentSelection.Shape.Converged,
                 currentSelection.UsesDiscreteLoads,
                 "Typed shadow mirror of the existing production primary-shape selection; user-facing authority is unchanged.");
-
             var direct = MooringSelectedShapeArbitrator.Arbitrate(currentCore, candidate)
                 ?? throw new InvalidOperationException($"Typed arbitration {name}: direct result is null.");
 
             if (candidate.Status == MooringSignedCandidateStatus.Accepted)
             {
                 accepted++;
-                if (ReferenceEquals(direct, currentCore) ||
-                    candidate.Shape is null ||
+                if (ReferenceEquals(direct, currentCore) || candidate.Shape is null ||
                     direct.SourceIdentity != MooringShapeSourceIdentity.SignedBoundaryFeedback ||
-                    !ReferenceEquals(direct.Shape, candidate.Shape) ||
-                    direct.SelectedConverged != candidate.ExactFixedPointReached ||
-                    !direct.SelectedConverged ||
-                    direct.SelectedUsesDiscreteLoads != candidate.ContainsDiscreteLoads)
+                    !direct.SelectedConverged || direct.SelectedConverged != candidate.ExactFixedPointReached ||
+                    direct.SelectedUsesDiscreteLoads != candidate.ContainsDiscreteLoads ||
+                    !ReferenceEquals(direct.Shape, candidate.Shape))
                 {
-                    throw new InvalidOperationException(
-                        $"Typed arbitration {name}: Accepted candidate was not selected truthfully.");
+                    throw new InvalidOperationException($"Typed arbitration {name}: Accepted candidate was not selected truthfully.");
                 }
             }
             else
             {
                 if (!ReferenceEquals(direct, currentCore))
-                {
-                    throw new InvalidOperationException(
-                        $"Typed arbitration {name}: non-Accepted candidate did not preserve the exact current selected-core result.");
-                }
-
+                    throw new InvalidOperationException($"Typed arbitration {name}: non-Accepted result was not preserved exactly.");
                 if (MooringSelectedShapeArbitrator.Arbitrate(null, candidate) is not null)
-                {
-                    throw new InvalidOperationException(
-                        $"Typed arbitration {name}: non-Accepted candidate contaminated a null current selection.");
-                }
+                    throw new InvalidOperationException($"Typed arbitration {name}: non-Accepted candidate contaminated null current selection.");
 
                 if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
                     rejectedPhysical++;
                 else if (candidate.Status == MooringSignedCandidateStatus.Indeterminate)
                     indeterminate++;
                 else
-                    throw new InvalidOperationException(
-                        $"Typed arbitration {name}: unexpected non-Accepted status {candidate.Status}.");
+                    throw new InvalidOperationException($"Typed arbitration {name}: unexpected non-Accepted status {candidate.Status}.");
             }
 
-            AssertEquivalent(name, direct, snapshotShadow);
+            AssertSelectedCoreEquivalent(name, direct, snapshotSelectedCore);
 
-            var productionSelected = snapshot.SelectedShape
+            var selected = snapshot.SelectedShape
                 ?? throw new InvalidOperationException($"Typed arbitration {name}: SelectedShapeReadModel is null.");
-            var legacyExpected = SelectedMooringShapeProvider.Build(
+            var legacy = SelectedMooringShapeProvider.Build(
                 snapshot.TechnicalReportData.Shape,
                 snapshot.TechnicalReportData.IterativeSolver);
-            if (productionSelected.Source != legacyExpected.Source ||
-                productionSelected.UsesDiscreteLoads != legacyExpected.UsesDiscreteLoads ||
-                productionSelected.HasGateSelection != legacyExpected.HasGateSelection ||
-                productionSelected.GateDecision != legacyExpected.GateDecision ||
-                productionSelected.DecisionText != legacyExpected.DecisionText ||
-                productionSelected.MethodNote != legacyExpected.MethodNote ||
-                productionSelected.Shape.HorizontalOffsetM != legacyExpected.Shape.HorizontalOffsetM ||
-                productionSelected.Shape.VerticalResidualM != legacyExpected.Shape.VerticalResidualM ||
-                productionSelected.Shape.Nodes.Count != legacyExpected.Shape.Nodes.Count)
+
+            if (candidate.Status == MooringSignedCandidateStatus.Accepted)
             {
-                throw new InvalidOperationException(
-                    $"Typed arbitration {name}: user-facing selected-shape authority changed in Package 4.");
+                if (selected.Source != MooringShapeSourceIdentity.SignedBoundaryFeedback.ToString() ||
+                    !ReferenceEquals(selected.Shape, direct.Shape) ||
+                    selected.UsesDiscreteLoads != direct.SelectedUsesDiscreteLoads ||
+                    selected.HasGateSelection || selected.GateDecision is not null)
+                {
+                    throw new InvalidOperationException($"Typed arbitration {name}: selected read model does not project the typed signed result.");
+                }
+            }
+            else
+            {
+                AssertReadModelEquivalent(name, legacy, selected);
             }
 
             Console.WriteLine(string.Join("|",
@@ -151,9 +127,8 @@ internal static class SignedCandidateTypedArbitrationRegression
                 $"CandidateStatus={candidate.Status}",
                 $"CurrentSource={currentCore.SourceIdentity}",
                 $"ArbitratedSource={direct.SourceIdentity}",
-                $"ArbitratedConverged={direct.SelectedConverged}",
-                $"ArbitratedUsesDiscreteLoads={direct.SelectedUsesDiscreteLoads}",
-                "ReadModelAuthoritySwitch=False"));
+                $"ReadModelSource={selected.Source}",
+                $"ReadModelAuthoritySwitch={candidate.Status == MooringSignedCandidateStatus.Accepted}"));
         }
 
         if (total != 5 || accepted != 2 || rejectedPhysical != 2 || indeterminate != 1)
@@ -163,22 +138,61 @@ internal static class SignedCandidateTypedArbitrationRegression
         }
     }
 
-    private static void AssertEquivalent(
-        string name,
-        MooringSelectedShapeResult expected,
-        MooringSelectedShapeResult actual)
+    private static void AssertSelectedCoreEquivalent(string name, MooringSelectedShapeResult expected, MooringSelectedShapeResult actual)
     {
+        var shapeEquivalent = expected.SourceIdentity == MooringShapeSourceIdentity.SignedBoundaryFeedback
+            ? ReferenceEquals(expected.Shape, actual.Shape)
+            : AreShapesEquivalent(expected.Shape, actual.Shape);
+
         if (expected.SourceIdentity != actual.SourceIdentity ||
             expected.SelectedConverged != actual.SelectedConverged ||
             expected.SelectedUsesDiscreteLoads != actual.SelectedUsesDiscreteLoads ||
             expected.MethodNote != actual.MethodNote ||
+            !shapeEquivalent)
+        {
+            throw new InvalidOperationException($"Typed arbitration {name}: snapshot selected core differs from direct arbitrator output.");
+        }
+    }
+
+    private static bool AreShapesEquivalent(MooringShapeResult expected, MooringShapeResult actual)
+    {
+        if (expected.BuoyState != actual.BuoyState ||
+            expected.DepthM != actual.DepthM ||
+            expected.LineLengthM != actual.LineLengthM ||
+            expected.HorizontalOffsetM != actual.HorizontalOffsetM ||
+            expected.VerticalResidualM != actual.VerticalResidualM ||
+            expected.Converged != actual.Converged ||
+            expected.MethodNote != actual.MethodNote ||
+            expected.IterationCount != actual.IterationCount ||
+            expected.ConvergenceResidualM != actual.ConvergenceResidualM ||
+            expected.AngleScale != actual.AngleScale ||
+            expected.ConvergenceCriterion != actual.ConvergenceCriterion ||
+            expected.BuoyPoint != actual.BuoyPoint ||
+            expected.AnchorPoint != actual.AnchorPoint ||
+            expected.Nodes.Count != actual.Nodes.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < expected.Nodes.Count; i++)
+        {
+            if (expected.Nodes[i] != actual.Nodes[i])
+                return false;
+        }
+
+        return true;
+    }
+
+    private static void AssertReadModelEquivalent(string name, SelectedShapeReadModel expected, SelectedShapeReadModel actual)
+    {
+        if (expected.Source != actual.Source || expected.UsesDiscreteLoads != actual.UsesDiscreteLoads ||
+            expected.HasGateSelection != actual.HasGateSelection || expected.GateDecision != actual.GateDecision ||
+            expected.DecisionText != actual.DecisionText || expected.MethodNote != actual.MethodNote ||
             expected.Shape.HorizontalOffsetM != actual.Shape.HorizontalOffsetM ||
             expected.Shape.VerticalResidualM != actual.Shape.VerticalResidualM ||
-            expected.Shape.Converged != actual.Shape.Converged ||
             expected.Shape.Nodes.Count != actual.Shape.Nodes.Count)
         {
-            throw new InvalidOperationException(
-                $"Typed arbitration {name}: snapshot shadow differs from direct typed arbitrator output.");
+            throw new InvalidOperationException($"Typed arbitration {name}: non-Accepted read model changed.");
         }
     }
 
