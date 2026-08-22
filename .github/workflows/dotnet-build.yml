@@ -116,8 +116,14 @@ jobs:
               throw "Selected shape consumer map check failed with exit code $LASTEXITCODE"
             }
 
-            $currentPhase = "engineering-regression"
-            dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json
+            $currentPhase = "build-regression"
+            dotnet build validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore
+            if ($LASTEXITCODE -ne 0) {
+              throw "Engineering regression build failed with exit code $LASTEXITCODE"
+            }
+
+            $currentPhase = "run-regression"
+            dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore --no-build -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json
             if ($LASTEXITCODE -ne 0) {
               throw "Engineering regression verification failed with exit code $LASTEXITCODE"
             }
