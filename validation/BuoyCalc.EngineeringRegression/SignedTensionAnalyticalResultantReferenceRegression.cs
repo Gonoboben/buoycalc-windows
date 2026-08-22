@@ -38,9 +38,9 @@ internal static class SignedTensionAnalyticalResultantReferenceRegression
         // zero buoy drag / zero internal point loads. Therefore V is constant along the line:
         // Surface H = 0, Surface V = Q0, Anchor-end H = EndH, Anchor-end V = Q0.
         var referenceSurfaceResultantN = Math.Abs(referenceQ0N);
-        var referenceAnchorEndResultantN = Math.Hypot(referenceEndHN, referenceQ0N);
+        var referenceAnchorEndResultantN = Magnitude(referenceEndHN, referenceQ0N);
         var candidateSurfaceResultantN = Math.Abs(candidateQ0N);
-        var candidateAnchorEndResultantN = Math.Hypot(candidateEndHN, candidateQ0N);
+        var candidateAnchorEndResultantN = Magnitude(candidateEndHN, candidateQ0N);
 
         PositiveFinite(referenceSurfaceResultantN, "reference surface resultant");
         PositiveFinite(referenceAnchorEndResultantN, "reference anchor-end resultant");
@@ -112,6 +112,8 @@ internal static class SignedTensionAnalyticalResultantReferenceRegression
         if (!double.IsFinite(actual) || !double.IsFinite(expected) || Math.Abs(actual - expected) > tolerance)
             throw new InvalidOperationException($"E1-B1 {label}: expected {expected:R}, got {actual:R}.");
     }
+
+    private static double Magnitude(double h, double v) => Math.Sqrt(h * h + v * v);
 
     private static double Relative(double delta, double reference) =>
         Math.Abs(reference) > 0.0 ? delta / reference : 0.0;
