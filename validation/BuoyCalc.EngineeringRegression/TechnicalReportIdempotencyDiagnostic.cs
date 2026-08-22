@@ -12,7 +12,9 @@ internal static class TechnicalReportIdempotencyDiagnostic
     {
         if (File.Exists(DiagnosticStagePath))
             File.Delete(DiagnosticStagePath);
+        Mark("DiagnosticStart");
 
+        Mark("BuildFixture");
         var builder = typeof(HistoricalGoldenImpactRegression).GetMethod(
             "BuildHistoricalScenarios",
             BindingFlags.NonPublic | BindingFlags.Static)
@@ -26,9 +28,12 @@ internal static class TechnicalReportIdempotencyDiagnostic
         var assembly = Property<IReadOnlyList<AssemblyItemInput>>(definition, "Assembly");
         var anchor = Property<AnchorInput>(definition, "Anchor");
         var safetyFactor = Property<double>(definition, "SafetyFactor");
+
+        Mark("RunFixture");
         var run = ApplicationCalculationRunner.Run(environment, buoy, assembly, anchor, safetyFactor);
         var snapshot = run.Snapshot;
 
+        Mark("BaselineRender");
         var baseline = Render(environment, buoy, anchor, snapshot);
 
         Mark("DirectDoubleRender");
