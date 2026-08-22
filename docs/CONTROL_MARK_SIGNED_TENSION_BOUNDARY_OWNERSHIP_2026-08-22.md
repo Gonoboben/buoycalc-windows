@@ -30,10 +30,10 @@ The E1-A canonical regression requires the first discrete sequence row to be the
 
 `MooringSurfaceBoundaryInfoAnalyzer` prepares internal point loads by excluding the first and last discrete boundary rows. Thus buoy and anchor are boundary conditions, not internal point loads.
 
-It derives:
+For whatever `CalculationResult` is supplied to that analyzer it derives:
 
 ```text
-BuoySteadyDragN = CalculationResult.CurrentForceN
+BuoySteadyDragN = CurrentForceN
                  - sum(line segment current forces)
                  - sum(internal discrete point current forces)
 ```
@@ -63,6 +63,36 @@ AnchorEndLineVN = EndVN
 
 These are names for validation semantics only. None is an alias for `CalculationResult.TensionKn`.
 
+## Base boundary versus Accepted feedback boundary
+
+There are two different current-force stages and they must not be conflated.
+
+The snapshot technical-report boundary is built from the original `CalculationResult`. For that **base** stage E1-A verifies:
+
+```text
+BaseBoundary.EndHN = CalculationResult.CurrentForceN
+```
+
+through the explicit buoy + line-segment + internal-point steady-current balance.
+
+The Accepted `SignedBoundaryFeedback` candidate is different. `MooringSignedCandidateEvaluator` repeatedly runs `MooringShapeForceAnalyzer` and then creates a new intermediate result with:
+
+```text
+SegmentRows     = updatedSegments
+CurrentForceN   = updatedTotalCurrentForceN
+HorizontalForceN = updatedTotalCurrentForceN + baseResult.WaveForceN
+```
+
+before solving the next boundary. The final Accepted candidate therefore owns a **feedback-updated** current-force state. That intermediate `CalculationResult` is not published as the application's legacy `run.Result`.
+
+Therefore this equation is explicitly invalid for the final selected signed state:
+
+```text
+SelectedSigned.EndHN = original run.Result.CurrentForceN   // DO NOT ASSUME
+```
+
+E1-A instead requires exact identity between `MooringSelectedSignedBoundaryState` and the Accepted candidate's own solved `Boundary/SolutionState`.
+
 ## Distributed and point-load accumulation
 
 For each line segment the kernel applies:
@@ -79,12 +109,12 @@ H += point.CurrentForceN
 V -= point.WeightWaterKg * g
 ```
 
-Therefore, for a solved selected signed state:
+Thus each solved boundary state satisfies, against the segment-current-force stage that produced it:
 
 ```text
 AnchorEndLineHN
   = SurfaceLineHN
-  + sum(line current forces)
+  + sum(stage line current forces)
   + sum(internal point current forces)
 
 AnchorEndLineVN
@@ -92,6 +122,8 @@ AnchorEndLineVN
   - g * [sum(signed line submerged weights)
          + sum(signed internal-point submerged weights)]
 ```
+
+Feedback changes the line current-force rows, but does not change the signed submerged weights. E1-A therefore independently verifies the final Accepted `EndVN` from the original segment/internal-point submerged weights and the final candidate `Q0N`.
 
 The negative-weight convention is intentional: if `WeightWaterKg < 0`, the update `V -= W_water*g` increases V. E1-A verifies this using the canonical `buoyant-line` fixture without selecting that rejected candidate as authority.
 
@@ -121,15 +153,9 @@ and the selected signed `PointLoadCrossings` must equal the internal discrete-ro
 steady current; wave excluded
 ```
 
-The signed boundary horizontal balance therefore closes against legacy steady-current force:
+This applies both to the base boundary and every feedback-updated candidate boundary.
 
-```text
-AnchorEndLineHN = CalculationResult.CurrentForceN
-```
-
-for the canonical Accepted fixtures.
-
-Legacy global scalar force, however, is:
+Legacy global scalar force, however, is explicitly composed as:
 
 ```text
 CalculationResult.HorizontalForceN
@@ -137,13 +163,9 @@ CalculationResult.HorizontalForceN
   + CalculationResult.WaveForceN
 ```
 
-Both Accepted canonical fixtures deliberately have non-zero `WaveForceN`. E1-A therefore requires:
+Both Accepted canonical fixtures deliberately have non-zero `WaveForceN`.
 
-```text
-AnchorEndLineHN != CalculationResult.HorizontalForceN
-```
-
-while also proving the two equations above.
+The E1-A proof is semantic rather than a fragile numerical inequality: signed boundary H/V belongs to a steady-current boundary path, while legacy `HorizontalForceN` is a wave-inclusive aggregate. A feedback-updated `EndHN` must therefore not be aliased to legacy `HorizontalForceN` or original `CurrentForceN` merely because both are horizontal-force values.
 
 This prevents a later implementation from silently replacing the wave-inclusive legacy design-demand scalar with a steady-current-only signed resultant.
 
@@ -163,11 +185,12 @@ Those names are intentionally **not** `TensionKn`. Their physical location and l
 
 The production signed boundary state is now unambiguously mapped as a surface-to-anchor, steady-current, signed-submerged-weight integration path with internal discrete point loads applied by `s` crossing.
 
-The most important result for future authority work is:
+The important stage distinction is:
 
 ```text
-signed boundary force state = steady-current path, wave excluded
-legacy TensionKn demand      = wave-inclusive global horizontal force + legacy net-buoyancy vertical term
+base boundary H-state            = original CalculationResult steady-current stage
+Accepted selected boundary H-state = feedback-updated steady-current stage
+legacy TensionKn demand           = original wave-inclusive horizontal aggregate + legacy net-buoyancy vertical term
 ```
 
 Therefore E1-A does **not** justify a production tension-authority switch. It supplies the ownership map required for E1-B independent/reference resultants.
