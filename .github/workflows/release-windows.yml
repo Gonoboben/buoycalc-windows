@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   actions: read
+  statuses: write
 
 jobs:
   publish-windows:
@@ -25,6 +26,27 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Publish RC build status pending
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $statusUrl = "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}"
+          $targetUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+          $body = @{
+            state = "pending"
+            context = "BuoyCalc Windows RC"
+            description = "RC build and evidence verification started"
+            target_url = $targetUrl
+          } | ConvertTo-Json
+          Invoke-RestMethod -Uri $statusUrl -Method Post -Headers $headers -ContentType "application/json" -Body $body | Out-Null
 
       - name: Verify checked-out commit is exact main
         shell: pwsh
@@ -135,3 +157,33 @@ jobs:
             artifacts/release/BuoyCalc-Windows-v1.0.0-win-x64-manifest.json
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish final RC build status
+        if: always()
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $jobStatus = "${{ job.status }}"
+          $state = if ($jobStatus -eq "success") { "success" } else { "failure" }
+          $description = if ($state -eq "success") {
+            "RC package, manifest and SHA-256 verified"
+          } else {
+            "RC build or evidence verification failed"
+          }
+
+          $statusUrl = "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}"
+          $targetUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+          $body = @{
+            state = $state
+            context = "BuoyCalc Windows RC"
+            description = $description
+            target_url = $targetUrl
+          } | ConvertTo-Json
+          Invoke-RestMethod -Uri $statusUrl -Method Post -Headers $headers -ContentType "application/json" -Body $body | Out-Null
