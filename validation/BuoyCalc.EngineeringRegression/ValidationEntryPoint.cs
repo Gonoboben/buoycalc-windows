@@ -3,75 +3,77 @@ using BuoyCalc.Windows.Models;
 
 internal static class ValidationEntryPoint
 {
+    private const string F4B1DiagnosticStagePath = "f4b1-diagnostic-stage.txt";
+
     public static int Main(string[] args)
     {
         try
         {
-            ShapeLineLengthSourceRegression.Validate();
-            ForceShapeConsistencyRegression.Validate();
-            SignedOrientationRegression.Validate();
-            BoundaryLoadOwnershipRegression.Validate();
-            ConstantLoadAnalyticalReferenceRegression.Validate();
-            PiecewisePointLoadAnalyticalReferenceRegression.Validate();
-            BerteauxVectorOverlapRegression.Validate();
-            BerteauxConstitutiveDragBoundaryRegression.Validate();
-            BerteauxPlanarResistanceVectorRegression.Validate();
-            UniformCurrentReadModelRegression.Validate();
-            UniformCurrentReportRegression.Validate();
-            RopeMetadataRegression.Validate();
-            ProfilePlanarProjectionRegression.Validate();
-            ProfilePlanarProjectionReadModelRegression.Validate();
-            SegmentPlanarProjectionRegression.Validate();
-            ProfilePlanarProjectionLossRegression.Validate();
-            SurfaceBoundaryInfoAnalyzerRegression.Validate();
-            SurfaceBoundaryInfoDataWiringRegression.Validate();
-            SurfaceBoundaryInfoReportRegression.Validate();
-            SurfaceBoundaryCanonicalMeasurementRegression.Validate();
-            SurfaceBoundarySelectedShapeImpactRegression.Validate();
-            SurfaceBoundaryIterationPathRegression.Validate();
-            SurfaceBoundaryShapeNormalFieldRegression.Validate();
-            SurfaceBoundaryTopVectorGapRegression.Validate();
-            SurfaceBoundaryPerSegmentTraceRegression.Validate();
-            SurfaceBoundaryGlobalReactionAccountingRegression.Validate();
-            SurfaceBoundaryTensionTraceReadModelRegression.Validate();
-            BoundaryConditionedSignedGeometryRegression.Validate();
-            BoundaryConditionedFeedbackRollupRegression.Validate();
-            BoundaryFeedbackIndependentReferenceRegression.Validate();
-            SignedTensionAnalyticalResultantReferenceRegression.Validate();
-            SignedTensionCanonicalResultantEvidenceRegression.Validate();
-            SignedTensionDemandDispositionRegression.Validate();
-            WaveLoadOwnershipRegression.Validate();
-            SelectedDesignEnvelopeStateRegression.Validate();
-            DesignEnvelopeReferenceEvidenceRegression.Validate();
-            SelectedDesignTensionDemandAuthorityRegression.Validate();
-            AnchorEndReactionOwnershipRegression.Validate();
-            SelectedAnchorReactionStateRegression.Validate();
-            AnchorHoldingCapacityDispositionRegression.Validate();
-            AcceptedFinalTensionTraceRetentionRegression.Validate();
-            SelectedLocalElementDemandStateRegression.Validate();
-            SelectedLocalStructuralCapacityStateRegression.Validate();
-            SelectedEngineeringAssessmentStateRegression.Validate();
-            TechnicalReportIdempotencyDiagnostic.Validate();
-            SelectedUserPresentationReadModelRegression.Validate();
-            HistoricalGoldenImpactRegression.Validate();
-            SignedCandidateConvergenceTrajectoryRegression.Validate();
-            SignedCandidateDiscreteLoadSemanticsRegression.Validate();
-            SignedCandidateShadowArbitrationRegression.Validate();
-            SignedCandidateCoreContractRegression.Validate();
-            SignedCandidateProductionEvaluatorRegression.Validate();
-            SignedCandidateSnapshotShadowIntegrationRegression.Validate();
-            SignedCandidateTypedArbitrationRegression.Validate();
-            SignedCandidateSelectedAuthoritySwitchRegression.Validate();
-            SelectedSignedBoundaryStateAvailabilityRegression.Validate();
-            SignedScalarDivergenceEvidenceRegression.Validate();
-            SignedTensionBoundaryOwnershipRegression.Validate();
-            DownstreamAuthorityOwnershipRegression.Validate();
-            SignedGeometryProductionBlockerFeasibilityRegression.Validate();
-            VerticalLimitingForceStateRegression.Validate();
-            ProjectDtoCompatibilityRegression.Validate();
-            SignedNodeEquilibriumRegression.Validate();
-            FinalIterationDiscreteStateRegression.Validate();
-            FinalIterationSignedNodeEquilibriumRegression.Validate();
+            RunStage(nameof(ShapeLineLengthSourceRegression), ShapeLineLengthSourceRegression.Validate);
+            RunStage(nameof(ForceShapeConsistencyRegression), ForceShapeConsistencyRegression.Validate);
+            RunStage(nameof(SignedOrientationRegression), SignedOrientationRegression.Validate);
+            RunStage(nameof(BoundaryLoadOwnershipRegression), BoundaryLoadOwnershipRegression.Validate);
+            RunStage(nameof(ConstantLoadAnalyticalReferenceRegression), ConstantLoadAnalyticalReferenceRegression.Validate);
+            RunStage(nameof(PiecewisePointLoadAnalyticalReferenceRegression), PiecewisePointLoadAnalyticalReferenceRegression.Validate);
+            RunStage(nameof(BerteauxVectorOverlapRegression), BerteauxVectorOverlapRegression.Validate);
+            RunStage(nameof(BerteauxConstitutiveDragBoundaryRegression), BerteauxConstitutiveDragBoundaryRegression.Validate);
+            RunStage(nameof(BerteauxPlanarResistanceVectorRegression), BerteauxPlanarResistanceVectorRegression.Validate);
+            RunStage(nameof(UniformCurrentReadModelRegression), UniformCurrentReadModelRegression.Validate);
+            RunStage(nameof(UniformCurrentReportRegression), UniformCurrentReportRegression.Validate);
+            RunStage(nameof(RopeMetadataRegression), RopeMetadataRegression.Validate);
+            RunStage(nameof(ProfilePlanarProjectionRegression), ProfilePlanarProjectionRegression.Validate);
+            RunStage(nameof(ProfilePlanarProjectionReadModelRegression), ProfilePlanarProjectionReadModelRegression.Validate);
+            RunStage(nameof(SegmentPlanarProjectionRegression), SegmentPlanarProjectionRegression.Validate);
+            RunStage(nameof(ProfilePlanarProjectionLossRegression), ProfilePlanarProjectionLossRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryInfoAnalyzerRegression), SurfaceBoundaryInfoAnalyzerRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryInfoDataWiringRegression), SurfaceBoundaryInfoDataWiringRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryInfoReportRegression), SurfaceBoundaryInfoReportRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryCanonicalMeasurementRegression), SurfaceBoundaryCanonicalMeasurementRegression.Validate);
+            RunStage(nameof(SurfaceBoundarySelectedShapeImpactRegression), SurfaceBoundarySelectedShapeImpactRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryIterationPathRegression), SurfaceBoundaryIterationPathRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryShapeNormalFieldRegression), SurfaceBoundaryShapeNormalFieldRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryTopVectorGapRegression), SurfaceBoundaryTopVectorGapRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryPerSegmentTraceRegression), SurfaceBoundaryPerSegmentTraceRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryGlobalReactionAccountingRegression), SurfaceBoundaryGlobalReactionAccountingRegression.Validate);
+            RunStage(nameof(SurfaceBoundaryTensionTraceReadModelRegression), SurfaceBoundaryTensionTraceReadModelRegression.Validate);
+            RunStage(nameof(BoundaryConditionedSignedGeometryRegression), BoundaryConditionedSignedGeometryRegression.Validate);
+            RunStage(nameof(BoundaryConditionedFeedbackRollupRegression), BoundaryConditionedFeedbackRollupRegression.Validate);
+            RunStage(nameof(BoundaryFeedbackIndependentReferenceRegression), BoundaryFeedbackIndependentReferenceRegression.Validate);
+            RunStage(nameof(SignedTensionAnalyticalResultantReferenceRegression), SignedTensionAnalyticalResultantReferenceRegression.Validate);
+            RunStage(nameof(SignedTensionCanonicalResultantEvidenceRegression), SignedTensionCanonicalResultantEvidenceRegression.Validate);
+            RunStage(nameof(SignedTensionDemandDispositionRegression), SignedTensionDemandDispositionRegression.Validate);
+            RunStage(nameof(WaveLoadOwnershipRegression), WaveLoadOwnershipRegression.Validate);
+            RunStage(nameof(SelectedDesignEnvelopeStateRegression), SelectedDesignEnvelopeStateRegression.Validate);
+            RunStage(nameof(DesignEnvelopeReferenceEvidenceRegression), DesignEnvelopeReferenceEvidenceRegression.Validate);
+            RunStage(nameof(SelectedDesignTensionDemandAuthorityRegression), SelectedDesignTensionDemandAuthorityRegression.Validate);
+            RunStage(nameof(AnchorEndReactionOwnershipRegression), AnchorEndReactionOwnershipRegression.Validate);
+            RunStage(nameof(SelectedAnchorReactionStateRegression), SelectedAnchorReactionStateRegression.Validate);
+            RunStage(nameof(AnchorHoldingCapacityDispositionRegression), AnchorHoldingCapacityDispositionRegression.Validate);
+            RunStage(nameof(AcceptedFinalTensionTraceRetentionRegression), AcceptedFinalTensionTraceRetentionRegression.Validate);
+            RunStage(nameof(SelectedLocalElementDemandStateRegression), SelectedLocalElementDemandStateRegression.Validate);
+            RunStage(nameof(SelectedLocalStructuralCapacityStateRegression), SelectedLocalStructuralCapacityStateRegression.Validate);
+            RunStage(nameof(SelectedEngineeringAssessmentStateRegression), SelectedEngineeringAssessmentStateRegression.Validate);
+            RunStage(nameof(TechnicalReportIdempotencyDiagnostic), TechnicalReportIdempotencyDiagnostic.Validate);
+            RunStage(nameof(SelectedUserPresentationReadModelRegression), SelectedUserPresentationReadModelRegression.Validate);
+            RunStage(nameof(HistoricalGoldenImpactRegression), HistoricalGoldenImpactRegression.Validate);
+            RunStage(nameof(SignedCandidateConvergenceTrajectoryRegression), SignedCandidateConvergenceTrajectoryRegression.Validate);
+            RunStage(nameof(SignedCandidateDiscreteLoadSemanticsRegression), SignedCandidateDiscreteLoadSemanticsRegression.Validate);
+            RunStage(nameof(SignedCandidateShadowArbitrationRegression), SignedCandidateShadowArbitrationRegression.Validate);
+            RunStage(nameof(SignedCandidateCoreContractRegression), SignedCandidateCoreContractRegression.Validate);
+            RunStage(nameof(SignedCandidateProductionEvaluatorRegression), SignedCandidateProductionEvaluatorRegression.Validate);
+            RunStage(nameof(SignedCandidateSnapshotShadowIntegrationRegression), SignedCandidateSnapshotShadowIntegrationRegression.Validate);
+            RunStage(nameof(SignedCandidateTypedArbitrationRegression), SignedCandidateTypedArbitrationRegression.Validate);
+            RunStage(nameof(SignedCandidateSelectedAuthoritySwitchRegression), SignedCandidateSelectedAuthoritySwitchRegression.Validate);
+            RunStage(nameof(SelectedSignedBoundaryStateAvailabilityRegression), SelectedSignedBoundaryStateAvailabilityRegression.Validate);
+            RunStage(nameof(SignedScalarDivergenceEvidenceRegression), SignedScalarDivergenceEvidenceRegression.Validate);
+            RunStage(nameof(SignedTensionBoundaryOwnershipRegression), SignedTensionBoundaryOwnershipRegression.Validate);
+            RunStage(nameof(DownstreamAuthorityOwnershipRegression), DownstreamAuthorityOwnershipRegression.Validate);
+            RunStage(nameof(SignedGeometryProductionBlockerFeasibilityRegression), SignedGeometryProductionBlockerFeasibilityRegression.Validate);
+            RunStage(nameof(VerticalLimitingForceStateRegression), VerticalLimitingForceStateRegression.Validate);
+            RunStage(nameof(ProjectDtoCompatibilityRegression), ProjectDtoCompatibilityRegression.Validate);
+            RunStage(nameof(SignedNodeEquilibriumRegression), SignedNodeEquilibriumRegression.Validate);
+            RunStage(nameof(FinalIterationDiscreteStateRegression), FinalIterationDiscreteStateRegression.Validate);
+            RunStage(nameof(FinalIterationSignedNodeEquilibriumRegression), FinalIterationSignedNodeEquilibriumRegression.Validate);
         }
         catch (Exception ex)
         {
@@ -81,6 +83,12 @@ internal static class ValidationEntryPoint
         }
 
         return Program.Main(args);
+    }
+
+    private static void RunStage(string name, Action action)
+    {
+        File.WriteAllText(F4B1DiagnosticStagePath, "Validation:" + name + System.Environment.NewLine);
+        action();
     }
 }
 
