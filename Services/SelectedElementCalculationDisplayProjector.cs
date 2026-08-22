@@ -70,7 +70,8 @@ public static class SelectedElementCalculationDisplayProjector
             ? "не подходит: чистая плавучесть ≤ 0"
             : "подходит: положительная чистая плавучесть";
 
-        return Base(row) withValues(
+        return WithValues(
+            Base(row),
             breakingLoadKn: string.Empty,
             workingLoadKn: string.Empty,
             reserve: string.Empty,
@@ -139,8 +140,8 @@ public static class SelectedElementCalculationDisplayProjector
     private static ElementCalculationDisplayRow Base(ElementCalculationRow row) =>
         ElementCalculationDisplayRow.From(row);
 
-    private static ElementCalculationDisplayRow withValues(
-        this ElementCalculationDisplayRow source,
+    private static ElementCalculationDisplayRow WithValues(
+        ElementCalculationDisplayRow source,
         string breakingLoadKn,
         string workingLoadKn,
         string reserve,
