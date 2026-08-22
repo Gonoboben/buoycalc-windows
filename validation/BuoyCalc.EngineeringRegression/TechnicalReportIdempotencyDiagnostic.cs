@@ -6,8 +6,13 @@ using BuoyCalc.Windows.Services;
 
 internal static class TechnicalReportIdempotencyDiagnostic
 {
+    private const string DiagnosticStagePath = "f4b1-diagnostic-stage.txt";
+
     public static void Validate()
     {
+        if (File.Exists(DiagnosticStagePath))
+            File.Delete(DiagnosticStagePath);
+
         var builder = typeof(HistoricalGoldenImpactRegression).GetMethod(
             "BuildHistoricalScenarios",
             BindingFlags.NonPublic | BindingFlags.Static)
@@ -25,17 +30,22 @@ internal static class TechnicalReportIdempotencyDiagnostic
         var snapshot = run.Snapshot;
 
         var baseline = Render(environment, buoy, anchor, snapshot);
+
+        Mark("DirectDoubleRender");
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "direct second render");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|DirectDoubleRender=Exact");
 
+        Mark("AfterLegacySummary");
         _ = UserReportBuilder.Build(environment, run.Result);
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after legacy user summary");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterLegacySummary=Exact");
 
+        Mark("AfterLegacyElementRows");
         _ = run.Result.ElementRows.Select(ElementCalculationDisplayRow.From).ToList();
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after legacy element rows");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterLegacyElementRows=Exact");
 
+        Mark("AfterCaptureReads");
         _ = run.Result.Verdict;
         _ = run.Result.MainRisk;
         _ = run.Result.Checks.ToArray();
@@ -51,22 +61,37 @@ internal static class TechnicalReportIdempotencyDiagnostic
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after regression capture reads");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterCaptureReads=Exact");
 
+        Mark("AfterSelectedSummary");
         _ = UserReportBuilder.Build(environment, snapshot);
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after selected user summary");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterSelectedSummary=Exact");
 
+        Mark("AfterElementProjector");
         _ = SelectedElementCalculationDisplayProjector.Project(snapshot);
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after selected element projector");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterElementProjector=Exact");
 
-        _ = ReportBuildBoundary.Build(
+        Mark("BoundaryReturnedTechnical");
+        var boundary = ReportBuildBoundary.Build(
             "F4-B1 idempotency",
             environment,
             buoy,
             anchor,
             snapshot);
+        AssertExact(baseline, boundary.TechnicalReportText, "inside report build boundary return");
+        Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|BoundaryReturnedTechnical=Exact");
+
+        Mark("AfterReportBuildBoundary");
         AssertExact(baseline, Render(environment, buoy, anchor, snapshot), "after report build boundary");
         Console.WriteLine("F4B1_TECHNICAL_REPORT_IDEMPOTENCY|AfterReportBuildBoundary=Exact");
+
+        Mark("DiagnosticComplete");
+    }
+
+    private static void Mark(string stage)
+    {
+        File.WriteAllText(DiagnosticStagePath, stage + System.Environment.NewLine);
+        Console.WriteLine($"F4B1_TECHNICAL_REPORT_IDEMPOTENCY|Stage={stage}");
     }
 
     private static string Render(
