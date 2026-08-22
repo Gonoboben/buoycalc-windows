@@ -46,6 +46,7 @@ internal static class ValidationEntryPoint
             SignedCandidateSnapshotShadowIntegrationRegression.Validate();
             SignedCandidateTypedArbitrationRegression.Validate();
             SignedCandidateSelectedAuthoritySwitchRegression.Validate();
+            SelectedSignedBoundaryStateAvailabilityRegression.Validate();
             DownstreamAuthorityOwnershipRegression.Validate();
             SignedGeometryProductionBlockerFeasibilityRegression.Validate();
             VerticalLimitingForceStateRegression.Validate();
