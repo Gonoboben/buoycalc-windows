@@ -8,7 +8,7 @@
 
 ## Замороженная инженерная база
 
-F1-F4 завершены до начала release freeze. F5 не должен менять инженерные формулы или authority chain.
+F1-F4 завершены до начала release freeze. F5 не меняет инженерные формулы или authority chain.
 
 Замороженные инварианты:
 
@@ -22,23 +22,59 @@ renderers = presentation only
 3D = post-v1
 ```
 
-Canonical engineering regression baseline фиксируется отдельной F5-A контрольной отметкой и не регенерируется ради смены версии.
+Canonical engineering regression baseline зафиксирован F5-A и не регенерируется ради release packaging.
 
-## Локальная Windows x64 сборка
+## Локальная Windows x64 публикация
 
-Текущий publish entry point:
+Низкоуровневый publish entry point:
 
 ```powershell
 ./scripts/publish-windows.ps1
 ```
 
-Он публикует `Release`, `win-x64`, `self-contained` single-file приложение в:
+Он публикует `Release`, `win-x64`, `self-contained` single-file приложение и проверяет, что результат содержит ровно один исполняемый файл `BuoyCalc.Windows.exe`.
 
-```text
-artifacts/publish/BuoyCalc-Windows-win-x64
+Полный RC packaging entry point:
+
+```powershell
+./scripts/package-windows-rc.ps1 -Version v1.0.0 -Runtime win-x64
 ```
 
-F5-B дополнительно зафиксирует детерминированное имя RC-архива, manifest и SHA-256 checksum.
+После package step обязательно выполняется:
+
+```powershell
+./scripts/verify-windows-rc.ps1 -Version v1.0.0 -Runtime win-x64
+```
+
+## RC evidence set
+
+Для `v1.0.0` / `win-x64` создаются ровно три release-файла:
+
+```text
+BuoyCalc-Windows-v1.0.0-win-x64.zip
+BuoyCalc-Windows-v1.0.0-win-x64.sha256
+BuoyCalc-Windows-v1.0.0-win-x64-manifest.json
+```
+
+Manifest содержит:
+
+- version;
+- runtime;
+- exact source commit SHA;
+- имя ZIP;
+- SHA-256 ZIP;
+- имя и SHA-256 `BuoyCalc.Windows.exe`;
+- `selfContained=true`;
+- `singleFile=true`;
+- параметры нормализации ZIP.
+
+ZIP содержит только один файл:
+
+```text
+BuoyCalc-Windows-v1.0.0-win-x64/BuoyCalc.Windows.exe
+```
+
+Для одинакового входного EXE процедура упаковки использует стабильный порядок, store/no-compression и фиксированное время ZIP entry `2000-01-01T00:00:00Z`. Это исключает случайную зависимость checksum от времени упаковки или порядка файлов.
 
 ## GitHub Actions RC build
 
@@ -48,9 +84,30 @@ Workflow:
 BuoyCalc Windows Release
 ```
 
-До F5-B он остаётся ручным `workflow_dispatch` publish workflow. После F5-B RC должен строиться только из exact `main`, с проверяемым commit SHA, детерминированным именем артефакта и SHA-256.
+Он сохраняет ручной `workflow_dispatch` и дополнительно запускается при push специальной ветки:
 
-## Обязательный gate перед RC
+```text
+release-candidate/v1.0.0
+```
+
+Перед publish workflow выполняет `git fetch origin main` и требует одновременно:
+
+```text
+checked-out HEAD == github.sha
+checked-out HEAD == origin/main
+```
+
+Поэтому RC-ветка является только триггером. Она не может собрать отдельный от `main` commit.
+
+Workflow artifact имеет фиксированное имя:
+
+```text
+BuoyCalc-Windows-v1.0.0-win-x64-RC
+```
+
+и содержит ровно ZIP + SHA-256 + manifest.
+
+## Обязательный gate перед созданием RC trigger
 
 На exact `main` должны быть зелёными:
 
@@ -61,24 +118,27 @@ Report Store Consumer Scan
 BuoyCalc Windows Build: success
 ```
 
-Нельзя использовать RC artifact от commit, для которого обязательные проверки `pending` или `failure`.
+Только после этого `release-candidate/v1.0.0` создаётся/перемещается на **тот же SHA main**. Нельзя использовать RC artifact от commit, для которого обязательные проверки `pending` или `failure`.
 
 ## Обязательный ручной Windows 11 smoke
 
-После F5-B и создания exact-main RC пользователь вручную проверяет **тот же artifact**, который предполагается выпустить:
+После создания exact-main RC пользователь вручную проверяет **тот же ZIP**, который предполагается выпустить:
 
-1. приложение запускается;
-2. отображается identity `v1.0.0` и Release Candidate note;
-3. создаётся новый проект;
-4. проект сохраняется;
-5. сохранённый проект загружается обратно;
-6. расчёт выполняется без ошибки;
-7. последовательность элементов отображается корректно;
-8. выбранная 2D-схема открывается;
-9. PDF экспортируется;
-10. PDF использует рассчитанную выбранную геометрию/read models;
-11. полный technical report открывается и показывает selected authority там, где она доступна;
-12. проверяются несколько реальных постановок, включая рабочий сценарий пользователя.
+1. распаковать `BuoyCalc-Windows-v1.0.0-win-x64.zip`;
+2. приложение запускается;
+3. отображается identity `v1.0.0` и Release Candidate note;
+4. создаётся новый проект;
+5. проект сохраняется;
+6. сохранённый проект загружается обратно;
+7. расчёт выполняется без ошибки;
+8. последовательность элементов отображается корректно;
+9. выбранная 2D-схема открывается;
+10. PDF экспортируется;
+11. PDF использует рассчитанную выбранную геометрию/read models;
+12. полный technical report открывается и показывает selected authority там, где она доступна;
+13. проверяются несколько реальных постановок, включая рабочий сценарий пользователя.
+
+Перед smoke нужно сверить SHA-256 ZIP со значением одновременно в `.sha256` и manifest.
 
 Если smoke выявляет дефект, tag/release не создаётся. Исправление идёт отдельным PR, после чего RC строится заново и smoke повторяется.
 
@@ -86,10 +146,10 @@ BuoyCalc Windows Build: success
 
 Только после явного подтверждения успешного Windows smoke допускается:
 
-1. удостовериться, что commit RC всё ещё является exact release commit;
-2. создать tag `v1.0.0` на проверенном commit;
+1. удостовериться, что source commit из manifest всё ещё является проверенным release commit;
+2. создать tag `v1.0.0` на этом commit;
 3. создать GitHub Release из этого tag;
-4. прикрепить **тот же проверенный** Windows artifact, checksum и release notes.
+4. прикрепить **тот же проверенный** ZIP, checksum, manifest и release notes.
 
 Не следует менять код или пересобирать другой commit между успешным smoke и финальным выпуском.
 

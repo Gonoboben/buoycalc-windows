@@ -44,6 +44,26 @@ Therefore horizontal anchor holding capacity remains `RequiresAdditionalPhysical
 - full technical report with selected F1/F2/F3/F4 authority sections and retained compatibility diagnostics;
 - canonical engineering regression suite.
 
+## RC artifact evidence
+
+F5-B fixes the Windows RC evidence set to:
+
+```text
+BuoyCalc-Windows-v1.0.0-win-x64.zip
+BuoyCalc-Windows-v1.0.0-win-x64.sha256
+BuoyCalc-Windows-v1.0.0-win-x64-manifest.json
+```
+
+The package is a self-contained single-file `win-x64` application. The manifest records the exact source commit, package SHA-256 and executable SHA-256. ZIP entry ordering/timestamp/compression are normalized so package evidence is not affected by packaging time or file enumeration order.
+
+The automatic RC trigger ref is:
+
+```text
+release-candidate/v1.0.0
+```
+
+The release workflow refuses to build unless the checked-out commit equals `origin/main`.
+
 ## Explicit v1 non-goals
 
 The first release intentionally excludes:
@@ -59,13 +79,14 @@ The first release intentionally excludes:
 
 ## Before final release
 
-The following still must happen after these notes are merged:
+After F5-B is merged, the following still must happen:
 
-1. F5-B deterministic `win-x64` packaging, manifest and SHA-256 hardening;
-2. exact-main green CI;
-3. build one clean self-contained Windows RC artifact from exact main;
-4. user manual Windows 11 smoke of that same artifact;
-5. explicit user approval;
-6. only then create tag `v1.0.0` and GitHub Release for the tested commit/artifact.
+1. exact-main green CI;
+2. create/update `release-candidate/v1.0.0` at that exact main SHA;
+3. build one clean self-contained Windows RC evidence artifact;
+4. verify ZIP SHA-256 against both checksum file and manifest;
+5. user manual Windows 11 smoke of that same ZIP;
+6. explicit user approval;
+7. only then create tag `v1.0.0` and GitHub Release for the tested commit/artifact.
 
-Until step 5 is complete, this document describes a Release Candidate, not a published release.
+Until step 6 is complete, this document describes a Release Candidate, not a published release.

@@ -90,6 +90,11 @@ jobs:
               throw "v1 release freeze identity/baseline smoke check failed with exit code $LASTEXITCODE"
             }
 
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-windows-rc-packaging.ps1
+            if ($LASTEXITCODE -ne 0) {
+              throw "Windows RC packaging smoke check failed with exit code $LASTEXITCODE"
+            }
+
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-readmodel-boundary.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Read-model boundary smoke check failed with exit code $LASTEXITCODE"
