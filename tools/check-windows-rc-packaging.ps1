@@ -72,9 +72,20 @@ Assert-Contains $verify 'Manifest executable SHA-256 mismatch' "Windows RC verif
 $workflow = Read-RepoText $workflowPath
 Assert-Contains $workflow "workflow_dispatch:" "Windows release workflow manual trigger"
 Assert-Contains $workflow "release-candidate/v1.0.0" "Windows release workflow RC trigger"
+Assert-Contains $workflow "contents: read" "Windows release workflow repository permission"
+Assert-Contains $workflow "actions: read" "Windows release workflow Actions permission"
+Assert-NotContains $workflow "contents: write" "Windows release workflow repository permission"
+Assert-NotContains $workflow "actions: write" "Windows release workflow Actions permission"
 Assert-Contains $workflow "fetch-depth: 0" "Windows release workflow full source identity"
 Assert-Contains $workflow "git fetch origin main --depth=1" "Windows release workflow main verification"
 Assert-Contains $workflow 'if ($head -ne $main)' "Windows release workflow exact-main guard"
+Assert-Contains $workflow '/actions/runs?head_sha=$sourceSha&event=push&per_page=100' "Windows release workflow exact-main Actions query"
+Assert-Contains $workflow '".NET Build"' "Windows release workflow .NET gate"
+Assert-Contains $workflow '"Selected Shape Consumer Scan"' "Windows release workflow selected-shape gate"
+Assert-Contains $workflow '"Report Store Consumer Scan"' "Windows release workflow report-store gate"
+Assert-Contains $workflow '$_.event -eq "push"' "Windows release workflow push-run filter"
+Assert-Contains $workflow '$run.status -ne "completed" -or $run.conclusion -ne "success"' "Windows release workflow success gate"
+Assert-Contains $workflow 'Required exact-main CI workflow' "Windows release workflow missing/failing gate"
 Assert-Contains $workflow "./scripts/package-windows-rc.ps1" "Windows release workflow package step"
 Assert-Contains $workflow "./scripts/verify-windows-rc.ps1" "Windows release workflow verify step"
 Assert-Contains $workflow "BuoyCalc-Windows-v1.0.0-win-x64-RC" "Windows release workflow artifact name"
@@ -88,9 +99,10 @@ foreach ($forbidden in @(
     "gh release ",
     "softprops/action-gh-release",
     "actions/create-release",
-    "contents: write"
+    "contents: write",
+    "actions: write"
 )) {
-    Assert-NotContains $releaseFiles $forbidden "F5-B RC-only release boundary"
+    Assert-NotContains $releaseFiles $forbidden "F5-D RC-only release boundary"
 }
 
 Write-Host "Windows RC packaging smoke check passed."
