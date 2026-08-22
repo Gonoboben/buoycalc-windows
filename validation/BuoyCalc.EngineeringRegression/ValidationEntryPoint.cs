@@ -52,6 +52,7 @@ internal static class ValidationEntryPoint
             SelectedLocalStructuralCapacityStateRegression.Validate();
             SelectedEngineeringAssessmentStateRegression.Validate();
             SelectedUserPresentationReadModelRegression.Validate();
+            SelectedTechnicalReportReadModelRegression.Validate();
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();
