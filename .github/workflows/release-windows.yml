@@ -75,44 +75,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $ErrorActionPreference = "Stop"
-          $sourceSha = "${{ github.sha }}"
-          $uri = "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$sourceSha&event=push&per_page=100"
-          $headers = @{
-            Authorization = "Bearer $env:GITHUB_TOKEN"
-            Accept = "application/vnd.github+json"
-            "X-GitHub-Api-Version" = "2022-11-28"
-          }
-
-          $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
-          $requiredWorkflows = @(
-            ".NET Build",
-            "Selected Shape Consumer Scan",
-            "Report Store Consumer Scan"
-          )
-
-          foreach ($requiredName in $requiredWorkflows) {
-            $matches = @(
-              $response.workflow_runs |
-                Where-Object {
-                  $_.name -eq $requiredName -and
-                  $_.head_sha -eq $sourceSha -and
-                  $_.event -eq "push"
-                } |
-                Sort-Object -Property created_at -Descending
-            )
-
-            if ($matches.Count -eq 0) {
-              throw "Required exact-main CI workflow '$requiredName' has no push run for source $sourceSha."
-            }
-
-            $run = $matches[0]
-            if ($run.status -ne "completed" -or $run.conclusion -ne "success") {
-              throw "Required exact-main CI workflow '$requiredName' is not green for $sourceSha: status=$($run.status), conclusion=$($run.conclusion), run=$($run.html_url)"
-            }
-
-            Write-Host "Exact-main CI gate confirmed: $requiredName | run=$($run.id) | conclusion=$($run.conclusion)"
-          }
+          ./scripts/verify-exact-main-ci-gates.ps1 `
+            -Repository "${{ github.repository }}" `
+            -SourceCommit "${{ github.sha }}" `
+            -GitHubToken "$env:GITHUB_TOKEN"
 
       - name: Build deterministic win-x64 RC package
         shell: pwsh
