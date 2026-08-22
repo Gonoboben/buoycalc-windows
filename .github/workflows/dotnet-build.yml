@@ -52,64 +52,77 @@ jobs:
             Invoke-RestMethod -Uri $statusUrl -Method Post -Headers $headers -ContentType "application/json" -Body $body | Out-Null
           }
 
+          $currentPhase = "start"
           Set-BuoyCalcStatus "pending" "Build started"
 
           try {
+            $currentPhase = "restore-app"
             dotnet restore BuoyCalc.Windows.csproj
             if ($LASTEXITCODE -ne 0) {
               throw "dotnet restore failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "restore-regression"
             dotnet restore validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj
             if ($LASTEXITCODE -ne 0) {
               throw "engineering regression restore failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "build-app"
             dotnet build BuoyCalc.Windows.csproj --configuration Release --no-restore
             if ($LASTEXITCODE -ne 0) {
               throw "dotnet build failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "check-reportbuilder"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-reportbuilder-usage.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "ReportBuilder usage check failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "check-technical-report"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-technical-report-path.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Technical report path smoke check failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "check-readmodel"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-readmodel-boundary.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Read-model boundary smoke check failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "check-governance"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-repository-governance.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Repository governance smoke check failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "scan-report-store"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scan-report-store-consumers.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Report store consumer scan failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "check-report-store-map"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-report-store-consumer-map.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Report store consumer map check failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "check-selected-shape-map"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-selected-shape-consumer-map.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Selected shape consumer map check failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "engineering-regression"
             dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json
             if ($LASTEXITCODE -ne 0) {
               throw "Engineering regression verification failed with exit code $LASTEXITCODE"
             }
 
+            $currentPhase = "complete"
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
@@ -125,5 +138,6 @@ jobs:
             if (-not [string]::IsNullOrWhiteSpace($diagnosticStage)) {
               Set-BuoyCalcStatus "failure" "Temporary diagnostic stage" "F4B1: $diagnosticStage"
             }
+            Set-BuoyCalcStatus "failure" "Temporary build phase" "F4B1 phase: $currentPhase"
             throw
           }
