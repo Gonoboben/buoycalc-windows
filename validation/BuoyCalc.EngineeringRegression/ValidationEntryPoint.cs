@@ -39,6 +39,7 @@ internal static class ValidationEntryPoint
             BoundaryFeedbackIndependentReferenceRegression.Validate();
             SignedTensionAnalyticalResultantReferenceRegression.Validate();
             SignedTensionCanonicalResultantEvidenceRegression.Validate();
+            SignedTensionDemandDispositionRegression.Validate();
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();
