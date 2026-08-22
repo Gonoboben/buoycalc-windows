@@ -13,7 +13,6 @@ $zipName = "$artifactBase.zip"
 $checksumName = "$artifactBase.sha256"
 $manifestName = "$artifactBase-manifest.json"
 $expectedEntryName = "$artifactBase/BuoyCalc.Windows.exe"
-$expectedTimestamp = [DateTimeOffset]::new(2000, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
 
 Push-Location $repoRoot
 try {
@@ -65,52 +64,68 @@ try {
     }
 
     $expectedChecksumText = "$packageSha256  $zipName"
-    $checksumText = (Get-Content -LiteralPath $checksumPath -Raw).TrimEnd("`r", "`n")
+    $checksumText = (Get-Content -LiteralPath $checksumPath -Raw).TrimEnd([char[]]"`r`n")
     if ($checksumText -ne $expectedChecksumText) {
         throw "Checksum file mismatch: expected '$expectedChecksumText', got '$checksumText'."
     }
 
     Add-Type -AssemblyName System.IO.Compression
-    $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zipPath).Path)
+    $zipFileStream = [System.IO.File]::OpenRead((Resolve-Path $zipPath).Path)
     try {
-        if ($archive.Entries.Count -ne 1) {
-            throw "RC ZIP must contain exactly one entry; found $($archive.Entries.Count)."
-        }
-
-        $entry = $archive.Entries[0]
-        if ($entry.FullName -ne $expectedEntryName) {
-            throw "RC ZIP entry mismatch: expected '$expectedEntryName', got '$($entry.FullName)'."
-        }
-        if ($entry.Length -le 0) {
-            throw "RC executable entry is empty."
-        }
-        if ($entry.CompressedLength -ne $entry.Length) {
-            throw "RC ZIP must use store/no-compression mode for deterministic packaging."
-        }
-        if ($entry.LastWriteTime.UtcDateTime -ne $expectedTimestamp.UtcDateTime) {
-            throw "RC ZIP entry timestamp is not normalized to $($expectedTimestamp.ToString('O'))."
-        }
-
-        $sha = [System.Security.Cryptography.SHA256]::Create()
+        $archive = [System.IO.Compression.ZipArchive]::new(
+            $zipFileStream,
+            [System.IO.Compression.ZipArchiveMode]::Read,
+            $false)
         try {
-            $entryStream = $entry.Open()
+            if ($archive.Entries.Count -ne 1) {
+                throw "RC ZIP must contain exactly one entry; found $($archive.Entries.Count)."
+            }
+
+            $entry = $archive.Entries[0]
+            if ($entry.FullName -ne $expectedEntryName) {
+                throw "RC ZIP entry mismatch: expected '$expectedEntryName', got '$($entry.FullName)'."
+            }
+            if ($entry.Length -le 0) {
+                throw "RC executable entry is empty."
+            }
+            if ($entry.CompressedLength -ne $entry.Length) {
+                throw "RC ZIP must use store/no-compression mode for deterministic packaging."
+            }
+
+            $entryClock = $entry.LastWriteTime.DateTime
+            if ($entryClock.Year -ne 2000 -or
+                $entryClock.Month -ne 1 -or
+                $entryClock.Day -ne 1 -or
+                $entryClock.Hour -ne 0 -or
+                $entryClock.Minute -ne 0 -or
+                $entryClock.Second -ne 0) {
+                throw "RC ZIP entry timestamp is not normalized to 2000-01-01T00:00:00."
+            }
+
+            $sha = [System.Security.Cryptography.SHA256]::Create()
             try {
-                $entryHashBytes = $sha.ComputeHash($entryStream)
+                $entryStream = $entry.Open()
+                try {
+                    $entryHashBytes = $sha.ComputeHash($entryStream)
+                }
+                finally {
+                    $entryStream.Dispose()
+                }
             }
             finally {
-                $entryStream.Dispose()
+                $sha.Dispose()
+            }
+            $entrySha256 = [Convert]::ToHexString($entryHashBytes).ToLowerInvariant()
+            if ($manifest.executableSha256 -ne $entrySha256) {
+                throw "Manifest executable SHA-256 mismatch: expected $entrySha256, got $($manifest.executableSha256)."
             }
         }
         finally {
-            $sha.Dispose()
-        }
-        $entrySha256 = [Convert]::ToHexString($entryHashBytes).ToLowerInvariant()
-        if ($manifest.executableSha256 -ne $entrySha256) {
-            throw "Manifest executable SHA-256 mismatch: expected $entrySha256, got $($manifest.executableSha256)."
+            $archive.Dispose()
         }
     }
     finally {
-        $archive.Dispose()
+        $zipFileStream.Dispose()
     }
 
     Write-Host "Windows RC package verification passed."
