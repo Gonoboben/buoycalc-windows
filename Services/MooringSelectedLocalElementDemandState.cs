@@ -155,7 +155,7 @@ public static class MooringSelectedLocalElementDemandStateProjector
             if (element.IsDistributed)
                 rows.Add(BuildDistributedRow(element, trace, waveN));
             else if (element.IsDiscrete)
-                rows.Add(BuildDiscreteRow(element, pointSides));
+                rows.Add(BuildDiscreteRow(element, pointSides, waveN));
             else
                 throw new InvalidOperationException($"Selected local element demand has unsupported sequence role at element {element.Number}.");
         }
@@ -301,7 +301,8 @@ public static class MooringSelectedLocalElementDemandStateProjector
 
     private static MooringSelectedLocalElementDemandRow BuildDiscreteRow(
         MooringSequencePositionRow element,
-        IReadOnlyDictionary<int, PointSides> pointSides)
+        IReadOnlyDictionary<int, PointSides> pointSides,
+        double waveN)
     {
         if (!pointSides.TryGetValue(element.Number, out var sides))
         {
@@ -334,7 +335,7 @@ public static class MooringSelectedLocalElementDemandStateProjector
             element.PositionAlongLineM,
             governingH,
             governingV,
-            governingH,
+            governingH + waveN,
             governingV,
             sides.BeforeHN,
             sides.BeforeVN,
