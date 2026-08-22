@@ -8,7 +8,8 @@ namespace BuoyCalc.Windows.ApplicationModel;
 ///
 /// Technical report data and selected engineering X/Z are retained directly in the snapshot.
 /// User-facing consumers do not require mutable shape/report store publication.
-/// Signed-candidate state and the typed selected-core decision are retained for diagnostics.
+/// Signed-candidate state, typed selected-core decision and validated selected F1-F4
+/// engineering authorities are retained for diagnostics and downstream read models.
 /// </summary>
 public sealed partial record CalculationSnapshot(
     CalculationResult Result,
@@ -19,6 +20,12 @@ public sealed partial record CalculationSnapshot
 {
     public MooringSignedCandidateResult? SignedCandidate { get; init; }
     public MooringSelectedShapeResult? ShadowSelectedCore { get; init; }
+    public MooringSelectedDesignEnvelopeState? SelectedDesignEnvelope { get; init; }
+    public MooringSelectedDesignTensionDemandState? SelectedDesignTensionDemand { get; init; }
+    public MooringSelectedAnchorReactionState? SelectedAnchorReaction { get; init; }
+    public MooringSelectedLocalElementDemandState? SelectedLocalElementDemand { get; init; }
+    public MooringSelectedLocalStructuralCapacityState? SelectedLocalStructuralCapacity { get; init; }
+    public MooringSelectedEngineeringAssessmentState? SelectedEngineeringAssessment { get; init; }
 }
 
 public static class CalculationSnapshotBuilder
@@ -69,13 +76,45 @@ public static class CalculationSnapshotBuilder
             selectedShape,
             shadowSelectedCore);
 
+        // F4-A retains the validated selected authority chain once per completed snapshot.
+        // Downstream presentation consumers are intentionally unchanged in this package.
+        var selectedDesignEnvelope = MooringSelectedDesignEnvelopeStateProjector.Project(
+            result,
+            shadowSelectedCore,
+            signedCandidate);
+        var selectedDesignTensionDemand = MooringSelectedDesignTensionDemandProjector.Project(
+            selectedDesignEnvelope);
+        var selectedAnchorReaction = MooringSelectedAnchorReactionStateProjector.Project(
+            result,
+            selectedDesignEnvelope);
+        var selectedLocalElementDemand = MooringSelectedLocalElementDemandStateProjector.Project(
+            result,
+            data.SequencePositions,
+            shadowSelectedCore,
+            signedCandidate);
+        var selectedLocalStructuralCapacity = MooringSelectedLocalStructuralCapacityStateProjector.Project(
+            result,
+            selectedLocalElementDemand);
+        var selectedEngineeringAssessment = MooringSelectedEngineeringAssessmentStateProjector.Project(
+            environment,
+            result,
+            selectedDesignTensionDemand,
+            selectedAnchorReaction,
+            selectedLocalStructuralCapacity);
+
         return new CalculationSnapshot(
             result,
             data,
             selectedShape)
         {
             SignedCandidate = signedCandidate,
-            ShadowSelectedCore = shadowSelectedCore
+            ShadowSelectedCore = shadowSelectedCore,
+            SelectedDesignEnvelope = selectedDesignEnvelope,
+            SelectedDesignTensionDemand = selectedDesignTensionDemand,
+            SelectedAnchorReaction = selectedAnchorReaction,
+            SelectedLocalElementDemand = selectedLocalElementDemand,
+            SelectedLocalStructuralCapacity = selectedLocalStructuralCapacity,
+            SelectedEngineeringAssessment = selectedEngineeringAssessment
         };
     }
 }

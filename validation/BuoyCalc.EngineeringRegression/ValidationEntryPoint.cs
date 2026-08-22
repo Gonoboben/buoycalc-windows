@@ -50,6 +50,7 @@ internal static class ValidationEntryPoint
             AcceptedFinalTensionTraceRetentionRegression.Validate();
             SelectedLocalElementDemandStateRegression.Validate();
             SelectedLocalStructuralCapacityStateRegression.Validate();
+            SelectedEngineeringAssessmentStateRegression.Validate();
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();
