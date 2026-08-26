@@ -36,6 +36,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public event Action<AssemblyItemViewModel>? DuplicateRequested;
 
     public IReadOnlyList<string> KindOptions { get; } = new[] { "Line", "Connector", "Payload" };
+    public IReadOnlyList<string> KindDisplayOptions { get; } = new[] { "Линия", "Соединитель", "Прибор" };
     public IReadOnlyList<string> RopePresetOptions => RopeLibraryStorage.LoadAllRopes().Select(x => x.DisplayName).ToList();
     public IReadOnlyList<string> ConnectorPresetOptions => ConnectorLibraryStorage.LoadAllConnectors().Select(x => x.DisplayName).ToList();
     public IReadOnlyList<string> PayloadPresetOptions => PayloadLibraryStorage.LoadAllPayloads().Select(x => x.DisplayName).ToList();
@@ -81,12 +82,21 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public bool IsConnector => ParseKind(Kind) == AssemblyItemKind.Connector;
     public bool IsPayload => ParseKind(Kind) == AssemblyItemKind.Payload;
 
-    public string KindDisplayName => ParseKind(Kind) switch
+    public string KindDisplayName
     {
-        AssemblyItemKind.Connector => "Соединитель",
-        AssemblyItemKind.Payload => "Прибор",
-        _ => "Линия"
-    };
+        get => ParseKind(Kind) switch
+        {
+            AssemblyItemKind.Connector => "Соединитель",
+            AssemblyItemKind.Payload => "Прибор",
+            _ => "Линия"
+        };
+        set => Kind = value switch
+        {
+            "Соединитель" => "Connector",
+            "Прибор" => "Payload",
+            _ => "Line"
+        };
+    }
 
     public string EditorHint => ParseKind(Kind) switch
     {
