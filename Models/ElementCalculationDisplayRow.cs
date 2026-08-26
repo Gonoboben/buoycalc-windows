@@ -10,6 +10,7 @@ public sealed class ElementCalculationDisplayRow
     public string Title { get; init; } = string.Empty;
     public string PresetName { get; init; } = string.Empty;
     public string LengthM { get; init; } = string.Empty;
+    public double SourceLengthM { get; init; }
     public string Count { get; init; } = string.Empty;
     public string WeightWaterKg { get; init; } = string.Empty;
     public string ProjectedAreaM2 { get; init; } = string.Empty;
@@ -29,6 +30,7 @@ public sealed class ElementCalculationDisplayRow
             Title = row.Title,
             PresetName = row.PresetName,
             LengthM = Format(row.LengthM),
+            SourceLengthM = row.LengthM,
             Count = row.Count.ToString(CultureInfo.InvariantCulture),
             WeightWaterKg = Format(row.WeightWaterKg),
             ProjectedAreaM2 = Format(row.ProjectedAreaM2),

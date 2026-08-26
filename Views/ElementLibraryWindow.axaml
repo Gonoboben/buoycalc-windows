@@ -8,6 +8,15 @@
         Background="#F3F6FA"
         Title="Библиотека элементов">
 
+  <Window.Styles>
+    <Style Selector="TextBlock.helpMark">
+      <Setter Property="Foreground" Value="#315B9A" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+  </Window.Styles>
+
   <Grid RowDefinitions="Auto,*" Margin="18" RowSpacing="16">
     <Border Background="#172033" CornerRadius="16" Padding="18">
       <Grid ColumnDefinitions="*,Auto">
@@ -15,29 +24,175 @@
           <TextBlock Text="Библиотека элементов" FontSize="24" FontWeight="Bold" Foreground="White" />
           <TextBlock Text="Масса буёв, якорей, соединителей и приборов задаётся на воздухе; объём — вытесняемый. Для линий задаётся вес в воде." FontSize="13" Foreground="#C7D2E5" TextWrapping="Wrap" />
         </StackPanel>
-        <Border Grid.Column="1" Background="#263653" CornerRadius="12" Padding="12,8" VerticalAlignment="Center"><TextBlock Text="Буи · Линии · Соединители · Приборы · Якоря" Foreground="#C7D2E5" FontSize="13" /></Border>
+        <Border Grid.Column="1" Background="#263653" CornerRadius="12" Padding="12,8" VerticalAlignment="Center">
+          <TextBlock Text="Буи · Линии · Соединители · Приборы · Якоря" Foreground="#C7D2E5" FontSize="13" />
+        </Border>
       </Grid>
     </Border>
 
     <TabControl Grid.Row="1">
       <TabItem Header="Буи">
-        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0"><Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Буи" FontSize="20" FontWeight="Bold" /><TextBlock Text="Встроенные и пользовательские элементы" FontSize="12" Foreground="#697386" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Buoys}" SelectedItem="{Binding SelectedBuoy}" Margin="0,12,0,0" /></Grid></Border><Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="12"><TextBlock Text="Редактор буя" FontSize="20" FontWeight="Bold" /><ScrollViewer Grid.Row="1"><StackPanel Spacing="12"><StackPanel Spacing="4"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyName}" /></StackPanel><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyVolume}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyWeight}" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyArea}" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyCd}" /></StackPanel></Grid><StackPanel Spacing="4"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding BuoyNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" /></StackPanel><Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border></StackPanel></ScrollViewer><Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новый буй" Command="{Binding NewBuoyCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveBuoyCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeleteBuoyCommand}" /></Grid></Grid></Border></Grid>
+        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0">
+          <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+            <Grid RowDefinitions="Auto,*">
+              <StackPanel Spacing="4">
+                <TextBlock Text="Буи" FontSize="20" FontWeight="Bold" />
+                <TextBlock Text="Встроенные и пользовательские элементы" FontSize="12" Foreground="#697386" />
+              </StackPanel>
+              <ListBox Grid.Row="1" ItemsSource="{Binding Buoys}" SelectedItem="{Binding SelectedBuoy}" Margin="0,12,0,0" />
+            </Grid>
+          </Border>
+          <Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+              <TextBlock Text="Редактор буя" FontSize="20" FontWeight="Bold" />
+              <ScrollViewer Grid.Row="1">
+                <StackPanel Spacing="12">
+                  <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Короткое понятное имя буя. Оно отображается в списке, главном окне, 2D-схеме и отчёте." /></StackPanel>
+                    <TextBox Text="{Binding BuoyName}" />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                    <StackPanel Spacing="4">
+                      <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Вытесненный объём буя. Используется для расчёта полной плавучести: объём × плотность воды. Берётся из паспорта или рассчитывается по геометрии." /></StackPanel>
+                      <TextBox Text="{Binding BuoyVolume}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                      <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Масса буя в воздухе. Обычно берётся из паспорта производителя или измеряется перед постановкой." /></StackPanel>
+                      <TextBox Text="{Binding BuoyWeight}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Spacing="4">
+                      <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Площадь силуэта буя, перпендикулярная потоку. Используется в расчёте сопротивления течению." /></StackPanel>
+                      <TextBox Text="{Binding BuoyArea}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                      <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Коэффициент сопротивления формы. Берётся из паспорта, справочника, испытаний или задаётся инженерной оценкой для формы буя." /></StackPanel>
+                      <TextBox Text="{Binding BuoyCd}" />
+                    </StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Укажите источник данных: паспорт производителя, расчёт по геометрии, измерение, справочник или тестовый пресет." /></StackPanel>
+                    <TextBox Text="{Binding BuoyNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border>
+                </StackPanel>
+              </ScrollViewer>
+              <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новый буй" Command="{Binding NewBuoyCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveBuoyCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeleteBuoyCommand}" /></Grid>
+            </Grid>
+          </Border>
+        </Grid>
       </TabItem>
 
       <TabItem Header="Линии">
-        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0"><Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Линии / буйрепы" FontSize="20" FontWeight="Bold" /><TextBlock Text="Канаты, цепи и тросы" FontSize="12" Foreground="#697386" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Ropes}" SelectedItem="{Binding SelectedRope}" Margin="0,12,0,0" /></Grid></Border><Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="12"><TextBlock Text="Редактор линии" FontSize="20" FontWeight="Bold" /><ScrollViewer Grid.Row="1"><StackPanel Spacing="12"><Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel Spacing="4"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding RopeName}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Материал" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding RopeMaterial}" /></StackPanel></Grid><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Диаметр, мм" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding RopeDiameter}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="MBL, кН" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding RopeBreakingLoad}" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="Вес в воде, кг/м" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding RopeWeightWater}" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding RopeCd}" /></StackPanel></Grid><StackPanel Spacing="4"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding RopeNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" /></StackPanel><Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border></StackPanel></ScrollViewer><Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новая линия" Command="{Binding NewRopeCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveRopeCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeleteRopeCommand}" /></Grid></Grid></Border></Grid>
+        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0">
+          <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Линии / буйрепы" FontSize="20" FontWeight="Bold" /><TextBlock Text="Канаты, цепи и тросы" FontSize="12" Foreground="#697386" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Ropes}" SelectedItem="{Binding SelectedRope}" Margin="0,12,0,0" /></Grid></Border>
+          <Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+              <TextBlock Text="Редактор линии" FontSize="20" FontWeight="Bold" />
+              <ScrollViewer Grid.Row="1">
+                <StackPanel Spacing="12">
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Название линии или буйрепа, которое будет видно в последовательности и отчёте." /></StackPanel><TextBox Text="{Binding RopeName}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Материал" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Материал каната, троса или цепи. Указывайте фактический материал из паспорта изделия." /></StackPanel><TextBox Text="{Binding RopeMaterial}" /></StackPanel>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                    <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Диаметр, мм" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Номинальный наружный диаметр линии по паспорту. Используется в расчёте гидродинамического сопротивления линии." /></StackPanel><TextBox Text="{Binding RopeDiameter}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="MBL, кН" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Minimum Breaking Load — минимальная разрывная нагрузка по паспорту/сертификату. Допустимая рабочая нагрузка определяется с учётом коэффициента запаса." /></StackPanel><TextBox Text="{Binding RopeBreakingLoad}" /></StackPanel>
+                    <StackPanel Grid.Row="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Вес в воде, кг/м" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Знаковый погонный вес в воде: положительное значение направлено вниз, отрицательное означает распределённую плавучесть вверх, 0 — нейтральная линия. Знак сохраняется в расчёте." /></StackPanel><TextBox Text="{Binding RopeWeightWater}" /></StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Коэффициент гидродинамического сопротивления линии. Берётся из паспорта, справочника или обоснованной инженерной оценки." /></StackPanel><TextBox Text="{Binding RopeCd}" /></StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Укажите источник характеристик линии: паспорт, сертификат, справочник, измерение или расчёт." /></StackPanel><TextBox Text="{Binding RopeNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" /></StackPanel>
+                  <Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border>
+                </StackPanel>
+              </ScrollViewer>
+              <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новая линия" Command="{Binding NewRopeCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveRopeCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeleteRopeCommand}" /></Grid>
+            </Grid>
+          </Border>
+        </Grid>
       </TabItem>
 
       <TabItem Header="Соединители">
-        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0"><Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Соединители" FontSize="20" FontWeight="Bold" /><TextBlock Text="Скобы, вертлюги, релизы" FontSize="12" Foreground="#697386" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Connectors}" SelectedItem="{Binding SelectedConnector}" Margin="0,12,0,0" /></Grid></Border><Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="12"><TextBlock Text="Редактор соединителя" FontSize="20" FontWeight="Bold" /><ScrollViewer Grid.Row="1"><StackPanel Spacing="12"><Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel Spacing="4"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding ConnectorName}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Тип" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding ConnectorType}" /></StackPanel></Grid><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding ConnectorWeightAir}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding ConnectorVolume}" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="MBL, кН" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding ConnectorBreakingLoad}" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding ConnectorArea}" /></StackPanel><StackPanel Grid.Row="2" Spacing="4"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding ConnectorCd}" /></StackPanel></Grid><StackPanel Spacing="4"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding ConnectorNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" /></StackPanel><Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border></StackPanel></ScrollViewer><Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новый соединитель" Command="{Binding NewConnectorCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveConnectorCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeleteConnectorCommand}" /></Grid></Grid></Border></Grid>
+        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0">
+          <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Соединители" FontSize="20" FontWeight="Bold" /><TextBlock Text="Скобы, вертлюги, релизы" FontSize="12" Foreground="#697386" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Connectors}" SelectedItem="{Binding SelectedConnector}" Margin="0,12,0,0" /></Grid></Border>
+          <Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+              <TextBlock Text="Редактор соединителя" FontSize="20" FontWeight="Bold" />
+              <ScrollViewer Grid.Row="1">
+                <StackPanel Spacing="12">
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Короткое имя соединителя для библиотеки, последовательности и отчёта." /></StackPanel><TextBox Text="{Binding ConnectorName}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Тип" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Тип соединителя: скоба, вертлюг, релиз или другой дискретный соединительный элемент." /></StackPanel><TextBox Text="{Binding ConnectorType}" /></StackPanel>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                    <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Фактическая масса соединителя в воздухе по паспорту или измерению." /></StackPanel><TextBox Text="{Binding ConnectorWeightAir}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Вытесняемый объём соединителя для определения его веса в воде." /></StackPanel><TextBox Text="{Binding ConnectorVolume}" /></StackPanel>
+                    <StackPanel Grid.Row="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="MBL, кН" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Минимальная разрывная нагрузка соединителя по паспорту/сертификату." /></StackPanel><TextBox Text="{Binding ConnectorBreakingLoad}" /></StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Проецируемая площадь соединителя на поток для расчёта локальной силы течения." /></StackPanel><TextBox Text="{Binding ConnectorArea}" /></StackPanel>
+                    <StackPanel Grid.Row="2" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Коэффициент сопротивления формы соединителя." /></StackPanel><TextBox Text="{Binding ConnectorCd}" /></StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Укажите паспорт, сертификат, производителя или иной источник характеристик соединителя." /></StackPanel><TextBox Text="{Binding ConnectorNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" /></StackPanel>
+                  <Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border>
+                </StackPanel>
+              </ScrollViewer>
+              <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новый соединитель" Command="{Binding NewConnectorCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveConnectorCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeleteConnectorCommand}" /></Grid>
+            </Grid>
+          </Border>
+        </Grid>
       </TabItem>
 
       <TabItem Header="Приборы">
-        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0"><Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Приборы / нагрузки" FontSize="20" FontWeight="Bold" /><TextBlock Text="ADCP, датчики, рамы и другие нагрузки" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Payloads}" SelectedItem="{Binding SelectedPayload}" Margin="0,12,0,0" /></Grid></Border><Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="12"><TextBlock Text="Редактор прибора" FontSize="20" FontWeight="Bold" /><ScrollViewer Grid.Row="1"><StackPanel Spacing="12"><Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel Spacing="4"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadName}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Тип" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadType}" /></StackPanel></Grid><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadWeightAir}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadVolume}" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadArea}" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadCd}" /></StackPanel></Grid><StackPanel Spacing="4"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" /></StackPanel><Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border></StackPanel></ScrollViewer><Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новый прибор" Command="{Binding NewPayloadCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SavePayloadCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeletePayloadCommand}" /></Grid></Grid></Border></Grid>
+        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0">
+          <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Приборы / нагрузки" FontSize="20" FontWeight="Bold" /><TextBlock Text="ADCP, датчики, рамы и другие нагрузки" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Payloads}" SelectedItem="{Binding SelectedPayload}" Margin="0,12,0,0" /></Grid></Border>
+          <Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+              <TextBlock Text="Редактор прибора" FontSize="20" FontWeight="Bold" />
+              <ScrollViewer Grid.Row="1">
+                <StackPanel Spacing="12">
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Название прибора или дискретной нагрузки для библиотеки, последовательности и 2D-схемы." /></StackPanel><TextBox Text="{Binding PayloadName}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Тип" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Тип прибора или нагрузки: ADCP, датчик, рама и т.п." /></StackPanel><TextBox Text="{Binding PayloadType}" /></StackPanel>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                    <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Фактическая масса прибора в воздухе." /></StackPanel><TextBox Text="{Binding PayloadWeightAir}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Вытесняемый объём прибора/рамы для определения локального веса в воде." /></StackPanel><TextBox Text="{Binding PayloadVolume}" /></StackPanel>
+                    <StackPanel Grid.Row="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Проецируемая площадь прибора на поток для расчёта локальной силы течения." /></StackPanel><TextBox Text="{Binding PayloadArea}" /></StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Коэффициент сопротивления формы прибора/рамы." /></StackPanel><TextBox Text="{Binding PayloadCd}" /></StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Укажите паспорт, чертёж, измерение или иной источник массы, объёма, площади и Cd." /></StackPanel><TextBox Text="{Binding PayloadNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" /></StackPanel>
+                  <Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border>
+                </StackPanel>
+              </ScrollViewer>
+              <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новый прибор" Command="{Binding NewPayloadCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SavePayloadCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeletePayloadCommand}" /></Grid>
+            </Grid>
+          </Border>
+        </Grid>
       </TabItem>
 
       <TabItem Header="Якоря">
-        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0"><Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Якоря" FontSize="20" FontWeight="Bold" /><TextBlock Text="Грузы, грибовидные и плитные якоря" FontSize="12" Foreground="#697386" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Anchors}" SelectedItem="{Binding SelectedAnchor}" Margin="0,12,0,0" /></Grid></Border><Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="12"><TextBlock Text="Редактор якоря" FontSize="20" FontWeight="Bold" /><ScrollViewer Grid.Row="1"><StackPanel Spacing="12"><Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel Spacing="4"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorName}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Тип" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorType}" /></StackPanel></Grid><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Материал" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorMaterial}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorWeightAir}" /></StackPanel><StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorVolume}" /></StackPanel><StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="Коэф. удержания" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorHoldingCoefficient}" /></StackPanel></Grid><StackPanel Spacing="4"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding AnchorNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" /></StackPanel><Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border></StackPanel></ScrollViewer><Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новый якорь" Command="{Binding NewAnchorCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveAnchorCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeleteAnchorCommand}" /></Grid></Grid></Border></Grid>
+        <Grid ColumnDefinitions="340,*" ColumnSpacing="16" Margin="0,12,0,0">
+          <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000"><Grid RowDefinitions="Auto,*"><StackPanel Spacing="4"><TextBlock Text="Якоря" FontSize="20" FontWeight="Bold" /><TextBlock Text="Грузы, грибовидные и плитные якоря" FontSize="12" Foreground="#697386" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Anchors}" SelectedItem="{Binding SelectedAnchor}" Margin="0,12,0,0" /></Grid></Border>
+          <Border Grid.Column="1" Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+              <TextBlock Text="Редактор якоря" FontSize="20" FontWeight="Bold" />
+              <ScrollViewer Grid.Row="1">
+                <StackPanel Spacing="12">
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Название" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Название якоря или грузового блока для библиотеки, проекта и отчёта." /></StackPanel><TextBox Text="{Binding AnchorName}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Тип" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Конструктивный тип якоря: грузовой блок, грибовидный, плитный и т.п." /></StackPanel><TextBox Text="{Binding AnchorType}" /></StackPanel>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                    <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Материал" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Материал якоря/груза. Вместе с фактическим объёмом и массой характеризует его вес в воде." /></StackPanel><TextBox Text="{Binding AnchorMaterial}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Масса якоря или грузового блока в воздухе." /></StackPanel><TextBox Text="{Binding AnchorWeightAir}" /></StackPanel>
+                    <StackPanel Grid.Row="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Фактический вытесняемый объём якоря/груза, используемый для определения его веса в воде." /></StackPanel><TextBox Text="{Binding AnchorVolume}" /></StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Коэф. удержания" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Исторический коэффициент совместимости. В v1 он не является подтверждённой горизонтальной несущей способностью системы якорь/грунт; для такой проверки требуется отдельная валидированная физическая модель." /></StackPanel><TextBox Text="{Binding AnchorHoldingCoefficient}" /></StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Заметка / источник" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Укажите паспорт, чертёж, материал, расчёт объёма или другой источник характеристик якоря." /></StackPanel><TextBox Text="{Binding AnchorNote}" AcceptsReturn="True" MinHeight="90" TextWrapping="Wrap" /></StackPanel>
+                  <Border Background="#F7F9FC" CornerRadius="12" Padding="12"><TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" /></Border>
+                </StackPanel>
+              </ScrollViewer>
+              <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10"><Button Content="Новый якорь" Command="{Binding NewAnchorCommand}" /><Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveAnchorCommand}" /><Button Grid.Column="2" Content="Удалить" Command="{Binding DeleteAnchorCommand}" /></Grid>
+            </Grid>
+          </Border>
+        </Grid>
       </TabItem>
     </TabControl>
   </Grid>

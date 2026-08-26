@@ -105,10 +105,14 @@ public sealed class Mooring2DCanvas : Control
         var anchorPoint = points[^1];
         context.DrawLine(ThinLinePen, anchorPoint, new Point(anchorPoint.X, bottomY));
 
-        var nodeStep = Math.Max(1, points.Count / 24);
-        for (var i = 1; i < points.Count - 1; i += nodeStep)
+        if (vm is not null && vm.ElementRows.Count > 0)
         {
-            context.DrawEllipse(NodeBrush, NodePen, points[i], 4.2, 4.2);
+            var markers = Mooring2DElementBoundaryProjector.Project(selectedShape, vm.ElementRows.ToList());
+            var markerIndex = 0;
+            foreach (var marker in markers)
+            {
+                DrawElementMarker(context, Map(marker.XOffsetM, marker.ZDepthM), marker, markerIndex++);
+            }
         }
 
         DrawBuoy(context, buoyPoint, vm?.BuoyName ?? "Буй");
@@ -128,6 +132,40 @@ public sealed class Mooring2DCanvas : Control
         var y = bottomY + 48;
         context.DrawLine(ThinLinePen, new Point(buoyPoint.X, y), new Point(anchorPoint.X, y));
         DrawLabel(context, $"расчётный снос {shape.HorizontalOffsetM:0.##} м", new Point(Math.Min(buoyPoint.X, anchorPoint.X) + 8, y - 18), 11, false, MutedTextBrush);
+    }
+
+    private static void DrawElementMarker(
+        DrawingContext context,
+        Point point,
+        Mooring2DElementMarker marker,
+        int markerIndex)
+    {
+        var labelOrigin = markerIndex % 2 == 0
+            ? new Point(point.X + 9, point.Y - 16)
+            : new Point(point.X + 9, point.Y + 5);
+
+        switch (marker.MarkerKind)
+        {
+            case Mooring2DElementMarkerKind.LineBoundary:
+                context.DrawLine(NodePen, new Point(point.X - 6, point.Y), new Point(point.X + 6, point.Y));
+                DrawLabel(context, $"граница: {Shorten(marker.Title, 20)}", labelOrigin, 9.5, false, MutedTextBrush);
+                break;
+
+            case Mooring2DElementMarkerKind.Payload:
+                context.DrawEllipse(BuoyBrush, NodePen, point, 5.2, 5.2);
+                DrawLabel(context, $"прибор: {Shorten(marker.Title, 20)}", labelOrigin, 9.5, true, TextBrush);
+                break;
+
+            case Mooring2DElementMarkerKind.Connector:
+                context.DrawRectangle(NodeBrush, NodePen, new Rect(point.X - 4.5, point.Y - 4.5, 9, 9), 2, 2);
+                DrawLabel(context, $"соединитель: {Shorten(marker.Title, 18)}", labelOrigin, 9.5, true, TextBrush);
+                break;
+
+            default:
+                context.DrawEllipse(NodeBrush, NodePen, point, 4.5, 4.5);
+                DrawLabel(context, Shorten(marker.Title, 20), labelOrigin, 9.5, false, TextBrush);
+                break;
+        }
     }
 
     private static void DrawUnavailableState(DrawingContext context, double width, double surfaceY, double padding)
