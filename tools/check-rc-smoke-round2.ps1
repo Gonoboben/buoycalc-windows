@@ -36,17 +36,40 @@ Require-Contains $pdf "foreach (var marker in diagram.ElementMarkers)"
 Require-NotContains $pdf "var step = Math.Max(1, points.Count / 22);"
 Require-NotContains $pdf "_canvas.DrawCircle(points[i], 3.8f"
 
+# RC round 3: diagrams retain calculated marker positions, but no element-name callouts/leaders.
+Require-NotContains $canvas '"конец линии:'
+Require-NotContains $canvas '"прибор:'
+Require-NotContains $canvas '"соединитель:'
+Require-NotContains $canvas "ResolveLabelOrigin"
+Require-NotContains $canvas "diagram.BuoyTitle"
+Require-NotContains $canvas "diagram.AnchorTitle"
+Require-NotContains $pdf '"конец линии:'
+Require-NotContains $pdf '"прибор:'
+Require-NotContains $pdf '"соединитель:'
+Require-NotContains $pdf "ResolveLabelPoint"
+Require-NotContains $pdf "diagram.BuoyTitle"
+Require-NotContains $pdf "diagram.AnchorTitle"
+
 Require-Contains $itemVm "UI-only card state"
 Require-Contains $itemVm "ToggleExpandedCommand"
 Require-Contains $itemVm "ExpandCollapseGlyph"
 Require-Contains $main 'IsVisible="{Binding IsExpanded}"'
 Require-Contains $main 'Command="{Binding ToggleExpandedCommand}"'
+Require-Contains $main 'TextBlock IsVisible="{Binding IsExpanded}" Text="{Binding Summary}"'
+Require-Contains $main 'IsChecked="{Binding IsEnabled}" Content="В расчёте"'
 
 Require-Contains $library "Cd = 2F/(ρ·U²·A)"
 Require-Contains $library "V=π·D²·L/4"
 Require-Contains $library "V≈m/ρматериала"
 Require-Contains $library "Экспорт библиотеки..."
 Require-Contains $library "Импорт библиотеки..."
+Require-Contains $library 'Style Selector="Button.headerCommand"'
+Require-Contains $library 'Classes="headerCommand" Content="Экспорт библиотеки..."'
+Require-Contains $library 'Classes="headerCommand" Content="Импорт библиотеки..."'
+Require-Contains $library "Коэффициент сопротивления формы буя."
+Require-Contains $library "Коэффициент сопротивления линии."
+Require-Contains $library "Коэффициент сопротивления формы соединителя."
+Require-Contains $library "Коэффициент сопротивления формы прибора/рамы."
 Require-Contains $libraryCode "ElementLibraryBundleStorage.Export"
 Require-Contains $libraryCode "ElementLibraryBundleStorage.ImportMerge"
 
@@ -70,4 +93,4 @@ Require-NotContains $bundle "DeleteUserConnector"
 Require-NotContains $bundle "DeleteUserPayload"
 Require-NotContains $bundle "DeleteUserAnchor"
 
-Write-Host "RC smoke round-2 UI/PDF/library guard passed."
+Write-Host "RC smoke round-2/3 UI/PDF/library guard passed."
