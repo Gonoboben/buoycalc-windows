@@ -237,7 +237,7 @@ public static class PdfReportBuilder
 
             foreach (var marker in diagram.ElementMarkers)
             {
-                DrawElementMarker(Map(marker.XOffsetM, marker.ZDepthM), marker, x, x + width);
+                DrawElementMarker(Map(marker.XOffsetM, marker.ZDepthM), marker);
             }
 
             var buoyPoint = points[0];
@@ -250,8 +250,6 @@ public static class PdfReportBuilder
             DrawTextAt("поверхность воды", x + 14, surfaceY - 24, 10, true, SKColors.Black);
             DrawTextAt($"глубина {drawingDepth:0.##} м", x + 14, surfaceY + 18, 9, false, new SKColor(80, 92, 112));
             DrawTextAt("дно / грунт", x + 14, bottomLineY + 18, 10, true, new SKColor(92, 70, 52));
-            DrawTextAt(Shorten(diagram.BuoyTitle, 30), ClampLabelX(buoyPoint.X + 16, x, x + width), buoyPoint.Y - 16, 9.2f, true, SKColors.Black);
-            DrawTextAt(Shorten(diagram.AnchorTitle, 30), ClampLabelX(anchorPoint.X + 20, x, x + width), anchorPoint.Y + 18, 9.2f, true, SKColors.Black);
             DrawLegendLine(x + 14, y + 18, linePaint, "выбранная расчётная форма X/Z", new SKColor(49, 91, 154));
             DrawTextAt(userShapeStatus, x + 250, y + 23, 9.2f, false, shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
             DrawTextAt($"снос X/Z {shape.HorizontalOffsetM:0.##} м", x + 390, y + 23, 9.2f, false, new SKColor(80, 92, 112));
@@ -261,69 +259,34 @@ public static class PdfReportBuilder
             _y += diagramHeight + 10;
         }
 
-        private void DrawElementMarker(
-            SKPoint point,
-            Mooring2DElementMarker marker,
-            float plotLeft,
-            float plotRight)
+        private void DrawElementMarker(SKPoint point, Mooring2DElementMarker marker)
         {
             using var connectorFill = Fill("#FFFFFF");
             using var payloadFill = Fill("#F2A33A");
             using var markerStroke = Stroke("#315B9A", 1.2f);
-            using var leaderStroke = Stroke("#A7C7EE", 0.8f);
-
-            var label = ResolveLabelPoint(point, marker.LabelZone, marker.LabelLane, plotLeft, plotRight);
-            _canvas!.DrawLine(point, new SKPoint(label.X - 3, label.Y - 3), leaderStroke);
 
             switch (marker.MarkerKind)
             {
                 case Mooring2DElementMarkerKind.LineBoundary:
-                    _canvas.DrawLine(new SKPoint(point.X - 5, point.Y), new SKPoint(point.X + 5, point.Y), markerStroke);
-                    DrawTextAt($"конец линии: {Shorten(marker.Title, 22)}", label.X, label.Y, 7.8f, false, new SKColor(80, 92, 112));
+                    _canvas!.DrawLine(new SKPoint(point.X - 5, point.Y), new SKPoint(point.X + 5, point.Y), markerStroke);
                     break;
 
                 case Mooring2DElementMarkerKind.Payload:
-                    _canvas.DrawCircle(point, 4.2f, payloadFill);
+                    _canvas!.DrawCircle(point, 4.2f, payloadFill);
                     _canvas.DrawCircle(point, 4.2f, markerStroke);
-                    DrawTextAt($"прибор: {Shorten(marker.Title, 22)}", label.X, label.Y, 7.8f, true, SKColors.Black);
                     break;
 
                 case Mooring2DElementMarkerKind.Connector:
-                    _canvas.DrawRect(new SKRect(point.X - 3.8f, point.Y - 3.8f, point.X + 3.8f, point.Y + 3.8f), connectorFill);
+                    _canvas!.DrawRect(new SKRect(point.X - 3.8f, point.Y - 3.8f, point.X + 3.8f, point.Y + 3.8f), connectorFill);
                     _canvas.DrawRect(new SKRect(point.X - 3.8f, point.Y - 3.8f, point.X + 3.8f, point.Y + 3.8f), markerStroke);
-                    DrawTextAt($"соединитель: {Shorten(marker.Title, 20)}", label.X, label.Y, 7.8f, true, SKColors.Black);
                     break;
 
                 default:
-                    _canvas.DrawCircle(point, 3.8f, connectorFill);
+                    _canvas!.DrawCircle(point, 3.8f, connectorFill);
                     _canvas.DrawCircle(point, 3.8f, markerStroke);
-                    DrawTextAt(Shorten(marker.Title, 22), label.X, label.Y, 7.8f, false, SKColors.Black);
                     break;
             }
         }
-
-        private static SKPoint ResolveLabelPoint(
-            SKPoint point,
-            Mooring2DLabelZone zone,
-            int lane,
-            float plotLeft,
-            float plotRight)
-        {
-            var rawX = point.X + 10;
-            var x = ClampLabelX(rawX, plotLeft, plotRight);
-            var y = zone switch
-            {
-                Mooring2DLabelZone.NearSurface => point.Y + 18 + lane * 15,
-                Mooring2DLabelZone.NearBottom => point.Y - 20 - lane * 15,
-                Mooring2DLabelZone.InteriorAbove => point.Y - 14 - lane * 3,
-                Mooring2DLabelZone.InteriorBelow => point.Y + 12 + lane * 3,
-                _ => point.Y - 10
-            };
-            return new SKPoint(x, y);
-        }
-
-        private static float ClampLabelX(float x, float plotLeft, float plotRight) =>
-            Math.Clamp(x, plotLeft + 8, plotRight - 150);
 
         public void ElementTable(IReadOnlyList<ElementCalculationDisplayRow> rows)
         {

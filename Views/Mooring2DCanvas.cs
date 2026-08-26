@@ -114,8 +114,8 @@ public sealed class Mooring2DCanvas : Control
             DrawElementMarker(context, Map(marker.XOffsetM, marker.ZDepthM), marker);
         }
 
-        DrawBuoy(context, buoyPoint, diagram.BuoyTitle);
-        DrawAnchor(context, anchorPoint, diagram.AnchorTitle);
+        DrawBuoy(context, buoyPoint);
+        DrawAnchor(context, anchorPoint);
 
         DrawLabel(context, "выбранная расчётная форма X/Z", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
         DrawLabel(
@@ -138,43 +138,24 @@ public sealed class Mooring2DCanvas : Control
         Point point,
         Mooring2DElementMarker marker)
     {
-        var labelOrigin = ResolveLabelOrigin(point, marker.LabelZone, marker.LabelLane);
-        context.DrawLine(ThinLinePen, new Point(point.X + 5, point.Y), new Point(labelOrigin.X - 3, labelOrigin.Y + 5));
-
         switch (marker.MarkerKind)
         {
             case Mooring2DElementMarkerKind.LineBoundary:
                 context.DrawLine(NodePen, new Point(point.X - 6, point.Y), new Point(point.X + 6, point.Y));
-                DrawLabel(context, $"конец линии: {Shorten(marker.Title, 22)}", labelOrigin, 9.5, false, MutedTextBrush);
                 break;
 
             case Mooring2DElementMarkerKind.Payload:
                 context.DrawEllipse(BuoyBrush, NodePen, point, 5.2, 5.2);
-                DrawLabel(context, $"прибор: {Shorten(marker.Title, 22)}", labelOrigin, 9.5, true, TextBrush);
                 break;
 
             case Mooring2DElementMarkerKind.Connector:
                 context.DrawRectangle(NodeBrush, NodePen, new Rect(point.X - 4.5, point.Y - 4.5, 9, 9), 2, 2);
-                DrawLabel(context, $"соединитель: {Shorten(marker.Title, 20)}", labelOrigin, 9.5, true, TextBrush);
                 break;
 
             default:
                 context.DrawEllipse(NodeBrush, NodePen, point, 4.5, 4.5);
-                DrawLabel(context, Shorten(marker.Title, 22), labelOrigin, 9.5, false, TextBrush);
                 break;
         }
-    }
-
-    private static Point ResolveLabelOrigin(Point point, Mooring2DLabelZone zone, int lane)
-    {
-        return zone switch
-        {
-            Mooring2DLabelZone.NearSurface => new Point(point.X + 14, point.Y + 20 + lane * 18),
-            Mooring2DLabelZone.NearBottom => new Point(point.X + 14, point.Y - 26 - lane * 18),
-            Mooring2DLabelZone.InteriorAbove => new Point(point.X + 12, point.Y - 18 - lane * 4),
-            Mooring2DLabelZone.InteriorBelow => new Point(point.X + 12, point.Y + 8 + lane * 4),
-            _ => new Point(point.X + 12, point.Y - 12)
-        };
     }
 
     private static void DrawUnavailableState(DrawingContext context, double width, double surfaceY, double padding)
@@ -190,17 +171,15 @@ public sealed class Mooring2DCanvas : Control
         DrawLabel(context, "Инженерная линия не отображается до появления selected X/Z.", new Point(Math.Max(padding + 24, width - 410), surfaceY + 120), 10, false, MutedTextBrush);
     }
 
-    private static void DrawBuoy(DrawingContext context, Point point, string title)
+    private static void DrawBuoy(DrawingContext context, Point point)
     {
         context.DrawEllipse(BuoyBrush, NodePen, point, 14, 14);
-        DrawLabel(context, Shorten(title, 24), new Point(point.X + 19, point.Y - 22), 11, true, TextBrush);
     }
 
-    private static void DrawAnchor(DrawingContext context, Point point, string title)
+    private static void DrawAnchor(DrawingContext context, Point point)
     {
         var rect = new Rect(point.X - 18, point.Y - 10, 36, 20);
         context.DrawRectangle(AnchorBrush, AnchorPen, rect, 4, 4);
-        DrawLabel(context, Shorten(title, 26), new Point(point.X + 22, point.Y + 13), 11, true, TextBrush);
     }
 
     private static void DrawLabel(DrawingContext context, string text, Point origin, double size, bool bold, IBrush brush)
@@ -219,11 +198,5 @@ public sealed class Mooring2DCanvas : Control
             BuoyShapeState.Overloaded => "буй перегружен",
             _ => "состояние буя не определено"
         };
-    }
-
-    private static string Shorten(string value, int maxLength)
-    {
-        value ??= string.Empty;
-        return value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 1)] + "…";
     }
 }

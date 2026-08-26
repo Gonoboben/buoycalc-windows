@@ -203,9 +203,11 @@
                       <StackPanel Grid.Column="1" Spacing="10">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                           <StackPanel Spacing="4">
-                            <TextBox Text="{Binding Title}" PlaceholderText="Название элемента" FontWeight="Bold" />
-                            <TextBlock Text="{Binding Summary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
-                            <CheckBox IsChecked="{Binding IsEnabled}" Content="Учитывать в расчёте" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                              <TextBox Text="{Binding Title}" PlaceholderText="Название элемента" FontWeight="Bold" />
+                              <CheckBox Grid.Column="1" IsChecked="{Binding IsEnabled}" Content="В расчёте" ToolTip.Tip="Учитывать этот элемент в расчёте" VerticalAlignment="Center" />
+                            </Grid>
+                            <TextBlock IsVisible="{Binding IsExpanded}" Text="{Binding Summary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
                           </StackPanel>
                           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
                             <Button Content="{Binding ExpandCollapseGlyph}" Command="{Binding ToggleExpandedCommand}" ToolTip.Tip="{Binding ExpandCollapseHint}" Width="34" />
