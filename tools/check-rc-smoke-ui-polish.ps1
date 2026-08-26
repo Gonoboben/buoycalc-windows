@@ -52,10 +52,13 @@ Assert-Contains $library 'не является подтверждённой г�
 
 $canvas = Read-RepoText "Views/Mooring2DCanvas.cs"
 Assert-NotContains $canvas 'nodeStep' "2D segmentation-node sampling"
-Assert-Contains $canvas 'Mooring2DElementBoundaryProjector.Project' "2D element-boundary projection"
+Assert-Contains $canvas 'Mooring2DDiagramReadModelBuilder.Build' "2D shared presentation read model"
 Assert-Contains $canvas 'Mooring2DElementMarkerKind.LineBoundary' "2D line boundaries"
 Assert-Contains $canvas 'Mooring2DElementMarkerKind.Connector' "2D connector markers"
 Assert-Contains $canvas 'Mooring2DElementMarkerKind.Payload' "2D payload markers"
+
+$diagramReadModel = Read-RepoText "Services/Mooring2DDiagramReadModel.cs"
+Assert-Contains $diagramReadModel 'Mooring2DElementBoundaryProjector.Project' "Shared 2D element-boundary projection"
 
 $displayRow = Read-RepoText "Models/ElementCalculationDisplayRow.cs"
 Assert-Contains $displayRow 'public double SourceLengthM { get; init; }' "Exact display source length"
