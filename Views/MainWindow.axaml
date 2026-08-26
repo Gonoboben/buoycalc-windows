@@ -208,6 +208,7 @@
                             <CheckBox IsChecked="{Binding IsEnabled}" Content="Учитывать в расчёте" />
                           </StackPanel>
                           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+                            <Button Content="{Binding ExpandCollapseGlyph}" Command="{Binding ToggleExpandedCommand}" ToolTip.Tip="{Binding ExpandCollapseHint}" Width="34" />
                             <Button Content="↑" Command="{Binding MoveUpCommand}" Width="34" />
                             <Button Content="↓" Command="{Binding MoveDownCommand}" Width="34" />
                             <Button Content="⧉" Command="{Binding DuplicateCommand}" Width="34" />
@@ -215,50 +216,52 @@
                           </StackPanel>
                         </Grid>
 
-                        <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
-                          <StackPanel Spacing="4">
-                            <TextBlock Text="Тип элемента" FontSize="12" Foreground="#697386" />
-                            <ComboBox ItemsSource="{Binding KindDisplayOptions}" SelectedItem="{Binding KindDisplayName, Mode=TwoWay}" HorizontalAlignment="Stretch" />
-                          </StackPanel>
-                          <Border Grid.Column="1" Background="#F3F6FA" CornerRadius="10" Padding="10">
-                            <TextBlock Text="Выберите тип, затем заполните только его параметры ниже." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
-                          </Border>
-                        </Grid>
-
-                        <Border IsVisible="{Binding IsLine}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
-                          <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+                        <StackPanel IsVisible="{Binding IsExpanded}" Spacing="10">
+                          <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
                             <StackPanel Spacing="4">
-                              <TextBlock Text="Пресет линии" FontSize="12" Foreground="#697386" />
-                              <ComboBox ItemsSource="{Binding RopePresetOptions}" SelectedItem="{Binding RopePresetId}" HorizontalAlignment="Stretch" />
+                              <TextBlock Text="Тип элемента" FontSize="12" Foreground="#697386" />
+                              <ComboBox ItemsSource="{Binding KindDisplayOptions}" SelectedItem="{Binding KindDisplayName, Mode=TwoWay}" HorizontalAlignment="Stretch" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Spacing="4">
-                              <TextBlock Text="Длина, м" FontSize="12" Foreground="#697386" />
-                              <TextBox Text="{Binding LengthM}" PlaceholderText="м" />
-                            </StackPanel>
+                            <Border Grid.Column="1" Background="#F3F6FA" CornerRadius="10" Padding="10">
+                              <TextBlock Text="Выберите тип, затем заполните только его параметры ниже." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+                            </Border>
                           </Grid>
-                        </Border>
 
-                        <Border IsVisible="{Binding IsConnector}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
-                          <StackPanel Spacing="4">
-                            <TextBlock Text="Пресет соединителя" FontSize="12" Foreground="#697386" />
-                            <ComboBox ItemsSource="{Binding ConnectorPresetOptions}" SelectedItem="{Binding ConnectorPresetId}" HorizontalAlignment="Stretch" />
-                          </StackPanel>
-                        </Border>
-
-                        <Border IsVisible="{Binding IsPayload}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
-                          <StackPanel Spacing="10">
-                            <StackPanel Spacing="4">
-                              <TextBlock Text="Пресет прибора" FontSize="12" Foreground="#697386" />
-                              <ComboBox ItemsSource="{Binding PayloadPresetOptions}" SelectedItem="{Binding PayloadPresetId}" HorizontalAlignment="Stretch" />
-                            </StackPanel>
-                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
-                              <StackPanel Spacing="4"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadWeightAirKg}" IsReadOnly="True" /></StackPanel>
-                              <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadVolumeM3}" IsReadOnly="True" /></StackPanel>
-                              <StackPanel Grid.Column="2" Spacing="4"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadProjectedAreaM2}" IsReadOnly="True" /></StackPanel>
-                              <StackPanel Grid.Column="3" Spacing="4"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadDragCoefficient}" IsReadOnly="True" /></StackPanel>
+                          <Border IsVisible="{Binding IsLine}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
+                            <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+                              <StackPanel Spacing="4">
+                                <TextBlock Text="Пресет линии" FontSize="12" Foreground="#697386" />
+                                <ComboBox ItemsSource="{Binding RopePresetOptions}" SelectedItem="{Binding RopePresetId}" HorizontalAlignment="Stretch" />
+                              </StackPanel>
+                              <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="Длина, м" FontSize="12" Foreground="#697386" />
+                                <TextBox Text="{Binding LengthM}" PlaceholderText="м" />
+                              </StackPanel>
                             </Grid>
-                          </StackPanel>
-                        </Border>
+                          </Border>
+
+                          <Border IsVisible="{Binding IsConnector}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
+                            <StackPanel Spacing="4">
+                              <TextBlock Text="Пресет соединителя" FontSize="12" Foreground="#697386" />
+                              <ComboBox ItemsSource="{Binding ConnectorPresetOptions}" SelectedItem="{Binding ConnectorPresetId}" HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                          </Border>
+
+                          <Border IsVisible="{Binding IsPayload}" Background="White" BorderBrush="#E1E7F0" BorderThickness="1" CornerRadius="10" Padding="10">
+                            <StackPanel Spacing="10">
+                              <StackPanel Spacing="4">
+                                <TextBlock Text="Пресет прибора" FontSize="12" Foreground="#697386" />
+                                <ComboBox ItemsSource="{Binding PayloadPresetOptions}" SelectedItem="{Binding PayloadPresetId}" HorizontalAlignment="Stretch" />
+                              </StackPanel>
+                              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                                <StackPanel Spacing="4"><TextBlock Text="Масса на воздухе, кг" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadWeightAirKg}" IsReadOnly="True" /></StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Вытесняемый объём, м³" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadVolumeM3}" IsReadOnly="True" /></StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="4"><TextBlock Text="Площадь, м²" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadProjectedAreaM2}" IsReadOnly="True" /></StackPanel>
+                                <StackPanel Grid.Column="3" Spacing="4"><TextBlock Text="Cd" FontSize="12" Foreground="#697386" /><TextBox Text="{Binding PayloadDragCoefficient}" IsReadOnly="True" /></StackPanel>
+                              </Grid>
+                            </StackPanel>
+                          </Border>
+                        </StackPanel>
                       </StackPanel>
                     </Grid>
                   </Border>
