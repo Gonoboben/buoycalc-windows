@@ -14,12 +14,22 @@ function Require-NotContains([string]$Path, [string]$Needle) {
     }
 }
 
+function Require-Count([string]$Path, [string]$Needle, [int]$Expected) {
+    $text = Get-Content -LiteralPath $Path -Raw
+    $actual = ([regex]::Matches($text, [regex]::Escape($Needle))).Count
+    if ($actual -ne $Expected) {
+        throw "Unexpected contract count in ${Path}: ${Needle}; expected=${Expected}; actual=${actual}"
+    }
+}
+
 $shared = "Services/Mooring2DDiagramReadModel.cs"
 $projector = "Services/Mooring2DElementBoundaryProjector.cs"
 $canvas = "Views/Mooring2DCanvas.cs"
 $pdf = "Services/PdfReportBuilder.cs"
 $itemVm = "ViewModels/AssemblyItemViewModel.cs"
 $main = "Views/MainWindow.axaml"
+$reportWindow = "Views/ReportTextWindow.axaml"
+$reportCode = "Views/ReportTextWindow.axaml.cs"
 $library = "Views/ElementLibraryWindow.axaml"
 $libraryCode = "Views/ElementLibraryWindow.axaml.cs"
 $bundle = "Services/ElementLibraryBundleStorage.cs"
@@ -50,6 +60,19 @@ Require-NotContains $pdf "ResolveLabelPoint"
 Require-NotContains $pdf "diagram.BuoyTitle"
 Require-NotContains $pdf "diagram.AnchorTitle"
 
+# RC round 4: marker geometry is presentation-only and intentionally lighter.
+Require-Contains $canvas "LinePen = new Pen(LineBrush, 2.2)"
+Require-Contains $canvas "NodePen = new Pen(LineBrush, 1.0)"
+Require-Contains $canvas "point, 3.8, 3.8"
+Require-Contains $canvas "new Rect(point.X - 3.2, point.Y - 3.2, 6.4, 6.4)"
+Require-Contains $canvas "point, 11, 11"
+Require-Contains $canvas "new Rect(point.X - 14, point.Y - 7, 28, 14)"
+Require-Contains $pdf 'linePaint = Stroke("#315B9A", 2.0f)'
+Require-Contains $pdf 'markerStroke = Stroke("#315B9A", 0.9f)'
+Require-Contains $pdf "DrawCircle(buoyPoint, 9"
+Require-Contains $pdf "point, 3.4f, payloadFill"
+Require-Contains $pdf "point.X - 3.0f"
+
 Require-Contains $itemVm "UI-only card state"
 Require-Contains $itemVm "ToggleExpandedCommand"
 Require-Contains $itemVm "ExpandCollapseGlyph"
@@ -57,6 +80,23 @@ Require-Contains $main 'IsVisible="{Binding IsExpanded}"'
 Require-Contains $main 'Command="{Binding ToggleExpandedCommand}"'
 Require-Contains $main 'TextBlock IsVisible="{Binding IsExpanded}" Text="{Binding Summary}"'
 Require-Contains $main 'IsChecked="{Binding IsEnabled}" Content="В расчёте"'
+
+# RC round 4: only the three requested left-column setup cards are collapsible.
+Require-Count $main '<Expander IsExpanded="True">' 3
+Require-Contains $main 'Text="Условия постановки" FontSize="18" FontWeight="Bold"'
+Require-Contains $main 'Text="Буй" FontSize="18" FontWeight="Bold"'
+Require-Contains $main 'Text="Якорь и запас" FontSize="18" FontWeight="Bold"'
+Require-Contains $main 'Text="Проект" FontSize="18" FontWeight="Bold"'
+
+# RC round 4: full-report export writes the exact retained ReportText to UTF-8 text.
+Require-Contains $reportWindow 'Click="ExportReportButton_Click"'
+Require-Contains $reportWindow 'Text="Экспорт .txt"'
+Require-Contains $reportWindow 'x:Name="ExportStatusText"'
+Require-Contains $reportCode "StorageProvider.SaveFilePickerAsync"
+Require-Contains $reportCode 'viewModel.ReportText, new UTF8Encoding(false)'
+Require-Contains $reportCode '"_full_report.txt"'
+Require-Contains $reportCode 'Patterns = new[] { "*.txt" }'
+Require-NotContains $reportCode "PdfReportStructureGuide"
 
 Require-Contains $library "Cd = 2F/(ρ·U²·A)"
 Require-Contains $library "V=π·D²·L/4"
@@ -93,4 +133,4 @@ Require-NotContains $bundle "DeleteUserConnector"
 Require-NotContains $bundle "DeleteUserPayload"
 Require-NotContains $bundle "DeleteUserAnchor"
 
-Write-Host "RC smoke round-2/3 UI/PDF/library guard passed."
+Write-Host "RC smoke round-2/3/4 UI/PDF/library guard passed."

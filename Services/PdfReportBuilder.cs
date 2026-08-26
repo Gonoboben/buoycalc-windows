@@ -213,12 +213,12 @@ public static class PdfReportBuilder
             using var waterPaint = Fill("#DCEBFF");
             using var bottomPaint = Fill("#E7DED3");
             using var borderPaint = Stroke("#D7DEE9", 1);
-            using var linePaint = Stroke("#315B9A", 2.7f);
+            using var linePaint = Stroke("#315B9A", 2.0f);
             using var thinPaint = Stroke("#A7C7EE", 1);
             using var buoyPaint = Fill("#F2A33A");
             using var anchorPaint = Fill("#5C4634");
-            using var nodeBorderPaint = Stroke("#315B9A", 1.2f);
-            using var warningPaint = Stroke("#D46B08", 1.3f);
+            using var nodeBorderPaint = Stroke("#315B9A", 0.9f);
+            using var warningPaint = Stroke("#D46B08", 1.0f);
 
             _canvas!.DrawRect(plotRect, plotPaint);
             _canvas.DrawRect(plotRect, borderPaint);
@@ -243,9 +243,9 @@ public static class PdfReportBuilder
             var buoyPoint = points[0];
             var anchorPoint = points[^1];
             var userShapeStatus = shape.Converged ? "форма: ОК" : "форма: требует проверки";
-            _canvas.DrawCircle(buoyPoint, 12, buoyPaint);
-            _canvas.DrawCircle(buoyPoint, 12, shape.Converged ? nodeBorderPaint : warningPaint);
-            _canvas.DrawRect(new SKRect(anchorPoint.X - 15, anchorPoint.Y - 8, anchorPoint.X + 15, anchorPoint.Y + 8), anchorPaint);
+            _canvas.DrawCircle(buoyPoint, 9, buoyPaint);
+            _canvas.DrawCircle(buoyPoint, 9, shape.Converged ? nodeBorderPaint : warningPaint);
+            _canvas.DrawRect(new SKRect(anchorPoint.X - 12, anchorPoint.Y - 6, anchorPoint.X + 12, anchorPoint.Y + 6), anchorPaint);
 
             DrawTextAt("поверхность воды", x + 14, surfaceY - 24, 10, true, SKColors.Black);
             DrawTextAt($"глубина {drawingDepth:0.##} м", x + 14, surfaceY + 18, 9, false, new SKColor(80, 92, 112));
@@ -263,27 +263,27 @@ public static class PdfReportBuilder
         {
             using var connectorFill = Fill("#FFFFFF");
             using var payloadFill = Fill("#F2A33A");
-            using var markerStroke = Stroke("#315B9A", 1.2f);
+            using var markerStroke = Stroke("#315B9A", 0.9f);
 
             switch (marker.MarkerKind)
             {
                 case Mooring2DElementMarkerKind.LineBoundary:
-                    _canvas!.DrawLine(new SKPoint(point.X - 5, point.Y), new SKPoint(point.X + 5, point.Y), markerStroke);
+                    _canvas!.DrawLine(new SKPoint(point.X - 4, point.Y), new SKPoint(point.X + 4, point.Y), markerStroke);
                     break;
 
                 case Mooring2DElementMarkerKind.Payload:
-                    _canvas!.DrawCircle(point, 4.2f, payloadFill);
-                    _canvas.DrawCircle(point, 4.2f, markerStroke);
+                    _canvas!.DrawCircle(point, 3.4f, payloadFill);
+                    _canvas.DrawCircle(point, 3.4f, markerStroke);
                     break;
 
                 case Mooring2DElementMarkerKind.Connector:
-                    _canvas!.DrawRect(new SKRect(point.X - 3.8f, point.Y - 3.8f, point.X + 3.8f, point.Y + 3.8f), connectorFill);
-                    _canvas.DrawRect(new SKRect(point.X - 3.8f, point.Y - 3.8f, point.X + 3.8f, point.Y + 3.8f), markerStroke);
+                    _canvas!.DrawRect(new SKRect(point.X - 3.0f, point.Y - 3.0f, point.X + 3.0f, point.Y + 3.0f), connectorFill);
+                    _canvas.DrawRect(new SKRect(point.X - 3.0f, point.Y - 3.0f, point.X + 3.0f, point.Y + 3.0f), markerStroke);
                     break;
 
                 default:
-                    _canvas!.DrawCircle(point, 3.8f, connectorFill);
-                    _canvas.DrawCircle(point, 3.8f, markerStroke);
+                    _canvas!.DrawCircle(point, 3.0f, connectorFill);
+                    _canvas.DrawCircle(point, 3.0f, markerStroke);
                     break;
             }
         }

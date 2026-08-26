@@ -23,10 +23,10 @@ public sealed class Mooring2DCanvas : Control
     private static readonly IBrush TextBrush = new SolidColorBrush(Color.Parse("#172033"));
     private static readonly IBrush MutedTextBrush = new SolidColorBrush(Color.Parse("#697386"));
     private static readonly IPen BorderPen = new Pen(new SolidColorBrush(Color.Parse("#D7DEE9")), 1);
-    private static readonly IPen LinePen = new Pen(LineBrush, 3);
+    private static readonly IPen LinePen = new Pen(LineBrush, 2.2);
     private static readonly IPen ThinLinePen = new Pen(new SolidColorBrush(Color.Parse("#A7C7EE")), 1);
-    private static readonly IPen NodePen = new Pen(LineBrush, 1.4);
-    private static readonly IPen AnchorPen = new Pen(AnchorBrush, 1.4);
+    private static readonly IPen NodePen = new Pen(LineBrush, 1.0);
+    private static readonly IPen AnchorPen = new Pen(AnchorBrush, 1.0);
 
     public override void Render(DrawingContext context)
     {
@@ -141,19 +141,19 @@ public sealed class Mooring2DCanvas : Control
         switch (marker.MarkerKind)
         {
             case Mooring2DElementMarkerKind.LineBoundary:
-                context.DrawLine(NodePen, new Point(point.X - 6, point.Y), new Point(point.X + 6, point.Y));
+                context.DrawLine(NodePen, new Point(point.X - 4, point.Y), new Point(point.X + 4, point.Y));
                 break;
 
             case Mooring2DElementMarkerKind.Payload:
-                context.DrawEllipse(BuoyBrush, NodePen, point, 5.2, 5.2);
+                context.DrawEllipse(BuoyBrush, NodePen, point, 3.8, 3.8);
                 break;
 
             case Mooring2DElementMarkerKind.Connector:
-                context.DrawRectangle(NodeBrush, NodePen, new Rect(point.X - 4.5, point.Y - 4.5, 9, 9), 2, 2);
+                context.DrawRectangle(NodeBrush, NodePen, new Rect(point.X - 3.2, point.Y - 3.2, 6.4, 6.4), 1.5, 1.5);
                 break;
 
             default:
-                context.DrawEllipse(NodeBrush, NodePen, point, 4.5, 4.5);
+                context.DrawEllipse(NodeBrush, NodePen, point, 3.2, 3.2);
                 break;
         }
     }
@@ -173,13 +173,13 @@ public sealed class Mooring2DCanvas : Control
 
     private static void DrawBuoy(DrawingContext context, Point point)
     {
-        context.DrawEllipse(BuoyBrush, NodePen, point, 14, 14);
+        context.DrawEllipse(BuoyBrush, NodePen, point, 11, 11);
     }
 
     private static void DrawAnchor(DrawingContext context, Point point)
     {
-        var rect = new Rect(point.X - 18, point.Y - 10, 36, 20);
-        context.DrawRectangle(AnchorBrush, AnchorPen, rect, 4, 4);
+        var rect = new Rect(point.X - 14, point.Y - 7, 28, 14);
+        context.DrawRectangle(AnchorBrush, AnchorPen, rect, 3, 3);
     }
 
     private static void DrawLabel(DrawingContext context, string text, Point origin, double size, bool bold, IBrush brush)

@@ -15,9 +15,19 @@
           <TextBlock Text="Полный отчёт" FontSize="22" FontWeight="Bold" />
           <TextBlock Text="Технический Markdown-отчёт без обрезки. Здесь остаются диагностические таблицы solver, автопроверки и внутренние ограничения модели." FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
         </StackPanel>
-        <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Top">
-          <TextBlock Text="технический отчёт" FontSize="12" Foreground="#263653" FontWeight="Bold" />
-        </Border>
+        <StackPanel Grid.Column="1" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Top">
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Click="ExportReportButton_Click" Padding="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
+              <Border Background="#263653" BorderBrush="#3A4C6A" BorderThickness="1" CornerRadius="12" Padding="12,8">
+                <TextBlock Text="Экспорт .txt" Foreground="White" FontSize="12" FontWeight="SemiBold" />
+              </Border>
+            </Button>
+            <Border Background="#E9EFFA" CornerRadius="12" Padding="12,8">
+              <TextBlock Text="технический отчёт" FontSize="12" Foreground="#263653" FontWeight="Bold" />
+            </Border>
+          </StackPanel>
+          <TextBlock x:Name="ExportStatusText" FontSize="11" Foreground="#697386" TextWrapping="Wrap" MaxWidth="330" HorizontalAlignment="Right" />
+        </StackPanel>
       </Grid>
 
       <ScrollViewer Grid.Row="1"
