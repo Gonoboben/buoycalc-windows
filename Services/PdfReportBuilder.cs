@@ -37,8 +37,12 @@ public static class PdfReportBuilder
 
         var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
         var sequence = sequenceLines.ToList();
+        var elementTable = elementRows.ToList();
         var diagramSource = PdfDiagramSourceSelector.Select(selectedShape);
         var clarifiedResultText = NormalizeResultText(resultText, diagramSource.ShapeOffsetM);
+        var diagram = diagramSource.HasSelectedShape
+            ? Mooring2DDiagramReadModelBuilder.Build(diagramSource.SelectedShape!, elementTable)
+            : null;
 
         writer.BeginPage();
         writer.Title("BuoyCalc Windows - пользовательский отчёт");
@@ -54,11 +58,11 @@ public static class PdfReportBuilder
 
         writer.BeginPage();
         writer.Title("Схема постановки");
-        if (diagramSource.HasSelectedShape)
+        if (diagram is not null)
         {
             writer.Text("Расчётная 2D-схема PDF построена только по выбранной инженерной форме X/Z. PDF не выбирает между кандидатами, не восстанавливает координаты из текста отчёта и не строит приблизительную fallback-геометрию.", 10);
             writer.Space(10);
-            writer.SelectedShapeDiagram(diagramSource.SelectedShape!);
+            writer.SelectedShapeDiagram(diagram);
         }
         else
         {
@@ -76,7 +80,7 @@ public static class PdfReportBuilder
 
         writer.BeginPage();
         writer.Title("Таблица элементов");
-        writer.ElementTable(elementRows.ToList());
+        writer.ElementTable(elementTable);
         writer.Space(10);
         writer.Section("Примечание");
         writer.Text("Подробные solver-таблицы, промежуточные формы, диагностические ведомости и служебные проверки не включены в пользовательский PDF. Они остаются в полном техническом отчёте приложения.", 10);
@@ -169,15 +173,16 @@ public static class PdfReportBuilder
             }
         }
 
-        public void SelectedShapeDiagram(SelectedShapeReadModel selectedShape)
+        public void SelectedShapeDiagram(Mooring2DDiagramReadModel diagram)
         {
             const float diagramHeight = 430;
             EnsureSpace(diagramHeight + 20);
 
+            var selectedShape = diagram.SelectedShape;
             var shape = selectedShape.Shape;
             var nodes = shape.Nodes
                 .OrderBy(v => v.Number)
-                .Select(v => new PlotNode(v.XOffsetM, v.ZDepthM, v.Label))
+                .Select(v => new PlotNode(v.XOffsetM, v.ZDepthM))
                 .ToList();
 
             if (nodes.Count < 2)
@@ -212,7 +217,6 @@ public static class PdfReportBuilder
             using var thinPaint = Stroke("#A7C7EE", 1);
             using var buoyPaint = Fill("#F2A33A");
             using var anchorPaint = Fill("#5C4634");
-            using var nodePaint = Fill("#FFFFFF");
             using var nodeBorderPaint = Stroke("#315B9A", 1.2f);
             using var warningPaint = Stroke("#D46B08", 1.3f);
 
@@ -231,11 +235,9 @@ public static class PdfReportBuilder
             _canvas.DrawLine(new SKPoint(x + 8, bottomLineY), new SKPoint(x + width - 8, bottomLineY), thinPaint);
             DrawPolyline(_canvas, points, linePaint);
 
-            var step = Math.Max(1, points.Count / 22);
-            for (var i = 1; i < points.Count - 1; i += step)
+            foreach (var marker in diagram.ElementMarkers)
             {
-                _canvas.DrawCircle(points[i], 3.8f, nodePaint);
-                _canvas.DrawCircle(points[i], 3.8f, nodeBorderPaint);
+                DrawElementMarker(Map(marker.XOffsetM, marker.ZDepthM), marker, x, x + width);
             }
 
             var buoyPoint = points[0];
@@ -248,8 +250,8 @@ public static class PdfReportBuilder
             DrawTextAt("поверхность воды", x + 14, surfaceY - 24, 10, true, SKColors.Black);
             DrawTextAt($"глубина {drawingDepth:0.##} м", x + 14, surfaceY + 18, 9, false, new SKColor(80, 92, 112));
             DrawTextAt("дно / грунт", x + 14, bottomLineY + 18, 10, true, new SKColor(92, 70, 52));
-            DrawTextAt(Shorten(CleanLabel(nodes[0].Label, "Буй"), 28), buoyPoint.X + 16, buoyPoint.Y + 4, 9.2f, true, SKColors.Black);
-            DrawTextAt(Shorten(CleanLabel(nodes[^1].Label, "Якорь"), 28), anchorPoint.X + 20, anchorPoint.Y + 4, 9.2f, true, SKColors.Black);
+            DrawTextAt(Shorten(diagram.BuoyTitle, 30), ClampLabelX(buoyPoint.X + 16, x, x + width), buoyPoint.Y - 16, 9.2f, true, SKColors.Black);
+            DrawTextAt(Shorten(diagram.AnchorTitle, 30), ClampLabelX(anchorPoint.X + 20, x, x + width), anchorPoint.Y + 18, 9.2f, true, SKColors.Black);
             DrawLegendLine(x + 14, y + 18, linePaint, "выбранная расчётная форма X/Z", new SKColor(49, 91, 154));
             DrawTextAt(userShapeStatus, x + 250, y + 23, 9.2f, false, shape.Converged ? new SKColor(80, 92, 112) : new SKColor(212, 107, 8));
             DrawTextAt($"снос X/Z {shape.HorizontalOffsetM:0.##} м", x + 390, y + 23, 9.2f, false, new SKColor(80, 92, 112));
@@ -258,6 +260,70 @@ public static class PdfReportBuilder
 
             _y += diagramHeight + 10;
         }
+
+        private void DrawElementMarker(
+            SKPoint point,
+            Mooring2DElementMarker marker,
+            float plotLeft,
+            float plotRight)
+        {
+            using var connectorFill = Fill("#FFFFFF");
+            using var payloadFill = Fill("#F2A33A");
+            using var markerStroke = Stroke("#315B9A", 1.2f);
+            using var leaderStroke = Stroke("#A7C7EE", 0.8f);
+
+            var label = ResolveLabelPoint(point, marker.LabelZone, marker.LabelLane, plotLeft, plotRight);
+            _canvas!.DrawLine(point, new SKPoint(label.X - 3, label.Y - 3), leaderStroke);
+
+            switch (marker.MarkerKind)
+            {
+                case Mooring2DElementMarkerKind.LineBoundary:
+                    _canvas.DrawLine(new SKPoint(point.X - 5, point.Y), new SKPoint(point.X + 5, point.Y), markerStroke);
+                    DrawTextAt($"конец линии: {Shorten(marker.Title, 22)}", label.X, label.Y, 7.8f, false, new SKColor(80, 92, 112));
+                    break;
+
+                case Mooring2DElementMarkerKind.Payload:
+                    _canvas.DrawCircle(point, 4.2f, payloadFill);
+                    _canvas.DrawCircle(point, 4.2f, markerStroke);
+                    DrawTextAt($"прибор: {Shorten(marker.Title, 22)}", label.X, label.Y, 7.8f, true, SKColors.Black);
+                    break;
+
+                case Mooring2DElementMarkerKind.Connector:
+                    _canvas.DrawRect(new SKRect(point.X - 3.8f, point.Y - 3.8f, point.X + 3.8f, point.Y + 3.8f), connectorFill);
+                    _canvas.DrawRect(new SKRect(point.X - 3.8f, point.Y - 3.8f, point.X + 3.8f, point.Y + 3.8f), markerStroke);
+                    DrawTextAt($"соединитель: {Shorten(marker.Title, 20)}", label.X, label.Y, 7.8f, true, SKColors.Black);
+                    break;
+
+                default:
+                    _canvas.DrawCircle(point, 3.8f, connectorFill);
+                    _canvas.DrawCircle(point, 3.8f, markerStroke);
+                    DrawTextAt(Shorten(marker.Title, 22), label.X, label.Y, 7.8f, false, SKColors.Black);
+                    break;
+            }
+        }
+
+        private static SKPoint ResolveLabelPoint(
+            SKPoint point,
+            Mooring2DLabelZone zone,
+            int lane,
+            float plotLeft,
+            float plotRight)
+        {
+            var rawX = point.X + 10;
+            var x = ClampLabelX(rawX, plotLeft, plotRight);
+            var y = zone switch
+            {
+                Mooring2DLabelZone.NearSurface => point.Y + 18 + lane * 15,
+                Mooring2DLabelZone.NearBottom => point.Y - 20 - lane * 15,
+                Mooring2DLabelZone.InteriorAbove => point.Y - 14 - lane * 3,
+                Mooring2DLabelZone.InteriorBelow => point.Y + 12 + lane * 3,
+                _ => point.Y - 10
+            };
+            return new SKPoint(x, y);
+        }
+
+        private static float ClampLabelX(float x, float plotLeft, float plotRight) =>
+            Math.Clamp(x, plotLeft + 8, plotRight - 150);
 
         public void ElementTable(IReadOnlyList<ElementCalculationDisplayRow> rows)
         {
@@ -423,22 +489,12 @@ public static class PdfReportBuilder
             return (text ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         }
 
-        private static string CleanLabel(string? value, string fallback)
-        {
-            value ??= fallback;
-            value = value.Replace("● Буй:", string.Empty)
-                .Replace("■ Якорь:", string.Empty)
-                .Replace("○", string.Empty)
-                .Trim();
-            return string.IsNullOrWhiteSpace(value) ? fallback : value;
-        }
-
         private static string Shorten(string value, int maxLength)
         {
             value ??= string.Empty;
             return value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 1)] + "…";
         }
 
-        private sealed record PlotNode(double X, double Z, string Label);
+        private sealed record PlotNode(double X, double Z);
     }
 }
