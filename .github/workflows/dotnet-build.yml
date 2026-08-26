@@ -105,6 +105,11 @@ jobs:
               throw "RC smoke UI polish guard failed with exit code $LASTEXITCODE"
             }
 
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-rc-smoke-round2.ps1
+            if ($LASTEXITCODE -ne 0) {
+              throw "RC smoke round-2 UI/PDF/library guard failed with exit code $LASTEXITCODE"
+            }
+
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-repository-governance.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Repository governance smoke check failed with exit code $LASTEXITCODE"
