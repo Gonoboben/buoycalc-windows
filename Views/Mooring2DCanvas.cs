@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using BuoyCalc.Windows.Models;
 using BuoyCalc.Windows.Services;
 using BuoyCalc.Windows.ViewModels;
 
@@ -66,19 +68,21 @@ public sealed class Mooring2DCanvas : Control
             return;
         }
 
-        DrawSelectedShape(context, selectedShape, vm, width, surfaceY, bottomY, usableHeight, padding);
+        var elementRows = vm?.ElementRows.ToList() ?? new List<ElementCalculationDisplayRow>();
+        var diagram = Mooring2DDiagramReadModelBuilder.Build(selectedShape, elementRows);
+        DrawSelectedShape(context, diagram, width, surfaceY, bottomY, usableHeight, padding);
     }
 
     private static void DrawSelectedShape(
         DrawingContext context,
-        SelectedShapeReadModel selectedShape,
-        MainWindowViewModel? vm,
+        Mooring2DDiagramReadModel diagram,
         double width,
         double surfaceY,
         double bottomY,
         double usableHeight,
         double padding)
     {
+        var selectedShape = diagram.SelectedShape;
         var shape = selectedShape.Shape;
         var nodes = shape.Nodes.OrderBy(x => x.Number).ToList();
         var minNodeX = nodes.Min(x => x.XOffsetM);
@@ -105,18 +109,13 @@ public sealed class Mooring2DCanvas : Control
         var anchorPoint = points[^1];
         context.DrawLine(ThinLinePen, anchorPoint, new Point(anchorPoint.X, bottomY));
 
-        if (vm is not null && vm.ElementRows.Count > 0)
+        foreach (var marker in diagram.ElementMarkers)
         {
-            var markers = Mooring2DElementBoundaryProjector.Project(selectedShape, vm.ElementRows.ToList());
-            var markerIndex = 0;
-            foreach (var marker in markers)
-            {
-                DrawElementMarker(context, Map(marker.XOffsetM, marker.ZDepthM), marker, markerIndex++);
-            }
+            DrawElementMarker(context, Map(marker.XOffsetM, marker.ZDepthM), marker);
         }
 
-        DrawBuoy(context, buoyPoint, vm?.BuoyName ?? "Буй");
-        DrawAnchor(context, anchorPoint, vm?.AnchorName ?? "Якорь");
+        DrawBuoy(context, buoyPoint, diagram.BuoyTitle);
+        DrawAnchor(context, anchorPoint, diagram.AnchorTitle);
 
         DrawLabel(context, "выбранная расчётная форма X/Z", new Point(padding + 12, surfaceY + 32), 11, true, TextBrush);
         DrawLabel(
@@ -137,35 +136,45 @@ public sealed class Mooring2DCanvas : Control
     private static void DrawElementMarker(
         DrawingContext context,
         Point point,
-        Mooring2DElementMarker marker,
-        int markerIndex)
+        Mooring2DElementMarker marker)
     {
-        var labelOrigin = markerIndex % 2 == 0
-            ? new Point(point.X + 9, point.Y - 16)
-            : new Point(point.X + 9, point.Y + 5);
+        var labelOrigin = ResolveLabelOrigin(point, marker.LabelZone, marker.LabelLane);
+        context.DrawLine(ThinLinePen, new Point(point.X + 5, point.Y), new Point(labelOrigin.X - 3, labelOrigin.Y + 5));
 
         switch (marker.MarkerKind)
         {
             case Mooring2DElementMarkerKind.LineBoundary:
                 context.DrawLine(NodePen, new Point(point.X - 6, point.Y), new Point(point.X + 6, point.Y));
-                DrawLabel(context, $"граница: {Shorten(marker.Title, 20)}", labelOrigin, 9.5, false, MutedTextBrush);
+                DrawLabel(context, $"конец линии: {Shorten(marker.Title, 22)}", labelOrigin, 9.5, false, MutedTextBrush);
                 break;
 
             case Mooring2DElementMarkerKind.Payload:
                 context.DrawEllipse(BuoyBrush, NodePen, point, 5.2, 5.2);
-                DrawLabel(context, $"прибор: {Shorten(marker.Title, 20)}", labelOrigin, 9.5, true, TextBrush);
+                DrawLabel(context, $"прибор: {Shorten(marker.Title, 22)}", labelOrigin, 9.5, true, TextBrush);
                 break;
 
             case Mooring2DElementMarkerKind.Connector:
                 context.DrawRectangle(NodeBrush, NodePen, new Rect(point.X - 4.5, point.Y - 4.5, 9, 9), 2, 2);
-                DrawLabel(context, $"соединитель: {Shorten(marker.Title, 18)}", labelOrigin, 9.5, true, TextBrush);
+                DrawLabel(context, $"соединитель: {Shorten(marker.Title, 20)}", labelOrigin, 9.5, true, TextBrush);
                 break;
 
             default:
                 context.DrawEllipse(NodeBrush, NodePen, point, 4.5, 4.5);
-                DrawLabel(context, Shorten(marker.Title, 20), labelOrigin, 9.5, false, TextBrush);
+                DrawLabel(context, Shorten(marker.Title, 22), labelOrigin, 9.5, false, TextBrush);
                 break;
         }
+    }
+
+    private static Point ResolveLabelOrigin(Point point, Mooring2DLabelZone zone, int lane)
+    {
+        return zone switch
+        {
+            Mooring2DLabelZone.NearSurface => new Point(point.X + 14, point.Y + 20 + lane * 18),
+            Mooring2DLabelZone.NearBottom => new Point(point.X + 14, point.Y - 26 - lane * 18),
+            Mooring2DLabelZone.InteriorAbove => new Point(point.X + 12, point.Y - 18 - lane * 4),
+            Mooring2DLabelZone.InteriorBelow => new Point(point.X + 12, point.Y + 8 + lane * 4),
+            _ => new Point(point.X + 12, point.Y - 12)
+        };
     }
 
     private static void DrawUnavailableState(DrawingContext context, double width, double surfaceY, double padding)
@@ -184,14 +193,14 @@ public sealed class Mooring2DCanvas : Control
     private static void DrawBuoy(DrawingContext context, Point point, string title)
     {
         context.DrawEllipse(BuoyBrush, NodePen, point, 14, 14);
-        DrawLabel(context, Shorten(title, 22), new Point(point.X + 18, point.Y - 9), 11, true, TextBrush);
+        DrawLabel(context, Shorten(title, 24), new Point(point.X + 19, point.Y - 22), 11, true, TextBrush);
     }
 
     private static void DrawAnchor(DrawingContext context, Point point, string title)
     {
         var rect = new Rect(point.X - 18, point.Y - 10, 36, 20);
         context.DrawRectangle(AnchorBrush, AnchorPen, rect, 4, 4);
-        DrawLabel(context, Shorten(title, 24), new Point(point.X + 22, point.Y - 8), 11, true, TextBrush);
+        DrawLabel(context, Shorten(title, 26), new Point(point.X + 22, point.Y + 13), 11, true, TextBrush);
     }
 
     private static void DrawLabel(DrawingContext context, string text, Point origin, double size, bool bold, IBrush brush)

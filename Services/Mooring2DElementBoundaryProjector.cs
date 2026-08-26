@@ -13,17 +13,28 @@ public enum Mooring2DElementMarkerKind
     OtherDiscrete
 }
 
+public enum Mooring2DLabelZone
+{
+    NearSurface,
+    InteriorAbove,
+    InteriorBelow,
+    NearBottom
+}
+
 public sealed record Mooring2DElementMarker(
     int ElementNumber,
     Mooring2DElementMarkerKind MarkerKind,
     string Title,
     double AlongLineM,
     double XOffsetM,
-    double ZDepthM);
+    double ZDepthM,
+    Mooring2DLabelZone LabelZone,
+    int LabelLane);
 
 /// <summary>
 /// Presentation-only projection of retained element s-positions onto the retained selected X/Z shape.
 /// No force, tension, line geometry or engineering acceptance state is calculated here.
+/// Label zones/lanes are also presentation-only and are shared by the window and PDF renderers.
 /// </summary>
 public static class Mooring2DElementBoundaryProjector
 {
@@ -40,7 +51,7 @@ public static class Mooring2DElementBoundaryProjector
 
         var positions = MooringSequencePositioner.BuildDisplayPositions(elementRows);
         var lineLengthM = Math.Max(0.0, selectedShape.Shape.LineLengthM);
-        var markers = new List<Mooring2DElementMarker>();
+        var raw = new List<(int Number, Mooring2DElementMarkerKind Kind, string Title, double S, double X, double Z)>();
 
         foreach (var row in positions.Rows.OrderBy(x => x.Number))
         {
@@ -49,7 +60,7 @@ public static class Mooring2DElementBoundaryProjector
                 if (row.EndAlongLineM > 0.0 && row.EndAlongLineM < lineLengthM)
                 {
                     var point = ProjectAtS(nodes, row.EndAlongLineM);
-                    markers.Add(new Mooring2DElementMarker(
+                    raw.Add((
                         row.Number,
                         Mooring2DElementMarkerKind.LineBoundary,
                         row.Title,
@@ -73,13 +84,54 @@ public static class Mooring2DElementBoundaryProjector
                 _ => Mooring2DElementMarkerKind.OtherDiscrete
             };
             var projected = ProjectAtS(nodes, row.PositionAlongLineM);
-            markers.Add(new Mooring2DElementMarker(
+            raw.Add((
                 row.Number,
                 markerKind,
                 row.Title,
                 row.PositionAlongLineM,
                 projected.XOffsetM,
                 projected.ZDepthM));
+        }
+
+        var surfaceLane = 0;
+        var bottomLane = 0;
+        var interiorIndex = 0;
+        var markers = new List<Mooring2DElementMarker>(raw.Count);
+
+        foreach (var marker in raw.OrderBy(x => x.S).ThenBy(x => x.Number))
+        {
+            var ratio = lineLengthM > 0.0 ? marker.S / lineLengthM : 0.0;
+            Mooring2DLabelZone zone;
+            int lane;
+
+            if (ratio <= 0.08)
+            {
+                zone = Mooring2DLabelZone.NearSurface;
+                lane = surfaceLane++;
+            }
+            else if (ratio >= 0.90)
+            {
+                zone = Mooring2DLabelZone.NearBottom;
+                lane = bottomLane++;
+            }
+            else
+            {
+                zone = interiorIndex % 2 == 0
+                    ? Mooring2DLabelZone.InteriorAbove
+                    : Mooring2DLabelZone.InteriorBelow;
+                lane = interiorIndex / 2;
+                interiorIndex++;
+            }
+
+            markers.Add(new Mooring2DElementMarker(
+                marker.Number,
+                marker.Kind,
+                marker.Title,
+                marker.S,
+                marker.X,
+                marker.Z,
+                zone,
+                lane));
         }
 
         return markers;
