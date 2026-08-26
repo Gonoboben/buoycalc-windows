@@ -90,7 +90,7 @@ public static class ElementLibraryBundleStorage
             BuoyLibraryStorage.BuiltInBuoys,
             x => x.Id,
             x => x.Name,
-            x => { x.Source = "User"; x.Id = x.Id.Trim(); x.Name = x.Name.Trim(); },
+            x => { x.Source = "User"; x.Id = (x.Id ?? string.Empty).Trim(); x.Name = (x.Name ?? string.Empty).Trim(); },
             BuoyLibraryStorage.SaveUserBuoys,
             ref skipped);
 
@@ -100,7 +100,7 @@ public static class ElementLibraryBundleStorage
             RopeLibraryStorage.BuiltInRopes,
             x => x.Id,
             x => x.Name,
-            x => { x.Source = "User"; x.Id = x.Id.Trim(); x.Name = x.Name.Trim(); },
+            x => { x.Source = "User"; x.Id = (x.Id ?? string.Empty).Trim(); x.Name = (x.Name ?? string.Empty).Trim(); },
             RopeLibraryStorage.SaveUserRopes,
             ref skipped);
 
@@ -110,7 +110,7 @@ public static class ElementLibraryBundleStorage
             ConnectorLibraryStorage.BuiltInConnectors,
             x => x.Id,
             x => x.Name,
-            x => { x.Source = "User"; x.Id = x.Id.Trim(); x.Name = x.Name.Trim(); },
+            x => { x.Source = "User"; x.Id = (x.Id ?? string.Empty).Trim(); x.Name = (x.Name ?? string.Empty).Trim(); },
             ConnectorLibraryStorage.SaveUserConnectors,
             ref skipped);
 
@@ -120,7 +120,7 @@ public static class ElementLibraryBundleStorage
             PayloadLibraryStorage.BuiltInPayloads,
             x => x.Id,
             x => x.Name,
-            x => { x.Source = "User"; x.Id = x.Id.Trim(); x.Name = x.Name.Trim(); },
+            x => { x.Source = "User"; x.Id = (x.Id ?? string.Empty).Trim(); x.Name = (x.Name ?? string.Empty).Trim(); },
             PayloadLibraryStorage.SaveUserPayloads,
             ref skipped);
 
@@ -130,7 +130,7 @@ public static class ElementLibraryBundleStorage
             AnchorLibraryStorage.BuiltInAnchors,
             x => x.Id,
             x => x.Name,
-            x => { x.Source = "User"; x.Id = x.Id.Trim(); x.Name = x.Name.Trim(); },
+            x => { x.Source = "User"; x.Id = (x.Id ?? string.Empty).Trim(); x.Name = (x.Name ?? string.Empty).Trim(); },
             AnchorLibraryStorage.SaveUserAnchors,
             ref skipped);
 
