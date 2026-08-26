@@ -10,6 +10,7 @@ namespace BuoyCalc.Windows.ViewModels;
 public sealed class AssemblyItemViewModel : ViewModelBase
 {
     private bool _isEnabled = true;
+    private bool _isExpanded = true;
     private string _kind = "Line";
     private string _title = "Участок линии";
     private string _ropePresetStorageId = "built-in:polyester_20";
@@ -28,6 +29,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         MoveUpCommand = new RelayCommand(() => MoveUpRequested?.Invoke(this));
         MoveDownCommand = new RelayCommand(() => MoveDownRequested?.Invoke(this));
         DuplicateCommand = new RelayCommand(() => DuplicateRequested?.Invoke(this));
+        ToggleExpandedCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
     }
 
     public event Action<AssemblyItemViewModel>? RemoveRequested;
@@ -45,6 +47,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     public ICommand MoveUpCommand { get; }
     public ICommand MoveDownCommand { get; }
     public ICommand DuplicateCommand { get; }
+    public ICommand ToggleExpandedCommand { get; }
 
     public bool IsEnabled
     {
@@ -58,6 +61,25 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             }
         }
     }
+
+    /// <summary>
+    /// UI-only card state. It is intentionally not mapped to project DTOs or engineering input.
+    /// </summary>
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (SetProperty(ref _isExpanded, value))
+            {
+                OnPropertyChanged(nameof(ExpandCollapseGlyph));
+                OnPropertyChanged(nameof(ExpandCollapseHint));
+            }
+        }
+    }
+
+    public string ExpandCollapseGlyph => IsExpanded ? "▾" : "▸";
+    public string ExpandCollapseHint => IsExpanded ? "Свернуть сведения об элементе" : "Развернуть сведения об элементе";
 
     public string Kind
     {
@@ -231,6 +253,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         return new AssemblyItemViewModel
         {
             IsEnabled = IsEnabled,
+            IsExpanded = IsExpanded,
             Kind = Kind,
             Title = $"{Title} копия",
             RopePresetStorageId = RopePresetStorageId,
