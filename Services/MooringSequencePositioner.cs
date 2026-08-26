@@ -99,8 +99,8 @@ public static class MooringSequencePositioner
 
     /// <summary>
     /// Presentation-only reconstruction of the already-calculated element-table positions.
-    /// The UI uses this overload only to place element-boundary markers on the selected X/Z shape;
-    /// it does not change or feed any engineering calculation.
+    /// The exact source line length retained by the display row is used for s; formatted table
+    /// strings are never used to position 2D markers. This path does not feed engineering calculation.
     /// </summary>
     public static MooringSequencePositionResult BuildDisplayPositions(IReadOnlyList<ElementCalculationDisplayRow> displayRows)
     {
@@ -114,7 +114,7 @@ public static class MooringSequencePositioner
             var isLine = string.Equals(element.Kind, "Линия", StringComparison.OrdinalIgnoreCase);
             var isBuoy = string.Equals(element.Kind, "Буй", StringComparison.OrdinalIgnoreCase);
             var isAnchor = string.Equals(element.Kind, "Якорь", StringComparison.OrdinalIgnoreCase);
-            var lengthM = ParseDisplayDouble(element.LengthM);
+            var lengthM = element.SourceLengthM;
             var weightWaterKg = ParseDisplayDouble(element.WeightWaterKg);
             var currentForceN = ParseDisplayDouble(element.CurrentForceN);
             var startM = sM;
