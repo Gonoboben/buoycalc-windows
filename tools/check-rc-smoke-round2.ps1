@@ -77,6 +77,8 @@ Require-Contains $pdf "point.X - 3.0f"
 Require-Contains $itemVm "UI-only card state"
 Require-Contains $itemVm "ToggleExpandedCommand"
 Require-Contains $itemVm "ExpandCollapseGlyph"
+Require-Contains $itemVm "private bool _isExpanded = false;"
+Require-Contains $itemVm "IsExpanded = false,"
 Require-Contains $main 'IsVisible="{Binding IsExpanded}"'
 Require-Contains $main 'Command="{Binding ToggleExpandedCommand}"'
 Require-Contains $main 'TextBlock IsVisible="{Binding IsExpanded}" Text="{Binding Summary}"'
