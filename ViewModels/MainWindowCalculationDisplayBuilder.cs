@@ -14,6 +14,7 @@ internal sealed record MainWindowSequenceDisplayItem(
 internal sealed record MainWindowCalculationDisplay(
     IReadOnlyList<ElementCalculationDisplayRow> ElementRows,
     SelectedShapeReadModel? SelectedShape,
+    UserEngineeringReportReadModel UserEngineeringReport,
     string UserResultText,
     string TechnicalReportText,
     string SequenceSummary,
@@ -45,6 +46,12 @@ internal static class MainWindowCalculationDisplayBuilder
         var snapshot = run.Snapshot;
         var reports = ReportBuildBoundary.Build(projectName, environment, buoy, anchor, snapshot);
         var elementRows = SelectedElementCalculationDisplayProjector.Project(snapshot);
+        var userEngineeringReport = UserEngineeringReportReadModelProjector.Project(
+            projectName,
+            environment,
+            buoy,
+            anchor,
+            snapshot);
         var sequenceVisualization = MainWindowSequenceVisualizationDisplayBuilder.Build(
             environment.DepthM,
             assemblyItems,
@@ -57,6 +64,7 @@ internal static class MainWindowCalculationDisplayBuilder
         return new MainWindowCalculationDisplay(
             elementRows,
             snapshot.SelectedShape,
+            userEngineeringReport,
             reports.UserResultText,
             reports.TechnicalReportText,
             sequenceVisualization.SequenceSummary,
