@@ -35,6 +35,13 @@ Require-Contains $pdf '"Локальная прочность элементов
 Require-Contains $pdf '"Якорь и контакт с грунтом — F2"'
 Require-Contains $pdf '"СПРАВОЧНО: legacy holding estimate — compatibility only"'
 Require-Contains $pdf '"Инженерные проверки и заключение — F4"'
+Require-Contains $pdf '"Воспроизводимость и provenance"'
+Require-Contains $pdf '"Typed source", "UserEngineeringReportReadModel"'
+Require-Contains $pdf '"Production segmentation: 0.20 м."'
+Require-Contains $pdf '"Signed boundary-feedback iteration budget: 64."'
+Require-Contains $pdf '"WeightWaterKgM сохраняет signed-семантику."'
+Require-Contains $pdf '"Принятый signed candidate должен быть точной детерминированной fixed point без epsilon-acceptance."'
+Require-Contains $pdf '"Координатная конвенция: s=0 у буя/поверхности, s=L у якоря/дна."'
 Require-Contains $pdf "StructuralTable(structural.Rows)"
 Require-Contains $pdf "foreach (var check in assessment.Checks)"
 Require-Contains $pdf "AnchorHorizontalCapacityDisposition"
