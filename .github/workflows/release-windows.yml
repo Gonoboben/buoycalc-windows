@@ -100,6 +100,15 @@ jobs:
             -SourceCommit "${{ github.sha }}" `
             -ReleaseOutput artifacts/release
 
+      - name: Launch-smoke exact packaged EXE
+        shell: pwsh
+        run: |
+          ./scripts/smoke-windows-rc-launch.ps1 `
+            -Version v1.0.0 `
+            -Runtime win-x64 `
+            -ReleaseOutput artifacts/release `
+            -StartupSeconds 8
+
       - name: Add RC evidence to job summary
         shell: pwsh
         run: |
@@ -111,6 +120,7 @@ jobs:
           - Runtime: ``$($manifest.runtime)``
           - Package: ``$($manifest.packageFile)``
           - SHA-256: ``$($manifest.packageSha256)``
+          - Packaged EXE launch smoke: ``passed``
           "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
       - name: Upload versioned RC evidence artifact
@@ -134,9 +144,9 @@ jobs:
           $jobStatus = "${{ job.status }}"
           $state = if ($jobStatus -eq "success") { "success" } else { "failure" }
           $description = if ($state -eq "success") {
-            "RC package, manifest and SHA-256 verified"
+            "RC package, evidence and packaged EXE launch verified"
           } else {
-            "RC build or evidence verification failed"
+            "RC build, evidence or launch verification failed"
           }
 
           $statusUrl = "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}"
