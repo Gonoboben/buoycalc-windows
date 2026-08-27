@@ -28,6 +28,7 @@ $canvas = "Views/Mooring2DCanvas.cs"
 $pdf = "Services/PdfReportBuilder.cs"
 $itemVm = "ViewModels/AssemblyItemViewModel.cs"
 $main = "Views/MainWindow.axaml"
+$mainCode = "Views/MainWindow.axaml.cs"
 $reportWindow = "Views/ReportTextWindow.axaml"
 $reportCode = "Views/ReportTextWindow.axaml.cs"
 $library = "Views/ElementLibraryWindow.axaml"
@@ -81,12 +82,31 @@ Require-Contains $main 'Command="{Binding ToggleExpandedCommand}"'
 Require-Contains $main 'TextBlock IsVisible="{Binding IsExpanded}" Text="{Binding Summary}"'
 Require-Contains $main 'IsChecked="{Binding IsEnabled}" Content="В расчёте"'
 
-# RC round 4: only the three requested left-column setup cards are collapsible.
-Require-Count $main '<Expander IsExpanded="True">' 3
+# RC round 5: only the three requested left-column setup cards are collapsible and all start collapsed.
+Require-Count $main 'IsExpanded="False"' 3
+Require-Count $main 'IsExpanded="True"' 0
+Require-Contains $main 'x:Name="ConditionsExpander" IsExpanded="False"'
+Require-Contains $main 'x:Name="BuoyExpander" IsExpanded="False"'
+Require-Contains $main 'x:Name="AnchorExpander" IsExpanded="False"'
 Require-Contains $main 'Text="Условия постановки" FontSize="18" FontWeight="Bold"'
 Require-Contains $main 'Text="Буй" FontSize="18" FontWeight="Bold"'
 Require-Contains $main 'Text="Якорь и запас" FontSize="18" FontWeight="Bold"'
 Require-Contains $main 'Text="Проект" FontSize="18" FontWeight="Bold"'
+Require-Contains $main 'Content="Новый" Command="{Binding NewProjectCommand}" Click="ResetSetupSectionsButton_Click"'
+Require-Contains $main 'Content="Загрузить..." Command="{Binding LoadProjectCommand}" Click="ResetSetupSectionsButton_Click"'
+Require-Contains $mainCode "CollapseSetupSections();"
+Require-Contains $mainCode "ConditionsExpander.IsExpanded = false;"
+Require-Contains $mainCode "BuoyExpander.IsExpanded = false;"
+Require-Contains $mainCode "AnchorExpander.IsExpanded = false;"
+Require-Count $main 'Content="Проверить схему и рассчитать"' 1
+
+$mainText = Get-Content -LiteralPath $main -Raw
+$anchorHeaderIndex = $mainText.IndexOf('Text="Якорь и запас"', [StringComparison]::Ordinal)
+$anchorExpanderEndIndex = $mainText.IndexOf('</Expander>', $anchorHeaderIndex, [StringComparison]::Ordinal)
+$calculateButtonIndex = $mainText.IndexOf('Content="Проверить схему и рассчитать"', [StringComparison]::Ordinal)
+if ($anchorHeaderIndex -lt 0 -or $anchorExpanderEndIndex -lt 0 -or $calculateButtonIndex -lt 0 -or $calculateButtonIndex -lt $anchorExpanderEndIndex) {
+    throw "Calculate action must remain outside the AnchorExpander."
+}
 
 # RC round 4: full-report export writes the exact retained ReportText to UTF-8 text.
 Require-Contains $reportWindow 'Click="ExportReportButton_Click"'
@@ -133,4 +153,4 @@ Require-NotContains $bundle "DeleteUserConnector"
 Require-NotContains $bundle "DeleteUserPayload"
 Require-NotContains $bundle "DeleteUserAnchor"
 
-Write-Host "RC smoke round-2/3/4 UI/PDF/library guard passed."
+Write-Host "RC smoke round-2/3/4/5 UI/PDF/library guard passed."
