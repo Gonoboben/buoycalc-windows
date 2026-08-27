@@ -13,6 +13,19 @@ public partial class MainWindow : Window
         AvaloniaXamlLoader.Load(this);
         WindowVersionHelper.Apply(this, "BuoyCalc Windows");
         DataContext = new MainWindowViewModel(new AvaloniaProjectFileDialogService(this));
+        CollapseSetupSections();
+    }
+
+    private void ResetSetupSectionsButton_Click(object? sender, RoutedEventArgs e)
+    {
+        CollapseSetupSections();
+    }
+
+    private void CollapseSetupSections()
+    {
+        ConditionsExpander.IsExpanded = false;
+        BuoyExpander.IsExpanded = false;
+        AnchorExpander.IsExpanded = false;
     }
 
     private async void OpenLibraryButton_Click(object? sender, RoutedEventArgs e)
