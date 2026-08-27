@@ -23,9 +23,18 @@ public partial class MainWindow : Window
 
     private void CollapseSetupSections()
     {
-        ConditionsExpander.IsExpanded = false;
-        BuoyExpander.IsExpanded = false;
-        AnchorExpander.IsExpanded = false;
+        CollapseExpander("ConditionsExpander");
+        CollapseExpander("BuoyExpander");
+        CollapseExpander("AnchorExpander");
+    }
+
+    private void CollapseExpander(string name)
+    {
+        var expander = this.FindControl<Expander>(name);
+        if (expander is not null)
+        {
+            expander.IsExpanded = false;
+        }
     }
 
     private async void OpenLibraryButton_Click(object? sender, RoutedEventArgs e)
