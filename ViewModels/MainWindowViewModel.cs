@@ -44,6 +44,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _resultText = "Нажмите «Рассчитать».";
     private string _reportText = "";
     private SelectedShapeReadModel? _selectedShape;
+    private UserEngineeringReportReadModel? _userEngineeringReport;
     private string _sequenceSummary = "";
     private string _projectStatusText = "Проект ещё не сохранён.";
     private string _buoyLibraryStatusText = "Библиотека готова.";
@@ -178,6 +179,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ResultText { get => _resultText; set => SetProperty(ref _resultText, value); }
     public string ReportText { get => _reportText; set => SetProperty(ref _reportText, value); }
     public SelectedShapeReadModel? SelectedShape { get => _selectedShape; private set => SetProperty(ref _selectedShape, value); }
+    public UserEngineeringReportReadModel? UserEngineeringReport { get => _userEngineeringReport; private set => SetProperty(ref _userEngineeringReport, value); }
     public string SequenceSummary { get => _sequenceSummary; set => SetProperty(ref _sequenceSummary, value); }
     public string ProjectStatusText { get => _projectStatusText; set => SetProperty(ref _projectStatusText, value); }
     public string BuoyLibraryStatusText { get => _buoyLibraryStatusText; set => SetProperty(ref _buoyLibraryStatusText, value); }
@@ -508,6 +510,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ResultText = template.ResultText;
         ReportText = template.ReportText;
         SelectedShape = null;
+        UserEngineeringReport = null;
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
 
@@ -698,6 +701,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ResultText = "Проект загружен. Нажмите «Рассчитать».";
         ReportText = "";
         SelectedShape = null;
+        UserEngineeringReport = null;
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
 
@@ -844,6 +848,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         SelectedShape = display.SelectedShape;
+        UserEngineeringReport = display.UserEngineeringReport;
         ResultText = display.UserResultText;
         ReportText = display.TechnicalReportText;
         SequenceSummary = display.SequenceSummary;
