@@ -73,7 +73,8 @@ Assert-NotContains $viewModel "SelectedShapeStore." "MainWindowViewModel"
 Assert-NotContains $viewModel "MooringAlternativeShapeStore." "MainWindowViewModel"
 
 $pdf = Read-RepoText "Services/PdfReportBuilder.cs"
-Assert-Contains $pdf "SelectedShapeReadModel? selectedShape" "PdfReportBuilder"
+Assert-Contains $pdf "report.SelectedShape" "PdfReportBuilder"
+Assert-Contains $pdf "Mooring2DDiagramReadModelBuilder.Build(report.SelectedShape, diagramRows)" "PdfReportBuilder"
 Assert-NotContains $pdf "SelectedShapeStore." "PdfReportBuilder"
 Assert-NotContains $pdf "MooringAlternativeShapeStore." "PdfReportBuilder"
 
