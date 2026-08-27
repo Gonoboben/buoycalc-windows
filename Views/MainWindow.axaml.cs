@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using BuoyCalc.Windows.Services;
 using BuoyCalc.Windows.ViewModels;
 
@@ -10,7 +9,7 @@ public partial class MainWindow : Window
 {
     public MainWindow()
     {
-        AvaloniaXamlLoader.Load(this);
+        InitializeComponent();
         WindowVersionHelper.Apply(this, "BuoyCalc Windows");
         DataContext = new MainWindowViewModel(new AvaloniaProjectFileDialogService(this));
         CollapseSetupSections();
