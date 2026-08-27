@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using BuoyCalc.Windows.Models;
@@ -16,18 +17,9 @@ public static class PdfReportBuilder
     private const float Margin = 36;
     private const float LineGap = 5;
 
-    public static void Build(
-        string filePath,
-        string projectName,
-        string resultText,
-        IEnumerable<string> sequenceLines,
-        IEnumerable<ElementCalculationDisplayRow> elementRows,
-        string reportText,
-        double visualizationDepthM,
-        double visualizationLineLengthM,
-        double visualizationOffsetM,
-        SelectedShapeReadModel? selectedShape)
+    public static void Build(string filePath, UserEngineeringReportReadModel report)
     {
+        ArgumentNullException.ThrowIfNull(report);
         Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? ".");
 
         using var stream = File.Open(filePath, FileMode.Create, FileAccess.Write);
@@ -36,80 +28,192 @@ public static class PdfReportBuilder
         using var boldTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? regularTypeface;
 
         var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
-        var sequence = sequenceLines.ToList();
-        var elementTable = elementRows.ToList();
-        var diagramSource = PdfDiagramSourceSelector.Select(selectedShape);
-        var clarifiedResultText = NormalizeResultText(resultText, diagramSource.ShapeOffsetM);
-        var diagram = diagramSource.HasSelectedShape
-            ? Mooring2DDiagramReadModelBuilder.Build(diagramSource.SelectedShape!, elementTable)
-            : null;
+        var diagramRows = ToDiagramRows(report.Elements);
+        var diagram = report.SelectedShape is null
+            ? null
+            : Mooring2DDiagramReadModelBuilder.Build(report.SelectedShape, diagramRows);
+
+        WriteExecutivePage(writer, report);
+        WriteConditionsPage(writer, report);
+        WriteCompositionPage(writer, report);
+        WriteGeometryPage(writer, report, diagram);
+
+        document.Close();
+    }
+
+    private static void WriteExecutivePage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
+    {
+        var assessment = report.Assessment;
+        var verdict = assessment?.Verdict ?? "Требуется проверка";
+        var mainRisk = assessment?.MainRisk ?? "Selected F1-F4 инженерная оценка недоступна для этого расчёта.";
+        var designTension = report.DesignLoad is null ? "не определена" : $"{report.DesignLoad.DemandKn:0.##} кН";
+        var governingReserve = report.Structural?.GoverningReserve is double reserve
+            ? reserve.ToString("0.##", CultureInfo.InvariantCulture)
+            : "не определён";
+        var offset = report.SelectedShape is null
+            ? "не определён"
+            : $"{report.SelectedShape.Shape.HorizontalOffsetM:0.##} м";
+        var anchorContact = report.AnchorReaction is null
+            ? "не определён"
+            : AnchorContactText(report.AnchorReaction.ContactClassification);
 
         writer.BeginPage();
-        writer.Title("BuoyCalc Windows - пользовательский отчёт");
-        writer.Text($"Проект: {projectName}");
-        writer.Text($"Версия расчётной модели: {AppInfo.DisplayVersion}");
+        writer.Title("BuoyCalc Windows — инженерный отчёт постановки");
+        writer.Text($"Проект: {report.ProjectName}", 11);
+        writer.Text($"Версия приложения и расчётной модели: {AppInfo.DisplayVersion}", 9.5f);
+        writer.Space(10);
+        writer.VerdictBanner(verdict, mainRisk);
         writer.Space(12);
-        writer.Section("Краткий итог");
-        writer.Multiline(clarifiedResultText, 11);
+        writer.Section("Ключевые показатели");
+        writer.KeyValueTable(new[]
+        {
+            ("Глубина постановки", $"{report.Environment.DepthM:0.##} м"),
+            ("Длина линии", $"{report.Calculation.LineLengthM:0.##} м"),
+            ("Selected design-нагрузка", designTension),
+            ("Определяющий локальный запас", governingReserve),
+            ("Снос selected X/Z", offset),
+            ("Контакт якоря", anchorContact),
+            ("Чистая плавучесть", $"{report.Calculation.NetBuoyancyKg:0.##} кг"),
+            ("Расчётное течение", $"{report.Environment.EffectiveCurrentSpeedMS:0.###} м/с")
+        });
         writer.Space(12);
-        writer.Section("Назначение отчёта");
-        writer.Text("Этот PDF предназначен для пользователя: итог, схема постановки, цепочка и таблица элементов. Полный технический отчёт с диагностическими таблицами открывается отдельно в окне Полный отчёт.", 10);
+        writer.Section("Граница применимости решения");
+        writer.Text(
+            "PDF отображает только уже рассчитанное состояние. Горизонтальная удерживающая способность системы якорь/грунт в v1 не является валидированной selected-capacity моделью и не может подтверждать итоговый проход по якорю; требуется отдельная физическая проверка якоря и грунта.",
+            9.5f);
         writer.EndPage();
+    }
+
+    private static void WriteConditionsPage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
+    {
+        var env = report.Environment;
 
         writer.BeginPage();
-        writer.Title("Схема постановки");
+        writer.Title("Исходные условия расчёта");
+        writer.KeyValueTable(new[]
+        {
+            ("Плотность воды, ввод", $"{env.WaterDensityKgM3:0.##} кг/м³"),
+            ("Плотность воды, эффективная", $"{env.EffectiveWaterDensityKgM3:0.##} кг/м³"),
+            ("Глубина", $"{env.DepthM:0.##} м"),
+            ("Скорость течения, ввод", $"{env.CurrentSpeedMS:0.###} м/с"),
+            ("Скорость течения, расчётная", $"{env.EffectiveCurrentSpeedMS:0.###} м/с"),
+            ("Высота волны", $"{env.WaveHeightM:0.##} м"),
+            ("Период волны", $"{env.WavePeriodS:0.##} с"),
+            ("Грунт", $"{env.SeabedName} · K={env.SeabedHoldingMultiplier:0.##}")
+        });
+
+        writer.Space(10);
+        writer.Section("Течение");
+        if (env.UsesCurrentProfile && env.CurrentProfile.Count > 0)
+        {
+            writer.Text("Используется заданный профиль течения по глубине.", 9.5f);
+            writer.CurrentProfileTable(env.CurrentProfile);
+        }
+        else
+        {
+            writer.Text($"Профиль течения отключён; используется одно значение {env.EffectiveCurrentSpeedMS:0.###} м/с.", 9.5f);
+        }
+
+        writer.Space(10);
+        writer.Section("Буй");
+        writer.KeyValueTable(new[]
+        {
+            ("Наименование", report.Buoy.Name),
+            ("Объём", $"{report.Buoy.VolumeM3:0.####} м³"),
+            ("Масса в воздухе", $"{report.Buoy.WeightAirKg:0.##} кг"),
+            ("Проекционная площадь", $"{report.Buoy.ProjectedAreaM2:0.####} м²"),
+            ("Cd", report.Buoy.DragCoefficient.ToString("0.###", CultureInfo.InvariantCulture))
+        });
+
+        writer.Space(10);
+        writer.Section("Якорь");
+        writer.KeyValueTable(new[]
+        {
+            ("Наименование", report.Anchor.Name),
+            ("Тип", report.Anchor.Type),
+            ("Материал", report.Anchor.Material),
+            ("Масса в воздухе", $"{report.Anchor.WeightAirKg:0.##} кг"),
+            ("Объём", $"{report.Anchor.VolumeM3:0.####} м³"),
+            ("Вес в воде", $"{report.Anchor.WeightWaterKg:0.##} кг")
+        });
+        writer.EndPage();
+    }
+
+    private static void WriteCompositionPage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
+    {
+        writer.BeginPage();
+        writer.Title("Состав постановки");
+        writer.Text("Последовательность приведена сверху вниз — от буя к якорю. Значения взяты из сохранённой таблицы выполненного расчёта.", 9.5f);
+        writer.Space(10);
+        writer.ElementTable(report.Elements);
+        writer.Space(10);
+        writer.Text(
+            "Локальная прочность и selected design-нагрузки приведены в последующих инженерных разделах отчёта; legacy reserve в этой таблице не используется как selected-authority.",
+            9.2f);
+        writer.EndPage();
+    }
+
+    private static void WriteGeometryPage(
+        PdfCanvasWriter writer,
+        UserEngineeringReportReadModel report,
+        Mooring2DDiagramReadModel? diagram)
+    {
+        writer.BeginPage();
+        writer.Title("Расчётная геометрия постановки X/Z");
         if (diagram is not null)
         {
-            writer.Text("Расчётная 2D-схема PDF построена только по выбранной инженерной форме X/Z. PDF не выбирает между кандидатами, не восстанавливает координаты из текста отчёта и не строит приблизительную fallback-геометрию.", 10);
+            writer.Text(
+                "Схема построена только по выбранной расчётной форме X/Z через общий presentation read model. PDF не выбирает кандидата, не восстанавливает координаты из текста и не создаёт fallback-геометрию.",
+                9.5f);
             writer.Space(10);
             writer.SelectedShapeDiagram(diagram);
         }
         else
         {
-            writer.Text("Выбранная расчётная форма X/Z недоступна. Пользовательский PDF не строит приблизительную инженерную схему без рассчитанных X/Z-узлов.", 10);
-            writer.Text($"Исходный контекст: глубина {visualizationDepthM:0.##} м; длина линии {visualizationLineLengthM:0.##} м.", 10);
-        }
-
-        writer.Space(12);
-        writer.Section("Текстовая цепочка");
-        foreach (var line in sequence)
-        {
-            writer.Text(line, 9.5f);
+            writer.Text("Выбранная расчётная форма X/Z недоступна. PDF не строит приблизительную инженерную схему без рассчитанных X/Z-узлов.", 10);
+            writer.Text($"Контекст расчёта: глубина {report.Environment.DepthM:0.##} м; длина линии {report.Calculation.LineLengthM:0.##} м.", 10);
         }
         writer.EndPage();
-
-        writer.BeginPage();
-        writer.Title("Таблица элементов");
-        writer.ElementTable(elementTable);
-        writer.Space(10);
-        writer.Section("Примечание");
-        writer.Text("Подробные solver-таблицы, промежуточные формы, диагностические ведомости и служебные проверки не включены в пользовательский PDF. Они остаются в полном техническом отчёте приложения.", 10);
-        writer.EndPage();
-        document.Close();
     }
 
-    private static string NormalizeResultText(string resultText, double shapeOffsetM)
+    private static IReadOnlyList<ElementCalculationDisplayRow> ToDiagramRows(
+        IReadOnlyList<UserEngineeringElementReadModel> elements)
     {
-        var lines = (resultText ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
-        for (var i = 0; i < lines.Count; i++)
-        {
-            if (lines[i].StartsWith("Плавучесть:", StringComparison.OrdinalIgnoreCase))
+        return elements
+            .OrderBy(x => x.Number)
+            .Select(x => new ElementCalculationDisplayRow
             {
-                lines[i] = "Чистая плавучесть:" + lines[i]["Плавучесть:".Length..];
-            }
-            else if (lines[i].StartsWith("Натяжение:", StringComparison.OrdinalIgnoreCase))
-            {
-                lines[i] = "Нагрузка слабого звена:" + lines[i]["Натяжение:".Length..];
-            }
-        }
-
-        if (shapeOffsetM > 0 && !lines.Any(x => x.StartsWith("Снос формы X/Z:", StringComparison.OrdinalIgnoreCase)))
-        {
-            lines.Add($"Снос формы X/Z: {shapeOffsetM:0.##} м");
-        }
-
-        return string.Join("\n", lines);
+                Number = x.Number,
+                Kind = x.Kind,
+                Title = x.Title,
+                PresetName = x.PresetName,
+                LengthM = Format(x.LengthM),
+                SourceLengthM = x.LengthM,
+                Count = x.Count.ToString(CultureInfo.InvariantCulture),
+                WeightWaterKg = Format(x.WeightWaterKg),
+                ProjectedAreaM2 = Format(x.ProjectedAreaM2),
+                DragCoefficient = Format(x.DragCoefficient),
+                CurrentForceN = Format(x.CurrentForceN),
+                BreakingLoadKn = Format(x.BreakingLoadKn),
+                WorkingLoadKn = Format(x.WorkingLoadKn),
+                Reserve = Format(x.LegacyReserve),
+                Status = UserStatusPolicy.ToUserStatus(x.LegacyStatus)
+            })
+            .ToArray();
     }
+
+    private static string AnchorContactText(MooringAnchorContactClassification classification)
+    {
+        return classification switch
+        {
+            MooringAnchorContactClassification.CompressiveContact => "сжимающий контакт",
+            MooringAnchorContactClassification.ZeroNormalLimit => "предел нулевой нормальной реакции",
+            MooringAnchorContactClassification.UpliftSeparation => "расчётный отрыв от грунта",
+            _ => classification.ToString()
+        };
+    }
+
+    private static string Format(double value) => value.ToString("0.####", CultureInfo.InvariantCulture);
 
     private sealed class PdfCanvasWriter
     {
@@ -162,14 +266,102 @@ public static class PdfReportBuilder
             }
         }
 
-        public void Multiline(string text, float size)
+        public void VerdictBanner(string verdict, string mainRisk)
         {
-            foreach (var rawLine in SplitLines(text))
+            const float height = 86;
+            EnsureSpace(height + 8);
+            var rect = new SKRect(Margin, _y, PageWidth - Margin, _y + height);
+            var background = verdict.StartsWith("Не подходит", StringComparison.OrdinalIgnoreCase)
+                ? new SKColor(255, 236, 236)
+                : verdict.StartsWith("Подходит", StringComparison.OrdinalIgnoreCase)
+                    ? new SKColor(235, 248, 239)
+                    : new SKColor(255, 247, 226);
+            var accent = verdict.StartsWith("Не подходит", StringComparison.OrdinalIgnoreCase)
+                ? new SKColor(173, 45, 45)
+                : verdict.StartsWith("Подходит", StringComparison.OrdinalIgnoreCase)
+                    ? new SKColor(46, 125, 69)
+                    : new SKColor(177, 108, 0);
+
+            using var fill = new SKPaint { Color = background, Style = SKPaintStyle.Fill, IsAntialias = true };
+            using var border = new SKPaint { Color = accent, Style = SKPaintStyle.Stroke, StrokeWidth = 1.2f, IsAntialias = true };
+            _canvas!.DrawRoundRect(rect, 6, 6, fill);
+            _canvas.DrawRoundRect(rect, 6, 6, border);
+            DrawTextAt("ИНЖЕНЕРНЫЙ ВЕРДИКТ", rect.Left + 12, rect.Top + 18, 8.5f, true, accent);
+            DrawTextAt(verdict, rect.Left + 12, rect.Top + 41, 16, true, accent);
+
+            var riskLines = Wrap(mainRisk, 8.8f, rect.Width - 24).Take(3).ToList();
+            for (var i = 0; i < riskLines.Count; i++)
             {
-                foreach (var line in Wrap(rawLine, size, PageWidth - 2 * Margin))
-                {
-                    DrawText(line, size, false);
-                }
+                DrawTextAt(riskLines[i], rect.Left + 12, rect.Top + 59 + i * 11, 8.8f, false, new SKColor(70, 70, 70));
+            }
+            _y += height;
+        }
+
+        public void KeyValueTable(IReadOnlyList<(string Label, string Value)> rows)
+        {
+            const float labelWidth = 210;
+            var widths = new[] { labelWidth, PageWidth - 2 * Margin - labelWidth };
+            foreach (var row in rows)
+            {
+                DrawTableRow(new[] { row.Label, row.Value }, widths, false, 22, 8.5f, 44, 62);
+            }
+        }
+
+        public void CurrentProfileTable(IReadOnlyList<CurrentProfilePointInput> points)
+        {
+            var headers = new[] { "Глубина, м", "East, м/с", "North, м/с", "Vertical, м/с", "ρ, кг/м³" };
+            var widths = new[] { 92f, 102f, 102f, 105f, 122f };
+            DrawTableRow(headers, widths, true, 22, 7.9f, 18, 18);
+            foreach (var p in points.OrderBy(x => x.DepthM))
+            {
+                DrawTableRow(
+                    new[]
+                    {
+                        p.DepthM.ToString("0.##", CultureInfo.InvariantCulture),
+                        p.EastCurrentMS.ToString("0.###", CultureInfo.InvariantCulture),
+                        p.NorthCurrentMS.ToString("0.###", CultureInfo.InvariantCulture),
+                        p.VerticalCurrentMS.ToString("0.###", CultureInfo.InvariantCulture),
+                        p.WaterDensityKgM3.ToString("0.##", CultureInfo.InvariantCulture)
+                    },
+                    widths,
+                    false,
+                    21,
+                    7.5f,
+                    18,
+                    18);
+            }
+        }
+
+        public void ElementTable(IReadOnlyList<UserEngineeringElementReadModel> rows)
+        {
+            var headers = new[] { "№", "Тип", "Элемент / исполнение", "L / n", "Вес в воде, кг", "Fx, Н" };
+            var widths = new[] { 24f, 65f, 190f, 55f, 94f, 95f };
+            DrawTableRow(headers, widths, true, 24, 7.8f, 16, 18);
+
+            foreach (var row in rows.OrderBy(x => x.Number))
+            {
+                var lengthOrCount = row.LengthM > 0
+                    ? $"{row.LengthM:0.##} м"
+                    : $"n={row.Count}";
+                var title = string.IsNullOrWhiteSpace(row.PresetName)
+                    ? row.Title
+                    : $"{row.Title} / {row.PresetName}";
+                DrawTableRow(
+                    new[]
+                    {
+                        row.Number.ToString(CultureInfo.InvariantCulture),
+                        row.Kind,
+                        title,
+                        lengthOrCount,
+                        row.WeightWaterKg.ToString("0.##", CultureInfo.InvariantCulture),
+                        row.CurrentForceN.ToString("0.##", CultureInfo.InvariantCulture)
+                    },
+                    widths,
+                    false,
+                    24,
+                    7.4f,
+                    16,
+                    34);
             }
         }
 
@@ -288,52 +480,44 @@ public static class PdfReportBuilder
             }
         }
 
-        public void ElementTable(IReadOnlyList<ElementCalculationDisplayRow> rows)
-        {
-            var headers = new[] { "№", "Тип", "Элемент", "Вес в воде", "Fx, Н", "Запас", "Статус" };
-            var widths = new[] { 24f, 58f, 142f, 58f, 58f, 48f, 134f };
-            DrawTableRow(headers, widths, true);
-
-            foreach (var row in rows)
-            {
-                DrawTableRow(
-                    new[]
-                    {
-                        row.Number.ToString(),
-                        row.Kind,
-                        row.Title,
-                        row.WeightWaterKg,
-                        row.CurrentForceN,
-                        row.Reserve,
-                        row.Status
-                    },
-                    widths,
-                    false);
-            }
-        }
-
         public void Space(float value)
         {
             _y += value;
         }
 
-        private void DrawTableRow(IReadOnlyList<string> values, IReadOnlyList<float> widths, bool isHeader)
+        private void DrawTableRow(
+            IReadOnlyList<string> values,
+            IReadOnlyList<float> widths,
+            bool isHeader,
+            float rowHeight,
+            float fontSize,
+            int headerMaxLength,
+            int valueMaxLength)
         {
-            const float rowHeight = 24;
             EnsureSpace(rowHeight + 4);
 
             var x = Margin;
             for (var i = 0; i < values.Count; i++)
             {
                 var rect = new SKRect(x, _y, x + widths[i], _y + rowHeight);
-                using var fill = new SKPaint { Color = isHeader ? new SKColor(233, 239, 250) : SKColors.White, IsAntialias = true };
-                using var border = new SKPaint { Color = new SKColor(215, 222, 233), Style = SKPaintStyle.Stroke, StrokeWidth = 0.7f, IsAntialias = true };
+                using var fill = new SKPaint
+                {
+                    Color = isHeader ? new SKColor(233, 239, 250) : SKColors.White,
+                    IsAntialias = true
+                };
+                using var border = new SKPaint
+                {
+                    Color = new SKColor(215, 222, 233),
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 0.7f,
+                    IsAntialias = true
+                };
                 _canvas!.DrawRect(rect, fill);
                 _canvas.DrawRect(rect, border);
 
-                var text = Shorten(values[i], isHeader ? 16 : 28);
-                using var paint = CreatePaint(isHeader ? 8.2f : 7.6f, isHeader);
-                _canvas.DrawText(text, rect.Left + 3, rect.Top + 15, paint);
+                var text = Shorten(values[i], isHeader ? headerMaxLength : valueMaxLength);
+                using var paint = CreatePaint(fontSize, isHeader);
+                _canvas.DrawText(text, rect.Left + 3, rect.Top + rowHeight * 0.64f, paint);
                 x += widths[i];
             }
 
@@ -445,11 +629,6 @@ public static class PdfReportBuilder
         private static SKPaint Stroke(string color, float width)
         {
             return new SKPaint { Color = SKColor.Parse(color), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = width };
-        }
-
-        private static IEnumerable<string> SplitLines(string text)
-        {
-            return (text ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         }
 
         private static string Shorten(string value, int maxLength)
