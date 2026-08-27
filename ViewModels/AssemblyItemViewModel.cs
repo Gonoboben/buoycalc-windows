@@ -10,7 +10,7 @@ namespace BuoyCalc.Windows.ViewModels;
 public sealed class AssemblyItemViewModel : ViewModelBase
 {
     private bool _isEnabled = true;
-    private bool _isExpanded = true;
+    private bool _isExpanded = false;
     private string _kind = "Line";
     private string _title = "Участок линии";
     private string _ropePresetStorageId = "built-in:polyester_20";
@@ -235,7 +235,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             {
                 AssemblyItemKind.Connector => $"{state} | точечный соединитель | {GetConnectorDisplayName(_connectorPresetStorageId)} | кол-во=1",
                 AssemblyItemKind.Payload => $"{state} | дискретная нагрузка | {GetPayloadDisplayName(_payloadPresetStorageId)} | вес={PayloadWeightAirKg} кг | A={PayloadProjectedAreaM2} м2 | Cd={PayloadDragCoefficient}",
-                _ => $"{state} | распределённая линия | {GetRopeDisplayName(_ropePresetStorageId)} | L={LengthM} м"
+                _ => $"{state} | распределённый участок | {GetRopeDisplayName(_ropePresetStorageId)} | L={LengthM} м"
             };
         }
     }
@@ -253,7 +253,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         return new AssemblyItemViewModel
         {
             IsEnabled = IsEnabled,
-            IsExpanded = IsExpanded,
+            IsExpanded = false,
             Kind = Kind,
             Title = $"{Title} копия",
             RopePresetStorageId = RopePresetStorageId,
