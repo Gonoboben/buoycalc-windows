@@ -64,10 +64,10 @@
                 <TextBox Text="{Binding ProjectFilePath}" PlaceholderText="Путь к .json файлу проекта" />
               </StackPanel>
               <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
-                <Button Content="Новый" Command="{Binding NewProjectCommand}" />
+                <Button Content="Новый" Command="{Binding NewProjectCommand}" Click="ResetSetupSectionsButton_Click" />
                 <Button Grid.Column="1" Content="Сохранить" Command="{Binding SaveProjectCommand}" />
                 <Button Grid.Row="1" Content="Сохранить как..." Command="{Binding SaveProjectAsCommand}" />
-                <Button Grid.Row="1" Grid.Column="1" Content="Загрузить..." Command="{Binding LoadProjectCommand}" />
+                <Button Grid.Row="1" Grid.Column="1" Content="Загрузить..." Command="{Binding LoadProjectCommand}" Click="ResetSetupSectionsButton_Click" />
               </Grid>
               <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
                 <TextBlock Text="{Binding ProjectStatusText}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
@@ -76,7 +76,7 @@
           </Border>
 
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-            <Expander IsExpanded="True">
+            <Expander x:Name="ConditionsExpander" IsExpanded="False">
               <Expander.Header>
                 <TextBlock Text="Условия постановки" FontSize="18" FontWeight="Bold" />
               </Expander.Header>
@@ -114,7 +114,7 @@
           </Border>
 
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-            <Expander IsExpanded="True">
+            <Expander x:Name="BuoyExpander" IsExpanded="False">
               <Expander.Header>
                 <TextBlock Text="Буй" FontSize="18" FontWeight="Bold" />
               </Expander.Header>
@@ -154,7 +154,7 @@
           </Border>
 
           <Border Background="White" CornerRadius="16" Padding="16" BoxShadow="0 2 12 #18000000">
-            <Expander IsExpanded="True">
+            <Expander x:Name="AnchorExpander" IsExpanded="False">
               <Expander.Header>
                 <TextBlock Text="Якорь и запас" FontSize="18" FontWeight="Bold" />
               </Expander.Header>
@@ -172,10 +172,16 @@
                   <StackPanel Grid.Row="2" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Коэф. удержания" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Исторический коэффициент совместимости. В v1 он не является подтверждённой горизонтальной несущей способностью якорь/грунт; для такой проверки требуется отдельная валидированная модель." /></StackPanel><TextBox Text="{Binding AnchorCoefficient}" IsReadOnly="True" /></StackPanel>
                   <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Коэф. запаса" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Коэффициент, используемый существующей структурной проверкой для получения допустимой рабочей нагрузки из MBL. Большее значение делает проверку консервативнее." /></StackPanel><TextBox Text="{Binding SafetyFactor}" /></StackPanel>
                 </Grid>
-                <Button Content="Проверить схему и рассчитать" Click="CalculateButton_Click" HorizontalAlignment="Stretch" Margin="0,8,0,0" Padding="14,10" FontWeight="Bold" />
               </StackPanel>
             </Expander>
           </Border>
+
+          <Button Content="Проверить схему и рассчитать"
+                  Click="CalculateButton_Click"
+                  HorizontalAlignment="Stretch"
+                  Padding="14,11"
+                  FontWeight="Bold"
+                  ToolTip.Tip="Открыть проверку последовательности постановки и выполнить расчёт после подтверждения." />
         </StackPanel>
       </ScrollViewer>
 
