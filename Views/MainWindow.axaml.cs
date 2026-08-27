@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using BuoyCalc.Windows.Services;
 using BuoyCalc.Windows.ViewModels;
 
@@ -10,7 +9,7 @@ public partial class MainWindow : Window
 {
     public MainWindow()
     {
-        AvaloniaXamlLoader.Load(this);
+        InitializeComponent();
         WindowVersionHelper.Apply(this, "BuoyCalc Windows");
         DataContext = new MainWindowViewModel(new AvaloniaProjectFileDialogService(this));
         CollapseSetupSections();
@@ -23,18 +22,9 @@ public partial class MainWindow : Window
 
     private void CollapseSetupSections()
     {
-        CollapseExpander("ConditionsExpander");
-        CollapseExpander("BuoyExpander");
-        CollapseExpander("AnchorExpander");
-    }
-
-    private void CollapseExpander(string name)
-    {
-        var expander = this.FindControl<Expander>(name);
-        if (expander is not null)
-        {
-            expander.IsExpanded = false;
-        }
+        ConditionsExpander.IsExpanded = false;
+        BuoyExpander.IsExpanded = false;
+        AnchorExpander.IsExpanded = false;
     }
 
     private async void OpenLibraryButton_Click(object? sender, RoutedEventArgs e)
