@@ -116,7 +116,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!MainWindowPdfExportWorkflowBuilder.CanExport(viewModel.ReportText))
+        if (!MainWindowPdfExportWorkflowBuilder.CanExport(viewModel.UserEngineeringReport))
         {
             viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildPreconditionStatus();
             return;
@@ -133,19 +133,7 @@ public partial class MainWindow : Window
 
         try
         {
-            var pdfReportText = PdfReportStructureGuide.Apply(viewModel.ReportText);
-            PdfReportBuilder.Build(
-                path,
-                viewModel.ProjectName,
-                viewModel.ResultText,
-                viewModel.SequenceDiagramLines,
-                viewModel.ElementRows,
-                pdfReportText,
-                viewModel.VisualizationDepthM,
-                viewModel.VisualizationLineLengthM,
-                viewModel.VisualizationOffsetM,
-                viewModel.SelectedShape);
-
+            PdfReportBuilder.Build(path, viewModel.UserEngineeringReport!);
             viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildSuccessStatus(path);
         }
         catch (System.Exception ex)

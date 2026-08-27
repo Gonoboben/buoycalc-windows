@@ -1,13 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using BuoyCalc.Windows.Services;
 
 namespace BuoyCalc.Windows.Views;
 
 internal static class MainWindowPdfExportWorkflowBuilder
 {
-    internal static bool CanExport(string reportText)
+    internal static bool CanExport(UserEngineeringReportReadModel? report)
     {
-        return !string.IsNullOrWhiteSpace(reportText);
+        return report is not null;
     }
 
     internal static string BuildSuggestedFileName(string projectName)

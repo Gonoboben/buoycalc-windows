@@ -105,6 +105,11 @@ jobs:
               throw "User engineering report read-model guard failed with exit code $LASTEXITCODE"
             }
 
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-user-pdf-typed-renderer.ps1
+            if ($LASTEXITCODE -ne 0) {
+              throw "Typed user PDF renderer guard failed with exit code $LASTEXITCODE"
+            }
+
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-rc-smoke-ui-polish.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "RC smoke UI polish guard failed with exit code $LASTEXITCODE"
