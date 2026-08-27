@@ -235,7 +235,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             {
                 AssemblyItemKind.Connector => $"{state} | точечный соединитель | {GetConnectorDisplayName(_connectorPresetStorageId)} | кол-во=1",
                 AssemblyItemKind.Payload => $"{state} | дискретная нагрузка | {GetPayloadDisplayName(_payloadPresetStorageId)} | вес={PayloadWeightAirKg} кг | A={PayloadProjectedAreaM2} м2 | Cd={PayloadDragCoefficient}",
-                _ => $"{state} | распределённый участок | {GetRopeDisplayName(_ropePresetStorageId)} | L={LengthM} м"
+                _ => $"{state} | распределённая линия | {GetRopeDisplayName(_ropePresetStorageId)} | L={LengthM} м"
             };
         }
     }
