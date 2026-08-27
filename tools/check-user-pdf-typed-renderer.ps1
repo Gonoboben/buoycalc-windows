@@ -29,6 +29,15 @@ Require-Contains $pdf '"Ключевые показатели"'
 Require-Contains $pdf '"Исходные условия расчёта"'
 Require-Contains $pdf '"Состав постановки"'
 Require-Contains $pdf '"Расчётная геометрия постановки X/Z"'
+Require-Contains $pdf '"Плавучесть и расчётные нагрузки"'
+Require-Contains $pdf '"Selected F1 design-нагрузка"'
+Require-Contains $pdf '"Локальная прочность элементов — F3"'
+Require-Contains $pdf '"Якорь и контакт с грунтом — F2"'
+Require-Contains $pdf '"СПРАВОЧНО: legacy holding estimate — compatibility only"'
+Require-Contains $pdf '"Инженерные проверки и заключение — F4"'
+Require-Contains $pdf "StructuralTable(structural.Rows)"
+Require-Contains $pdf "foreach (var check in assessment.Checks)"
+Require-Contains $pdf "AnchorHorizontalCapacityDisposition"
 Require-NotContains $pdf "resultText"
 Require-NotContains $pdf "reportText"
 Require-NotContains $pdf "PdfReportStructureGuide"
