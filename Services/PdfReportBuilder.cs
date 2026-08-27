@@ -41,6 +41,7 @@ public static class PdfReportBuilder
         WriteStructuralCapacityPage(writer, report);
         WriteAnchorPage(writer, report);
         WriteAssessmentPage(writer, report);
+        WriteReproducibilityPage(writer, report);
 
         document.Close();
     }
@@ -361,6 +362,63 @@ public static class PdfReportBuilder
         writer.Text($"Main risk code: {assessment.MainRiskCode}", 9);
         writer.Text($"Anchor horizontal capacity disposition: {assessment.AnchorHorizontalCapacityDisposition}", 9);
         writer.Text($"Selected authority source: {assessment.SourceIdentity}", 9);
+        writer.EndPage();
+    }
+
+    private static void WriteReproducibilityPage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
+    {
+        var generatedUtc = DateTimeOffset.UtcNow;
+        var shapeSource = report.SelectedShape?.Source ?? "не определён";
+        var shapeStatus = report.SelectedShape is null
+            ? "не определён"
+            : report.SelectedShape.Shape.Converged ? "Converged" : "RequiresReview";
+        var shapeNodes = report.SelectedShape?.Shape.Nodes.Count.ToString(CultureInfo.InvariantCulture) ?? "—";
+        var designSource = report.DesignLoad?.SourceIdentity.ToString() ?? "не определён";
+        var anchorSource = report.AnchorReaction?.SourceIdentity.ToString() ?? "не определён";
+        var structuralSource = report.Structural?.SourceIdentity.ToString() ?? "не определён";
+        var assessmentSource = report.Assessment?.SourceIdentity.ToString() ?? "не определён";
+
+        writer.BeginPage();
+        writer.Title("Воспроизводимость и provenance");
+        writer.Text(
+            "Эта страница фиксирует происхождение отображённых инженерных данных. Пользовательский PDF сформирован непосредственно из сохранённого `UserEngineeringReportReadModel` последнего выполненного расчёта; текст полного отчёта не является источником чисел или геометрии PDF.",
+            9.5f);
+        writer.Space(10);
+        writer.Section("Идентификация отчёта");
+        writer.KeyValueTable(new[]
+        {
+            ("Проект", report.ProjectName),
+            ("Версия", AppInfo.DisplayVersion),
+            ("Создан PDF, UTC", generatedUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture)),
+            ("Typed source", "UserEngineeringReportReadModel")
+        });
+
+        writer.Space(12);
+        writer.Section("Источники selected authority");
+        writer.KeyValueTable(new[]
+        {
+            ("Selected X/Z source", shapeSource),
+            ("Selected X/Z status", shapeStatus),
+            ("Количество X/Z узлов", shapeNodes),
+            ("F1 design-load source", designSource),
+            ("F2 anchor-reaction source", anchorSource),
+            ("F3 structural source", structuralSource),
+            ("F4 assessment source", assessmentSource)
+        });
+
+        writer.Space(12);
+        writer.Section("Замороженные v1 implementation invariants");
+        writer.Text("Production segmentation: 0.20 м.", 9.2f);
+        writer.Text("Signed boundary-feedback iteration budget: 64.", 9.2f);
+        writer.Text("WeightWaterKgM сохраняет signed-семантику.", 9.2f);
+        writer.Text("Принятый signed candidate должен быть точной детерминированной fixed point без epsilon-acceptance.", 9.2f);
+        writer.Text("Координатная конвенция: s=0 у буя/поверхности, s=L у якоря/дна.", 9.2f);
+
+        writer.Space(12);
+        writer.Section("Разделение authority");
+        writer.Text(
+            "Selected F1/F2/F3/F4 данные являются источником инженерного решения в этом PDF. Legacy tension/anchor-holding поля показаны только там, где явно помечены как compatibility evidence, и не заменяют selected authority.",
+            9.5f);
         writer.EndPage();
     }
 
