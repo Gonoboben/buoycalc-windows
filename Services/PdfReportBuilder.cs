@@ -37,6 +37,10 @@ public static class PdfReportBuilder
         WriteConditionsPage(writer, report);
         WriteCompositionPage(writer, report);
         WriteGeometryPage(writer, report, diagram);
+        WriteBuoyancyAndLoadsPage(writer, report);
+        WriteStructuralCapacityPage(writer, report);
+        WriteAnchorPage(writer, report);
+        WriteAssessmentPage(writer, report);
 
         document.Close();
     }
@@ -176,6 +180,190 @@ public static class PdfReportBuilder
         writer.EndPage();
     }
 
+    private static void WriteBuoyancyAndLoadsPage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
+    {
+        writer.BeginPage();
+        writer.Title("Плавучесть и расчётные нагрузки");
+        writer.Section("Баланс плавучести");
+        writer.KeyValueTable(new[]
+        {
+            ("Полная плавучесть", $"{report.Calculation.BuoyancyKg:0.##} кг"),
+            ("Суммарный вес в воде", $"{report.Calculation.TotalWeightWaterKg:0.##} кг"),
+            ("Чистая плавучесть", $"{report.Calculation.NetBuoyancyKg:0.##} кг"),
+            ("Коэффициент запаса SF", report.Calculation.SafetyFactor.ToString("0.###", CultureInfo.InvariantCulture))
+        });
+
+        writer.Space(12);
+        writer.Section("Горизонтальные воздействия, сохранённые расчётом");
+        writer.KeyValueTable(new[]
+        {
+            ("Суммарная сила течения", $"{report.Calculation.CurrentForceN:0.##} Н"),
+            ("Волновой horizontal proxy", $"{report.Calculation.WaveForceN:0.##} Н"),
+            ("Legacy horizontal sum", $"{report.Calculation.LegacyHorizontalForceN:0.##} Н")
+        });
+        writer.Text("Волновое значение — существующий квазистатический horizontal design proxy v1; это не динамический или time-domain расчёт.", 9.2f);
+
+        writer.Space(12);
+        writer.Section("Selected F1 design-нагрузка");
+        if (report.DesignLoad is null)
+        {
+            writer.Text("Selected F1 design-нагрузка недоступна для этого расчёта.", 10);
+        }
+        else
+        {
+            var load = report.DesignLoad;
+            var governingLocation = DesignLocationText(load.LocationKind);
+            if (load.SegmentNumber.HasValue)
+            {
+                governingLocation += $" · сегмент {load.SegmentNumber.Value}";
+            }
+            if (!string.IsNullOrWhiteSpace(load.SourceElement))
+            {
+                governingLocation += $" · {load.SourceElement}";
+            }
+
+            writer.KeyValueTable(new[]
+            {
+                ("Определяющая design-нагрузка", $"{load.DemandKn:0.##} кН"),
+                ("Расположение", governingLocation),
+                ("Координата s", $"{load.AlongLineM:0.##} м"),
+                ("Wave increment", $"{load.WaveHorizontalIncrementN:0.##} Н"),
+                ("Поверхность: H / V / T", $"{load.SurfaceDesignHN:0.##} / {load.SurfaceDesignVN:0.##} / {load.SurfaceDesignTensionN:0.##} Н"),
+                ("Якорь: H / V / T", $"{load.AnchorDesignHN:0.##} / {load.AnchorDesignVN:0.##} / {load.AnchorDesignTensionN:0.##} Н"),
+                ("Макс. midpoint", $"сегмент {load.MaxDesignMidpointSegmentNumber}; {load.MaxDesignMidpointTensionN:0.##} Н"),
+                ("Источник authority", load.SourceIdentity.ToString())
+            });
+        }
+        writer.EndPage();
+    }
+
+    private static void WriteStructuralCapacityPage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
+    {
+        writer.BeginPage();
+        writer.Title("Локальная прочность элементов — F3");
+
+        if (report.Structural is null)
+        {
+            writer.Text("Selected F3 локальная capacity-модель недоступна для этого расчёта.", 10);
+            writer.EndPage();
+            return;
+        }
+
+        var structural = report.Structural;
+        var governing = structural.GoverningElementNumber.HasValue
+            ? $"#{structural.GoverningElementNumber.Value} {structural.GoverningTitle} / {structural.GoverningPresetName}"
+            : "не определён";
+        var reserve = structural.GoverningReserve.HasValue
+            ? structural.GoverningReserve.Value.ToString("0.##", CultureInfo.InvariantCulture)
+            : "не определён";
+
+        writer.KeyValueTable(new[]
+        {
+            ("Структурных элементов ожидается", structural.ExpectedStructuralElementCount.ToString(CultureInfo.InvariantCulture)),
+            ("Оценено по capacity", structural.RatedStructuralElementCount.ToString(CultureInfo.InvariantCulture)),
+            ("Неполное покрытие", structural.IncompleteStructuralElementCount.ToString(CultureInfo.InvariantCulture)),
+            ("Недостаточная прочность", structural.InsufficientElementCount.ToString(CultureInfo.InvariantCulture)),
+            ("Покрытие complete", structural.CoverageComplete ? "да" : "нет"),
+            ("Определяющий элемент", governing),
+            ("Определяющий локальный запас", reserve)
+        });
+        writer.Space(10);
+        writer.StructuralTable(structural.Rows);
+        writer.Space(10);
+        writer.Text(
+            "Приборы/payload могут иметь рассчитанную локальную нагрузку, но в текущей модели не имеют MBL capacity-поля и поэтому не считаются rated structural element. Для соединителя Count должен быть ровно 1; масштабирование прочности параллельных/последовательных соединителей не предполагается.",
+            9.1f);
+        writer.EndPage();
+    }
+
+    private static void WriteAnchorPage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
+    {
+        writer.BeginPage();
+        writer.Title("Якорь и контакт с грунтом — F2");
+
+        if (report.AnchorReaction is null)
+        {
+            writer.Text("Selected F2 реакция якорной границы недоступна для этого расчёта.", 10);
+        }
+        else
+        {
+            var reaction = report.AnchorReaction;
+            writer.Section("Selected реакция якорной границы");
+            writer.KeyValueTable(new[]
+            {
+                ("Горизонтальная нагрузка", $"{reaction.HorizontalDemandN:0.##} Н"),
+                ("Подъёмная составляющая линии", $"{reaction.UpwardLinePullN:0.##} Н"),
+                ("Прижимающая составляющая линии", $"{reaction.DownwardLinePushN:0.##} Н"),
+                ("Вес якоря в воде", $"{reaction.AnchorWeightWaterKg:0.##} кг / {reaction.AnchorWeightWaterN:0.##} Н"),
+                ("Signed normal reaction", $"{reaction.SignedNormalReactionN:0.##} Н"),
+                ("Compressive normal reaction", $"{reaction.CompressiveNormalReactionN:0.##} Н"),
+                ("Uplift excess", $"{reaction.UpliftExcessN:0.##} Н"),
+                ("Классификация контакта", AnchorContactText(reaction.ContactClassification)),
+                ("Источник authority", reaction.SourceIdentity.ToString())
+            });
+        }
+
+        writer.Space(14);
+        writer.Section("СПРАВОЧНО: legacy holding estimate — compatibility only");
+        writer.Text(
+            "Следующие значения сохранены расчётным ядром для совместимости с прежним отчётом. Они НЕ являются валидированной selected-моделью горизонтальной удерживающей способности якорь/грунт и не могут самостоятельно разрешить итоговый проход.",
+            9.3f);
+        writer.KeyValueTable(new[]
+        {
+            ("Base holding coefficient", report.Anchor.BaseHoldingCoefficient.ToString("0.###", CultureInfo.InvariantCulture)),
+            ("Legacy type multiplier", report.Anchor.LegacyTypeMultiplier.ToString("0.###", CultureInfo.InvariantCulture)),
+            ("Legacy seabed multiplier", report.Anchor.LegacySeabedMultiplier.ToString("0.###", CultureInfo.InvariantCulture)),
+            ("Legacy holding estimate", $"{report.Anchor.LegacyHoldingKg:0.##} кг"),
+            ("Legacy required holding", $"{report.Anchor.LegacyRequiredHoldingKg:0.##} кг"),
+            ("Legacy reserve", report.Anchor.LegacyReserve.ToString("0.##", CultureInfo.InvariantCulture))
+        });
+        writer.Text("Для окончательной проверки требуется отдельная физически валидированная модель конкретного якоря и фактического грунта/контакта.", 9.3f);
+        writer.EndPage();
+    }
+
+    private static void WriteAssessmentPage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
+    {
+        writer.BeginPage();
+        writer.Title("Инженерные проверки и заключение — F4");
+
+        if (report.Assessment is null)
+        {
+            writer.VerdictBanner("Требуется проверка", "Selected F4 engineering assessment недоступна для этого расчёта.");
+            writer.EndPage();
+            return;
+        }
+
+        var assessment = report.Assessment;
+        writer.VerdictBanner(assessment.Verdict, assessment.MainRisk);
+        writer.Space(12);
+        writer.Section("Проверки");
+        foreach (var check in assessment.Checks)
+        {
+            writer.CheckBlock(CheckStatusText(check.Status), check.Summary, check.Detail);
+        }
+
+        writer.Space(10);
+        writer.Section("Итоговое инженерное заключение");
+        if (assessment.HasHardFailure)
+        {
+            writer.Text("Постановка имеет как минимум одно жёсткое невыполненное условие и по selected F4 assessment имеет вердикт «Не подходит». До устранения hard-failure переход к эксплуатации не рекомендуется.", 10);
+        }
+        else if (assessment.RequiresReview)
+        {
+            writer.Text("Жёстких базовых отказов не выявлено, но selected F4 assessment требует инженерной проверки. Перед эксплуатацией необходимо закрыть все review-пункты, прежде всего физическую проверку горизонтальной удерживающей способности якоря на фактическом грунте.", 10);
+        }
+        else
+        {
+            writer.Text("По доступным selected F4 проверкам жёстких отказов и review-пунктов не выявлено. Решение остаётся ограничено допущениями текущей квазистатической модели и областью валидированных расчётных authority.", 10);
+        }
+
+        writer.Space(8);
+        writer.Text($"Main risk code: {assessment.MainRiskCode}", 9);
+        writer.Text($"Anchor horizontal capacity disposition: {assessment.AnchorHorizontalCapacityDisposition}", 9);
+        writer.Text($"Selected authority source: {assessment.SourceIdentity}", 9);
+        writer.EndPage();
+    }
+
     private static IReadOnlyList<ElementCalculationDisplayRow> ToDiagramRows(
         IReadOnlyList<UserEngineeringElementReadModel> elements)
     {
@@ -211,6 +399,51 @@ public static class PdfReportBuilder
             MooringAnchorContactClassification.UpliftSeparation => "расчётный отрыв от грунта",
             _ => classification.ToString()
         };
+    }
+
+    private static string DesignLocationText(MooringDesignTensionLocationKind kind)
+    {
+        return kind switch
+        {
+            MooringDesignTensionLocationKind.Surface => "поверхность / буй",
+            MooringDesignTensionLocationKind.AnchorEnd => "якорная граница",
+            MooringDesignTensionLocationKind.Midpoint => "локальный midpoint сегмента",
+            _ => kind.ToString()
+        };
+    }
+
+    private static string StructuralStatusText(MooringLocalStructuralCapacityStatus status)
+    {
+        return status switch
+        {
+            MooringLocalStructuralCapacityStatus.Ok => "ОК",
+            MooringLocalStructuralCapacityStatus.Insufficient => "НЕДОСТАТОЧНО",
+            MooringLocalStructuralCapacityStatus.DemandUnavailable => "нет demand",
+            MooringLocalStructuralCapacityStatus.CapacityUnavailable => "нет capacity",
+            MooringLocalStructuralCapacityStatus.SafetyFactorUnavailable => "нет SF",
+            MooringLocalStructuralCapacityStatus.UnsupportedConnectorCount => "Count не поддержан",
+            MooringLocalStructuralCapacityStatus.NotRatedByCurrentModel => "не rated",
+            MooringLocalStructuralCapacityStatus.NoPositiveDemand => "нет +demand",
+            _ => status.ToString()
+        };
+    }
+
+    private static string CheckStatusText(MooringEngineeringAssessmentCheckStatus status)
+    {
+        return status switch
+        {
+            MooringEngineeringAssessmentCheckStatus.Ok => "ОК",
+            MooringEngineeringAssessmentCheckStatus.RequiresReview => "ПРОВЕРИТЬ",
+            MooringEngineeringAssessmentCheckStatus.HardFailure => "НЕ ПРОХОДИТ",
+            _ => status.ToString()
+        };
+    }
+
+    private static string Nullable(double? value, string format = "0.##")
+    {
+        return value.HasValue && double.IsFinite(value.Value)
+            ? value.Value.ToString(format, CultureInfo.InvariantCulture)
+            : "—";
     }
 
     private static string Format(double value) => value.ToString("0.####", CultureInfo.InvariantCulture);
@@ -363,6 +596,67 @@ public static class PdfReportBuilder
                     16,
                     34);
             }
+        }
+
+        public void StructuralTable(IReadOnlyList<UserEngineeringStructuralRowReadModel> rows)
+        {
+            var headers = new[] { "№", "Элемент", "Demand, кН", "MBL, кН", "WLL, кН", "Запас", "Статус" };
+            var widths = new[] { 26f, 145f, 68f, 62f, 62f, 56f, 104f };
+            DrawTableRow(headers, widths, true, 23, 6.9f, 14, 18);
+
+            foreach (var row in rows.OrderBy(x => x.ElementNumber))
+            {
+                var title = string.IsNullOrWhiteSpace(row.PresetName)
+                    ? row.Title
+                    : $"{row.Title} / {row.PresetName}";
+                DrawTableRow(
+                    new[]
+                    {
+                        row.ElementNumber.ToString(CultureInfo.InvariantCulture),
+                        title,
+                        Nullable(row.LocalDesignDemandKn),
+                        Nullable(row.BreakingLoadKn),
+                        Nullable(row.WorkingLoadKn),
+                        Nullable(row.LocalReserve),
+                        StructuralStatusText(row.Status)
+                    },
+                    widths,
+                    false,
+                    23,
+                    6.7f,
+                    14,
+                    27);
+            }
+        }
+
+        public void CheckBlock(string status, string summary, string detail)
+        {
+            var statusColor = status == "НЕ ПРОХОДИТ"
+                ? new SKColor(173, 45, 45)
+                : status == "ПРОВЕРИТЬ"
+                    ? new SKColor(177, 108, 0)
+                    : new SKColor(46, 125, 69);
+            var summaryLines = Wrap(summary, 9.2f, PageWidth - 2 * Margin - 94).Take(2).ToList();
+            var detailLines = Wrap(detail, 8.2f, PageWidth - 2 * Margin - 24).Take(3).ToList();
+            var height = 34 + summaryLines.Count * 11 + detailLines.Count * 10;
+            EnsureSpace(height + 6);
+
+            var rect = new SKRect(Margin, _y, PageWidth - Margin, _y + height);
+            using var fill = new SKPaint { Color = new SKColor(249, 250, 252), Style = SKPaintStyle.Fill, IsAntialias = true };
+            using var border = new SKPaint { Color = new SKColor(215, 222, 233), Style = SKPaintStyle.Stroke, StrokeWidth = 0.8f, IsAntialias = true };
+            _canvas!.DrawRoundRect(rect, 4, 4, fill);
+            _canvas.DrawRoundRect(rect, 4, 4, border);
+            DrawTextAt(status, rect.Left + 10, rect.Top + 18, 8.2f, true, statusColor);
+
+            for (var i = 0; i < summaryLines.Count; i++)
+            {
+                DrawTextAt(summaryLines[i], rect.Left + 92, rect.Top + 18 + i * 11, 9.2f, true, SKColors.Black);
+            }
+            for (var i = 0; i < detailLines.Count; i++)
+            {
+                DrawTextAt(detailLines[i], rect.Left + 10, rect.Top + 42 + i * 10, 8.2f, false, new SKColor(80, 92, 112));
+            }
+            _y += height + 5;
         }
 
         public void SelectedShapeDiagram(Mooring2DDiagramReadModel diagram)
