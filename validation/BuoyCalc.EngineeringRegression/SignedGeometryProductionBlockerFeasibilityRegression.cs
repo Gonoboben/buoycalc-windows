@@ -211,7 +211,19 @@ internal static class SignedGeometryProductionBlockerFeasibilityRegression
         double waveHeightM,
         double wavePeriodS,
         SeabedPreset seabed) =>
-        new(1025.0, depthM, currentSpeedMS, waveHeightM, wavePeriodS, seabed);
+        new(
+            1025.0,
+            depthM,
+            0.0,
+            waveHeightM,
+            wavePeriodS,
+            seabed,
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0.0, currentSpeedMS, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(depthM, currentSpeedMS, 0.0, 0.0, 1025.0)
+            });
 
     private static AssemblyItemInput Line(string title, RopePreset preset, double lengthM) =>
         new(AssemblyItemKind.Line, title, true, preset, null, lengthM, 1, 0, 0, 0, 0);
