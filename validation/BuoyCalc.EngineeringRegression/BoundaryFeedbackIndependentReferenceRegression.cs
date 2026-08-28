@@ -201,10 +201,16 @@ internal static class BoundaryFeedbackIndependentReferenceRegression
         var environment = new EnvironmentInput(
             RhoKgM3,
             TargetDepthM,
-            CurrentMS,
             0.0,
             0.0,
-            seabed);
+            0.0,
+            seabed,
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0.0, CurrentMS, 0.0, 0.0, RhoKgM3),
+                new CurrentProfilePointInput(TargetDepthM, CurrentMS, 0.0, 0.0, RhoKgM3)
+            });
         var assembly = new[]
         {
             new AssemblyItemInput(
