@@ -163,16 +163,25 @@ jobs:
             $regressionExitCode = $LASTEXITCODE
             $regressionOutput | ForEach-Object { Write-Host "$_" }
             if ($regressionExitCode -ne 0) {
-              $errorLine = $regressionOutput |
+              $stackLine = $regressionOutput |
                 ForEach-Object { "$_" } |
-                Where-Object { $_ -match "InvalidOperationException:" } |
+                Where-Object { $_ -match 'at\s+[A-Za-z0-9_]+Regression\.[A-Za-z0-9_]+' } |
                 Select-Object -First 1
-              if ($errorLine) {
-                $detail = $errorLine -replace '^.*InvalidOperationException:\s*', ''
-                if ($detail.Length -gt 108) {
-                  $detail = $detail.Substring(0, 108)
+              if ($stackLine -and $stackLine -match 'at\s+([A-Za-z0-9_]+Regression)\.([A-Za-z0-9_]+)') {
+                $stage = "regression: $($Matches[1]).$($Matches[2])"
+              }
+              else {
+                $errorLine = $regressionOutput |
+                  ForEach-Object { "$_" } |
+                  Where-Object { $_ -match "InvalidOperationException:" } |
+                  Select-Object -First 1
+                if ($errorLine) {
+                  $detail = $errorLine -replace '^.*InvalidOperationException:\s*', ''
+                  if ($detail.Length -gt 108) {
+                    $detail = $detail.Substring(0, 108)
+                  }
+                  $stage = "regression: $detail"
                 }
-                $stage = "regression: $detail"
               }
               throw "Engineering regression verification failed with exit code $regressionExitCode"
             }
