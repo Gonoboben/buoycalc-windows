@@ -24,7 +24,7 @@
                      FontWeight="Bold"
                      Foreground="#315B9A"
                      VerticalAlignment="Center"
-                     ToolTip.Tip="Профиль течения обязателен для каждого расчёта. Задайте минимум две точки на разных глубинах с U/V/W и плотностью воды. Линия разбивается на сегменты не длиннее 0.20 м; U/V/W и плотность интерполируются на глубине каждого сегмента. Базовая модель сопротивления использует |Uгор|. Компонента W применяется в ориентационно-зависимой X/Z-оценке силы линии. Для буя, соединителей и приборов применяется max |Uгор| профиля, а для расчётов веса в воде — средняя плотность профиля." />
+                     ToolTip.Tip="Задайте U/V/W и плотность минимум в двух точках на разных глубинах. Профиль течения обязателен для каждого расчёта. Линия разбивается на сегменты не длиннее 0.20 м; U/V/W и плотность интерполируются на глубине каждого сегмента. Базовая модель сопротивления использует |Uгор|. Компонента W применяется в ориентационно-зависимой X/Z-оценке силы линии. Для буя, соединителей и приборов применяется max |Uгор| профиля, а для расчётов веса в воде — средняя плотность профиля." />
         </StackPanel>
         <Border Grid.Column="1" Background="#E9EFFA" CornerRadius="12" Padding="12,8" VerticalAlignment="Center">
           <TextBlock Text="{x:Static services:AppInfo.DisplayVersion}" FontSize="12" Foreground="#263653" FontWeight="Bold" />
@@ -36,7 +36,7 @@
       <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Spacing="10">
           <TextBlock Text="Профиль течения является обязательным исходным условием расчёта и всегда активен." FontSize="12" FontWeight="SemiBold" Foreground="#263653" TextWrapping="Wrap" />
-          <TextBox Text="{Binding PlanarXAxisAzimuthDeg}" Watermark="Азимут оси +X, ° (0 = Север, 90 = Восток; пусто = не задан)" FontSize="12" />
+          <TextBox Text="{Binding PlanarXAxisAzimuthDeg}" PlaceholderText="Азимут оси +X, ° (0 = Север, 90 = Восток; пусто = не задан)" FontSize="12" />
           <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
             <TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
           </Border>
