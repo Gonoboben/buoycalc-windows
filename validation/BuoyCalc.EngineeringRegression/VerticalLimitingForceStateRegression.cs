@@ -22,7 +22,19 @@ internal static class VerticalLimitingForceStateRegression
             "Regression sand",
             1.2,
             "Deterministic regression seabed preset.");
-        var environment = new EnvironmentInput(1025.0, 50.0, 0.0, 0.0, 0.0, seabed);
+        var environment = new EnvironmentInput(
+            1025.0,
+            50.0,
+            0.0,
+            0.0,
+            0.0,
+            seabed,
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0.0, 0.0, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(50.0, 0.0, 0.0, 0.0, 1025.0)
+            });
         var buoy = new BuoyInput("Regression buoy", 1.0, 100.0, 0.8, 0.8);
         var rope = new RopePreset(
             "reg:heavy-line",
