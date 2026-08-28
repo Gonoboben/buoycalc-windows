@@ -9,10 +9,16 @@ internal static class SurfaceBoundaryInfoDataWiringRegression
         var environment = new EnvironmentInput(
             1025.0,
             10.0,
-            0.8,
             0.0,
             0.0,
-            new SeabedPreset("surface-info:wiring", "Synthetic", 1.0, string.Empty));
+            0.0,
+            new SeabedPreset("surface-info:wiring", "Synthetic", 1.0, string.Empty),
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0.0, 0.8, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(10.0, 0.8, 0.0, 0.0, 1025.0)
+            });
         var buoy = new BuoyInput("Synthetic buoy", 0.8, 80.0, 0.5, 1.0);
         var rope = new RopePreset(
             "surface-info:wiring-rope",
