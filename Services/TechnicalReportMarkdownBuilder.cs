@@ -9,9 +9,8 @@ namespace BuoyCalc.Windows.Services;
 /// <summary>
 /// Markdown renderer boundary for the full technical report.
 ///
-/// The top-level Markdown assembly now lives here. Existing section renderers are
-/// gradually moving from ReportBuilder into this builder while the generated
-/// output stays byte-for-byte stable.
+/// The top-level Markdown assembly lives here. Renderers only display state that
+/// has already been produced by the calculation/read-model pipeline.
 /// </summary>
 public static class TechnicalReportMarkdownBuilder
 {
@@ -24,7 +23,6 @@ public static class TechnicalReportMarkdownBuilder
         var shape = data.Shape;
         var shapeProjection = data.ShapeProjection;
         var shapeForces = data.ShapeForces;
-        var uniformCurrentNormalVector = data.UniformCurrentNormalVector;
         var shapeTensions = data.ShapeTensions;
         var forceShapeConsistency = data.ForceShapeConsistency;
         var sequencePositions = data.SequencePositions;
@@ -63,9 +61,8 @@ public static class TechnicalReportMarkdownBuilder
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeRows", sb, shape);
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeProjectionRows", sb, shapeProjection);
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeForceRows", sb, shapeForces);
-        TechnicalReportMarkdownSectionBridge.Append("AppendUniformCurrentNormalVectorRows", sb, uniformCurrentNormalVector);
         TechnicalReportMarkdownSectionBridge.Append("AppendShapeTensionRows", sb, shapeTensions);
-     TechnicalReportMarkdownSectionBridge.Append("AppendForceShapeConsistencyRows", sb, forceShapeConsistency);
+        TechnicalReportMarkdownSectionBridge.Append("AppendForceShapeConsistencyRows", sb, forceShapeConsistency);
         TechnicalReportMarkdownSectionBridge.Append("AppendDiscreteLoadTensionRows", sb, discreteLoadTensions);
         TechnicalReportMarkdownSectionBridge.Append("AppendDiscreteLoadShapeRows", sb, discreteLoadShape);
         TechnicalReportMarkdownSectionBridge.Append("AppendSignedNodeEquilibriumRows", sb, signedNodeEquilibrium);
@@ -85,7 +82,6 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine(shape.MethodNote);
         sb.AppendLine(shapeProjection.MethodNote);
         sb.AppendLine(shapeForces.MethodNote);
-        sb.AppendLine(uniformCurrentNormalVector.MethodNote);
         sb.AppendLine(shapeTensions.MethodNote);
         sb.AppendLine(sequencePositions.MethodNote);
         sb.AppendLine(discreteLoadTensions.MethodNote);
@@ -109,19 +105,13 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"- Плотность воды базовая: {environment.WaterDensityKgM3:0.####} кг/м³");
         sb.AppendLine($"- Плотность воды расчётная: {environment.EffectiveWaterDensityKgM3:0.####} кг/м³");
         sb.AppendLine($"- Глубина: {environment.DepthM:0.####} м");
-        sb.AppendLine($"- Течение базовое: {environment.CurrentSpeedMS:0.####} м/с");
-        sb.AppendLine($"- Течение расчётное: {environment.EffectiveCurrentSpeedMS:0.####} м/с");
-        sb.AppendLine($"- Профиль течения: {(environment.UseCurrentProfile ? "используется" : "не используется")}");
+        sb.AppendLine($"- Профиль течения: обязателен; точек: {environment.EffectiveCurrentProfile.Count}");
+        sb.AppendLine($"- Максимальная горизонтальная скорость профиля: {environment.EffectiveCurrentSpeedMS:0.####} м/с");
         sb.AppendLine($"- Волна: {environment.WaveHeightM:0.####} м / {environment.WavePeriodS:0.####} с");
         sb.AppendLine($"- Грунт: {environment.Seabed.Name}");
-     sb.AppendLine($"- Множитель грунта: {environment.Seabed.HoldingMultiplier:0.####}");
+        sb.AppendLine($"- Множитель грунта: {environment.Seabed.HoldingMultiplier:0.####}");
         sb.AppendLine($"- Примечание по грунту: {environment.Seabed.Note}");
         sb.AppendLine();
-
-        if (environment.EffectiveCurrentProfile.Count == 0)
-        {
-            return;
-        }
 
         sb.AppendLine("## Профиль течения по глубине");
         sb.AppendLine("| Глубина, м | U East, м/с | V North, м/с | W Vertical, м/с | |Uгор|, м/с | |U3D|, м/с | ρ, кг/м³ |");
