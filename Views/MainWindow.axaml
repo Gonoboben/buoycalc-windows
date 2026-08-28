@@ -90,25 +90,21 @@
                   <TextBox Text="{Binding Depth}" />
                 </StackPanel>
                 <StackPanel Grid.Row="1" Spacing="4">
-                  <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Течение, м/с" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Одно расчётное значение скорости течения. Если включён профиль по глубине, используются значения профиля согласно его расчётному контракту." /></StackPanel>
-                  <TextBox Text="{Binding CurrentSpeed}" />
-                </StackPanel>
-                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
                   <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Высота волны, м" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Расчётная высота волны для существующей предварительной оценки волновой нагрузки на буй." /></StackPanel>
                   <TextBox Text="{Binding WaveHeight}" />
                 </StackPanel>
-                <StackPanel Grid.Row="2" Spacing="4">
+                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
                   <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Период волны, с" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Время между соседними гребнями волны. Используется существующей моделью волновой нагрузки." /></StackPanel>
                   <TextBox Text="{Binding WavePeriod}" />
                 </StackPanel>
-                <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Spacing="4">
                   <StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="Грунт" FontSize="12" Foreground="#697386" /><TextBlock Classes="helpMark" Text="?" ToolTip.Tip="Описание грунта для справочных/совместимых данных якоря. Горизонтальная несущая способность якорь/грунт в v1 требует отдельной валидированной физической модели." /></StackPanel>
                   <ComboBox ItemsSource="{Binding SeabedPresets}" SelectedItem="{Binding SelectedSeabedPreset}" HorizontalAlignment="Stretch" />
                 </StackPanel>
                 <Border Grid.Row="3" Grid.ColumnSpan="2" Background="#F7F9FC" CornerRadius="10" Padding="10">
                   <TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
                 </Border>
-                <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Профиль течения по глубине..." Click="OpenCurrentProfileButton_Click" HorizontalAlignment="Stretch" />
+                <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Профиль течения по глубине — обязателен..." Click="OpenCurrentProfileButton_Click" HorizontalAlignment="Stretch" ToolTip.Tip="Расчёт выполняется только по профилю течения минимум из двух точек на разных глубинах." />
               </Grid>
             </Expander>
           </Border>
