@@ -54,14 +54,17 @@ internal static class MainWindowCalculationInputBuilder
             .OrderBy(x => x.DepthM)
             .ToList();
 
+        // CurrentSpeed and UseCurrentProfile remain on the UI source only for legacy project
+        // compatibility during the v1 migration. They are deliberately non-authoritative:
+        // every production calculation is profile-only.
         var environment = new EnvironmentInput(
             Parse(source.Environment.WaterDensity),
             Parse(source.Environment.Depth),
-            Parse(source.Environment.CurrentSpeed),
+            0,
             Parse(source.Environment.WaveHeight),
             Parse(source.Environment.WavePeriod),
             source.Environment.SelectedSeabedPreset ?? SeabedCatalog.ById("unknown"),
-            source.Environment.UseCurrentProfile,
+            true,
             currentProfile);
 
         var buoy = new BuoyInput(
