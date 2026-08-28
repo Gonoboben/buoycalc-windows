@@ -12,10 +12,16 @@ internal static class WaveLoadOwnershipRegression
         var environment = new EnvironmentInput(
             WaterDensityKgM3: 1025.0,
             DepthM: 50.0,
-            CurrentSpeedMS: 0.5,
+            CurrentSpeedMS: 0.0,
             WaveHeightM: 1.2,
             WavePeriodS: 6.0,
-            Seabed: seabed);
+            Seabed: seabed,
+            UseCurrentProfile: true,
+            CurrentProfile: new[]
+            {
+                new CurrentProfilePointInput(0.0, 0.5, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(50.0, 0.5, 0.0, 0.0, 1025.0)
+            });
         var buoy = new BuoyInput(
             Name: "F1-A buoy",
             VolumeM3: 0.5,
@@ -65,14 +71,22 @@ internal static class WaveLoadOwnershipRegression
         Near(noWave.Result.CurrentForceN, baseline.Result.CurrentForceN, "wave does not alter steady current force");
         Near(noWave.Result.HorizontalForceN, noWave.Result.CurrentForceN, "zero-wave horizontal identity");
 
+        var waveOnlyEnvironment = environment with
+        {
+            CurrentProfile = new[]
+            {
+                new CurrentProfilePointInput(0.0, 0.0, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(50.0, 0.0, 0.0, 0.0, 1025.0)
+            }
+        };
         var waveOnly = ApplicationCalculationRunner.Run(
-            environment with { CurrentSpeedMS = 0.0 },
+            waveOnlyEnvironment,
             buoy,
             new[] { line },
             anchor,
             5.0);
         Near(waveOnly.Result.CurrentForceN, 0.0, "zero-current aggregate current force");
-        Near(waveOnly.Result.WaveForceN, baseline.Result.WaveForceN, "wave force independent of scalar current");
+        Near(waveOnly.Result.WaveForceN, baseline.Result.WaveForceN, "wave force independent of current profile");
         Near(waveOnly.Result.HorizontalForceN, waveOnly.Result.WaveForceN, "wave-only horizontal identity");
 
         var payload = new AssemblyItemInput(
