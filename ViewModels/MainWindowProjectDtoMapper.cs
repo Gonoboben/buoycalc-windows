@@ -86,8 +86,10 @@ internal static class MainWindowProjectDtoMapper
             ProjectName = source.Environment.ProjectName,
             WaterDensity = source.Environment.WaterDensity,
             Depth = source.Environment.Depth,
-            CurrentSpeed = source.Environment.CurrentSpeed,
-            UseCurrentProfile = source.Environment.UseCurrentProfile ? "true" : "false",
+            // Retained fields keep old JSON readers/deserializers compatible, but no scalar
+            // current value is persisted as engineering authority after the profile-only switch.
+            CurrentSpeed = string.Empty,
+            UseCurrentProfile = "true",
             PlanarXAxisAzimuthDeg = source.Environment.PlanarXAxisAzimuthDeg,
             WaveHeight = source.Environment.WaveHeight,
             WavePeriod = source.Environment.WavePeriod,
@@ -136,8 +138,8 @@ internal static class MainWindowProjectDtoMapper
                 dto.ProjectName,
                 dto.WaterDensity,
                 dto.Depth,
-                dto.CurrentSpeed,
-                string.Equals(dto.UseCurrentProfile, "true", StringComparison.OrdinalIgnoreCase),
+                string.Empty,
+                true,
                 dto.WaveHeight,
                 dto.WavePeriod,
                 dto.SelectedSeabedPresetId)
