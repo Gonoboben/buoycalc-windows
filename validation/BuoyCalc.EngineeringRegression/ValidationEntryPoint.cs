@@ -7,6 +7,7 @@ internal static class ValidationEntryPoint
     {
         try
         {
+            MandatoryCurrentProfileRegression.Validate();
             ShapeLineLengthSourceRegression.Validate();
             ForceShapeConsistencyRegression.Validate();
             SignedOrientationRegression.Validate();
@@ -88,17 +89,20 @@ internal static class ProjectDtoCompatibilityRegression
 {
     public static void Validate()
     {
-        const string legacyJson = "{\"ProjectName\":\"Legacy\",\"WaterDensity\":\"1025\",\"UseCurrentProfile\":\"true\"}";
+        const string legacyJson = "{\"ProjectName\":\"Legacy\",\"WaterDensity\":\"1025\",\"CurrentSpeed\":\"0.5\",\"UseCurrentProfile\":\"false\"}";
         var legacy = JsonSerializer.Deserialize<BuoyProjectDto>(legacyJson)
             ?? throw new InvalidOperationException("Project DTO compatibility regression: legacy JSON did not deserialize.");
 
         if (legacy.PlanarXAxisAzimuthDeg != string.Empty)
             throw new InvalidOperationException("Project DTO compatibility regression: missing optional field must restore as empty string.");
+        if (legacy.CurrentSpeed != "0.5" || legacy.UseCurrentProfile != "false")
+            throw new InvalidOperationException("Project DTO compatibility regression: legacy scalar fields must remain readable for migration.");
 
         var source = new BuoyProjectDto
         {
             ProjectName = "Schema",
             WaterDensity = "1025",
+            CurrentSpeed = string.Empty,
             UseCurrentProfile = "true",
             PlanarXAxisAzimuthDeg = "270"
         };
@@ -108,7 +112,7 @@ internal static class ProjectDtoCompatibilityRegression
 
         if (restored.PlanarXAxisAzimuthDeg != "270")
             throw new InvalidOperationException("Project DTO compatibility regression: optional field did not round-trip.");
-        if (restored.UseCurrentProfile != "true" || restored.WaterDensity != "1025")
-            throw new InvalidOperationException("Project DTO compatibility regression: existing fields changed during round-trip.");
+        if (restored.UseCurrentProfile != "true" || restored.WaterDensity != "1025" || restored.CurrentSpeed != string.Empty)
+            throw new InvalidOperationException("Project DTO compatibility regression: profile-only compatibility fields changed during round-trip.");
     }
 }
