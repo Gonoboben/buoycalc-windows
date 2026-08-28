@@ -56,11 +56,13 @@ public record EnvironmentInput(
 {
     public IReadOnlyList<CurrentProfilePointInput> EffectiveCurrentProfile => CurrentProfile ?? Array.Empty<CurrentProfilePointInput>();
 
-    public double EffectiveCurrentSpeedMS => UseCurrentProfile && EffectiveCurrentProfile.Count > 0
+    // CurrentSpeedMS and UseCurrentProfile are retained only for v1 legacy project/API
+    // compatibility. Production current authority is always the explicit depth profile.
+    public double EffectiveCurrentSpeedMS => EffectiveCurrentProfile.Count > 0
         ? EffectiveCurrentProfile.Max(x => x.HorizontalSpeedMS)
-        : CurrentSpeedMS;
+        : 0;
 
-    public double EffectiveWaterDensityKgM3 => UseCurrentProfile && EffectiveCurrentProfile.Count > 0
+    public double EffectiveWaterDensityKgM3 => EffectiveCurrentProfile.Count > 0
         ? EffectiveCurrentProfile.Average(x => x.WaterDensityKgM3 > 0 ? x.WaterDensityKgM3 : WaterDensityKgM3)
         : WaterDensityKgM3;
 }
@@ -162,6 +164,8 @@ public static class BuoyCalculator
         AnchorInput anchor,
         double safetyFactor)
     {
+        CurrentProfileRequirement.EnsureUsable(environment);
+
         var enabledItems = assemblyItems.Where(x => x.IsEnabled).ToList();
         var lineItems = enabledItems.Where(x => x.Kind == AssemblyItemKind.Line && x.RopePreset is not null).ToList();
         var connectorItems = enabledItems.Where(x => x.Kind == AssemblyItemKind.Connector && x.ConnectorPreset is not null).ToList();
@@ -238,7 +242,7 @@ public static class BuoyCalculator
             anchorWeightWater > 0 ? "OK: якорь имеет положительный вес в воде" : "ERROR: якорь имеет нулевой или отрицательный вес в воде; удержание невозможно",
             anchorReserve >= 1 ? "OK: запас якоря" : "WARNING: малый запас якоря",
             environment.Seabed.Id == "unknown" ? "WARNING: грунт не задан точно" : $"OK: грунт учтён: {environment.Seabed.Name}",
-            environment.UseCurrentProfile ? $"INFO: используется профиль течения; линия разбита на {segmentRows.Count} расчётных сегментов" : $"INFO: используется одно значение скорости течения = {currentSpeedMS:0.####} м/с; линия разбита на {segmentRows.Count} расчётных сегментов",
+            $"INFO: используется обязательный профиль течения; линия разбита на {segmentRows.Count} расчётных сегментов",
             $"INFO: суммарная сила течения по сегментам линии = {lineCurrentForce:0.####} Н",
             $"INFO: удержание якоря = вес в воде × K якоря × K типа × K грунта = {anchorWeightWater:0.####} × {anchor.BaseHoldingCoefficient:0.####} × {anchorTypeMultiplier:0.####} × {seabedMultiplier:0.####}"
         };
@@ -498,9 +502,7 @@ public static class BuoyCalculator
                 var estimatedDepth = Math.Clamp(totalLineLengthM > 0 ? midLength / totalLineLengthM * environment.DepthM : 0, 0, Math.Max(0, environment.DepthM));
                 var current = CurrentAtDepth(environment, estimatedDepth);
                 var rho = current.WaterDensityKgM3 > 0 ? current.WaterDensityKgM3 : environment.EffectiveWaterDensityKgM3;
-                var localSpeed = environment.UseCurrentProfile && environment.EffectiveCurrentProfile.Count > 0
-                    ? current.HorizontalSpeedMS
-                    : environment.CurrentSpeedMS;
+                var localSpeed = current.HorizontalSpeedMS;
                 var projectedArea = Math.Max(0, endLength - startLength) * item.RopePreset.DiameterMm / 1000.0;
                 var currentForce = DragForce(rho, localSpeed, projectedArea, item.RopePreset.DragCoefficient);
                 var segmentWeightWaterKg = Math.Max(0, endLength - startLength) * item.RopePreset.WeightWaterKgM;
@@ -514,9 +516,9 @@ public static class BuoyCalculator
                     endLength,
                     Math.Max(0, endLength - startLength),
                     estimatedDepth,
-                    environment.UseCurrentProfile ? current.EastCurrentMS : environment.CurrentSpeedMS,
-                    environment.UseCurrentProfile ? current.NorthCurrentMS : 0,
-                    environment.UseCurrentProfile ? current.VerticalCurrentMS : 0,
+                    current.EastCurrentMS,
+                    current.NorthCurrentMS,
+                    current.VerticalCurrentMS,
                     localSpeed,
                     rho,
                     projectedArea,
@@ -534,9 +536,9 @@ public static class BuoyCalculator
 
     private static CurrentProfilePointInput CurrentAtDepth(EnvironmentInput environment, double depthM)
     {
-        if (!environment.UseCurrentProfile || environment.EffectiveCurrentProfile.Count == 0)
+        if (environment.EffectiveCurrentProfile.Count == 0)
         {
-            return new CurrentProfilePointInput(depthM, environment.CurrentSpeedMS, 0, 0, environment.WaterDensityKgM3);
+            throw new InvalidOperationException(CurrentProfileRequirement.UserMessage);
         }
 
         var points = environment.EffectiveCurrentProfile

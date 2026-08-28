@@ -20,6 +20,8 @@ public static class ApplicationCalculationRunner
         AnchorInput anchor,
         double safetyFactor)
     {
+        CurrentProfileRequirement.EnsureUsable(environment);
+
         var result = BuoyCalculator.Calculate(
             environment,
             buoy,

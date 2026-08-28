@@ -51,9 +51,11 @@ internal static class MainWindowCurrentProfilePointLifecyclePlanBuilder
             ? 0
             : existingDepths.Max() + 10;
 
+        // The legacy scalar-current arguments are intentionally ignored.
+        // A new profile point must never inherit a hidden whole-column speed.
         return new MainWindowCurrentProfilePointDefaults(
             depth.ToString("0.###", CultureInfo.InvariantCulture),
-            useCurrentSpeed ? currentSpeed : "0.3",
+            "0",
             "0",
             "0",
             waterDensity);

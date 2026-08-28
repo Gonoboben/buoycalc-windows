@@ -6,28 +6,12 @@ internal static class UniformCurrentReportRegression
 {
     public static void Validate()
     {
-        ValidateUniformSection();
-        ValidateProfileUnavailableSection();
-    }
-
-    private static void ValidateUniformSection()
-    {
-        var environment = BuildEnvironment(useProfile: false);
+        var environment = BuildEnvironment();
         var report = BuildReport(environment);
 
-        RequireContains(report, "## Вектор нормального сопротивления линии — uniform current", "uniform heading");
-        RequireContains(report, "- Статус: доступно для scalar/uniform-current mode.", "uniform available status");
-        RequireContains(report, "вычисления в renderer не выполняются", "passive-renderer note");
-    }
-
-    private static void ValidateProfileUnavailableSection()
-    {
-        var environment = BuildEnvironment(useProfile: true);
-        var report = BuildReport(environment);
-
-        RequireContains(report, "## Вектор нормального сопротивления линии — uniform current", "profile heading");
-        RequireContains(report, "- Статус: недоступно для текущего режима расчёта.", "profile unavailable status");
-        RequireContains(report, "planar X/Z projection", "profile unavailable reason");
+        RequireNotContains(report, "## Вектор нормального сопротивления линии — uniform current", "retired uniform heading");
+        RequireNotContains(report, "scalar/uniform-current mode", "retired scalar mode status");
+        RequireContains(report, "## Профиль течения по глубине", "mandatory current profile section");
     }
 
     private static string BuildReport(EnvironmentInput environment)
@@ -74,26 +58,24 @@ internal static class UniformCurrentReportRegression
             BaseHoldingCoefficient: 1.0);
 
         var run = ApplicationCalculationRunner.Run(environment, buoy, assembly, anchor, safetyFactor: 2.0);
-        return TechnicalReportMarkdownBuilder.Build("Uniform-current report regression", environment, buoy, anchor, run.Snapshot);
+        return TechnicalReportMarkdownBuilder.Build("Profile-only report regression", environment, buoy, anchor, run.Snapshot);
     }
 
-    private static EnvironmentInput BuildEnvironment(bool useProfile)
+    private static EnvironmentInput BuildEnvironment()
     {
         return new EnvironmentInput(
             WaterDensityKgM3: 1025.0,
             DepthM: 10.0,
-            CurrentSpeedMS: 0.8,
+            CurrentSpeedMS: 99.0,
             WaveHeightM: 0.0,
             WavePeriodS: 0.0,
             Seabed: new SeabedPreset("synthetic", "Synthetic", 1.0, string.Empty),
-            UseCurrentProfile: useProfile,
-            CurrentProfile: useProfile
-                ? new[]
-                {
-                    new CurrentProfilePointInput(0.0, 0.8, 0.0, 0.0, 1025.0),
-                    new CurrentProfilePointInput(10.0, 0.6, 0.2, 0.0, 1025.0)
-                }
-                : Array.Empty<CurrentProfilePointInput>());
+            UseCurrentProfile: true,
+            CurrentProfile: new[]
+            {
+                new CurrentProfilePointInput(0.0, 0.8, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(10.0, 0.6, 0.2, 0.0, 1025.0)
+            });
     }
 
     private static void RequireContains(string value, string expected, string label)
@@ -101,7 +83,16 @@ internal static class UniformCurrentReportRegression
         if (!value.Contains(expected, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
-                $"Uniform-current report regression {label}: report does not contain expected text: {expected}");
+                $"Profile-only report regression {label}: report does not contain expected text: {expected}");
+        }
+    }
+
+    private static void RequireNotContains(string value, string forbidden, string label)
+    {
+        if (value.Contains(forbidden, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Profile-only report regression {label}: report contains retired text: {forbidden}");
         }
     }
 }

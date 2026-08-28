@@ -66,10 +66,16 @@ internal static class BoundaryConditionedFeedbackCouplingRegression
         var environment = new EnvironmentInput(
             1025.0,
             30.0,
-            0.3,
             0.0,
             0.0,
-            seabed);
+            0.0,
+            seabed,
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0.0, 0.3, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(30.0, 0.3, 0.0, 0.0, 1025.0)
+            });
         var assembly = new[]
         {
             new AssemblyItemInput(
@@ -447,7 +453,6 @@ internal static class BoundaryConditionedFeedbackCouplingRegression
                 $"Boundary feedback {label} {stage}: trace crossed {trace.PointLoadCrossings} points, expected {expectedPointCount}.");
         }
     }
-
     private static Geometry BuildGeometry(
         MooringSurfaceBoundaryTensionTraceResult trace,
         string label)

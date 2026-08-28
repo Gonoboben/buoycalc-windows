@@ -58,8 +58,8 @@ internal static class MainWindowDefaultProjectTemplateBuilder
             ProjectJsonStorage.DefaultProjectPath,
             "1025",
             "50",
-            "0.5",
-            false,
+            string.Empty,
+            true,
             "1.0",
             "6.0",
             "unknown",
@@ -68,33 +68,7 @@ internal static class MainWindowDefaultProjectTemplateBuilder
             "5",
             "Нажмите «Рассчитать».",
             "",
-            new[]
-            {
-                new MainWindowDefaultCurrentProfilePointTemplate(
-                    Literal("0"),
-                    CurrentSpeed(),
-                    Literal("0"),
-                    Literal("0"),
-                    WaterDensity()),
-                new MainWindowDefaultCurrentProfilePointTemplate(
-                    Literal("10"),
-                    Literal("0.45"),
-                    Literal("0"),
-                    Literal("0"),
-                    WaterDensity()),
-                new MainWindowDefaultCurrentProfilePointTemplate(
-                    Literal("25"),
-                    Literal("0.3"),
-                    Literal("0"),
-                    Literal("0"),
-                    WaterDensity()),
-                new MainWindowDefaultCurrentProfilePointTemplate(
-                    Depth(),
-                    Literal("0.1"),
-                    Literal("0"),
-                    Literal("0"),
-                    WaterDensity())
-            },
+            System.Array.Empty<MainWindowDefaultCurrentProfilePointTemplate>(),
             new[]
             {
                 new MainWindowDefaultAssemblyItemTemplate(

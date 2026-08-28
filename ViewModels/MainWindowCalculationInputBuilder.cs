@@ -53,15 +53,21 @@ internal static class MainWindowCalculationInputBuilder
             .Select(x => SanitizeCurrentProfilePoint(x.ToInput()))
             .OrderBy(x => x.DepthM)
             .ToList();
+        var profileMaxHorizontalSpeedMS = currentProfile.Count == 0
+            ? 0
+            : currentProfile.Max(x => x.HorizontalSpeedMS);
 
+        // CurrentSpeed and UseCurrentProfile remain on the UI source only for legacy project
+        // compatibility during the v1 migration. The EnvironmentInput scalar slot receives only
+        // a profile-derived compatibility summary; it is never an independent calculation input.
         var environment = new EnvironmentInput(
             Parse(source.Environment.WaterDensity),
             Parse(source.Environment.Depth),
-            Parse(source.Environment.CurrentSpeed),
+            profileMaxHorizontalSpeedMS,
             Parse(source.Environment.WaveHeight),
             Parse(source.Environment.WavePeriod),
             source.Environment.SelectedSeabedPreset ?? SeabedCatalog.ById("unknown"),
-            source.Environment.UseCurrentProfile,
+            true,
             currentProfile);
 
         var buoy = new BuoyInput(

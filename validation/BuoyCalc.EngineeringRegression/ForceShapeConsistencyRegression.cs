@@ -140,7 +140,7 @@ internal static class ForceShapeConsistencyRegression
             new EnvironmentInput(
                 1025.0,
                 50.0,
-                0.2,
+                0,
                 0,
                 0,
                 RegressionSeabed,
@@ -431,10 +431,16 @@ internal static class ForceShapeConsistencyRegression
         return new EnvironmentInput(
             1025.0,
             depthM,
-            currentSpeedMS,
+            0,
             waveHeightM,
             wavePeriodS,
-            RegressionSeabed);
+            RegressionSeabed,
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0, currentSpeedMS, 0, 0, 1025),
+                new CurrentProfilePointInput(depthM, currentSpeedMS, 0, 0, 1025)
+            });
     }
 
     private static AssemblyItemInput Line(string title, RopePreset preset, double lengthM)

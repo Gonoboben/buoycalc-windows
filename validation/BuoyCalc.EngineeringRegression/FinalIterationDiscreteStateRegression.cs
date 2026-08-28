@@ -174,10 +174,16 @@ internal static class FinalIterationDiscreteStateRegression
         return new EnvironmentInput(
             1025.0,
             depthM,
-            currentSpeedMS,
+            0.0,
             0.5,
             5.0,
-            RegressionSeabed);
+            RegressionSeabed,
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0.0, currentSpeedMS, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(depthM, currentSpeedMS, 0.0, 0.0, 1025.0)
+            });
     }
 
     private static AssemblyItemInput Line(string title, double lengthM)
