@@ -441,7 +441,6 @@ internal static class SignedNodeEquilibriumRegression
             0,
             0,
             0,
-            0,
             true,
             "Synthetic signed-node regression tensions.");
 
@@ -570,10 +569,16 @@ internal static class SignedNodeEquilibriumRegression
         return new EnvironmentInput(
             1025.0,
             depthM,
-            currentSpeedMS,
+            0.0,
             waveHeightM,
             wavePeriodS,
-            RegressionSeabed);
+            RegressionSeabed,
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0.0, currentSpeedMS, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(depthM, currentSpeedMS, 0.0, 0.0, 1025.0)
+            });
     }
 
     private static AssemblyItemInput Line(string title, RopePreset rope, double lengthM)
