@@ -141,7 +141,7 @@ internal static class Program
                 new EnvironmentInput(
                     1025.0,
                     50.0,
-                    0.2,
+                    0,
                     0,
                     0,
                     RegressionSeabed,
@@ -536,13 +536,22 @@ internal static class Program
         double waveHeightM,
         double wavePeriodS)
     {
+        // Historical scalar regression cases are retained as named references, but the
+        // environmental input is now an explicit two-point constant profile. This keeps
+        // the constitutive load expectation while exercising the profile-only production path.
         return new EnvironmentInput(
             1025.0,
             depthM,
-            currentSpeedMS,
+            0,
             waveHeightM,
             wavePeriodS,
-            RegressionSeabed);
+            RegressionSeabed,
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0, currentSpeedMS, 0, 0, 1025),
+                new CurrentProfilePointInput(depthM, currentSpeedMS, 0, 0, 1025)
+            });
     }
 
     private static AssemblyItemInput Line(string title, RopePreset preset, double lengthM)
