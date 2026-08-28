@@ -70,7 +70,7 @@ internal static class UniformCurrentReportRegression
             WaveHeightM: 0.0,
             WavePeriodS: 0.0,
             Seabed: new SeabedPreset("synthetic", "Synthetic", 1.0, string.Empty),
-            UseCurrentProfile: false,
+            UseCurrentProfile: true,
             CurrentProfile: new[]
             {
                 new CurrentProfilePointInput(0.0, 0.8, 0.0, 0.0, 1025.0),
