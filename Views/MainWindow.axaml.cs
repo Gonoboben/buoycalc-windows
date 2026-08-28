@@ -1,5 +1,7 @@
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using BuoyCalc.Windows.Models;
 using BuoyCalc.Windows.Services;
 using BuoyCalc.Windows.ViewModels;
 
@@ -57,6 +59,15 @@ public partial class MainWindow : Window
     {
         if (DataContext is not MainWindowViewModel viewModel)
         {
+            return;
+        }
+
+        var profile = viewModel.CurrentProfilePoints
+            .Select(x => x.ToInput())
+            .ToList();
+        if (!CurrentProfileRequirement.IsUsable(profile))
+        {
+            viewModel.ProjectStatusText = CurrentProfileRequirement.UserMessage;
             return;
         }
 
