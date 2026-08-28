@@ -441,6 +441,7 @@ internal static class SignedNodeEquilibriumRegression
             0,
             0,
             0,
+            0,
             true,
             "Synthetic signed-node regression tensions.");
 
