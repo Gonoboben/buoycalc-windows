@@ -52,94 +52,113 @@ jobs:
             Invoke-RestMethod -Uri $statusUrl -Method Post -Headers $headers -ContentType "application/json" -Body $body | Out-Null
           }
 
+          $stage = "startup"
           Set-BuoyCalcStatus "pending" "Build started"
 
           try {
+            $stage = "restore app"
             dotnet restore BuoyCalc.Windows.csproj
             if ($LASTEXITCODE -ne 0) {
               throw "dotnet restore failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "restore regression"
             dotnet restore validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj
             if ($LASTEXITCODE -ne 0) {
               throw "engineering regression restore failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "compile app"
             dotnet build BuoyCalc.Windows.csproj --configuration Release --no-restore
             if ($LASTEXITCODE -ne 0) {
               throw "dotnet build failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "reportbuilder guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-reportbuilder-usage.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "ReportBuilder usage check failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "technical report guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-technical-report-path.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Technical report path smoke check failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "selected report guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-selected-technical-report-boundary.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Selected technical report boundary smoke check failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "v1 freeze guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-v1-release-freeze.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "v1 release freeze identity/baseline smoke check failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "RC packaging guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-windows-rc-packaging.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Windows RC packaging smoke check failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "readmodel guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-readmodel-boundary.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Read-model boundary smoke check failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "user readmodel guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-user-engineering-report-read-model.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "User engineering report read-model guard failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "typed PDF guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-user-pdf-typed-renderer.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Typed user PDF renderer guard failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "RC UI guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-rc-smoke-ui-polish.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "RC smoke UI polish guard failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "RC round2 guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-rc-smoke-round2.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "RC smoke round-2 UI/PDF/library guard failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "governance guard"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-repository-governance.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Repository governance smoke check failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "report consumer scan"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scan-report-store-consumers.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Report store consumer scan failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "report consumer map"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-report-store-consumer-map.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Report store consumer map check failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "shape consumer map"
             pwsh -NoProfile -ExecutionPolicy Bypass -File tools/check-selected-shape-consumer-map.ps1
             if ($LASTEXITCODE -ne 0) {
               throw "Selected shape consumer map check failed with exit code $LASTEXITCODE"
             }
 
+            $stage = "engineering regression"
             dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json
             if ($LASTEXITCODE -ne 0) {
               throw "Engineering regression verification failed with exit code $LASTEXITCODE"
@@ -148,6 +167,6 @@ jobs:
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
-            Set-BuoyCalcStatus "failure" "Build failed"
+            Set-BuoyCalcStatus "failure" "Build failed: $stage"
             throw
           }
