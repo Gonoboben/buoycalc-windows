@@ -159,9 +159,22 @@ jobs:
             }
 
             $stage = "engineering regression"
-            dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json
-            if ($LASTEXITCODE -ne 0) {
-              throw "Engineering regression verification failed with exit code $LASTEXITCODE"
+            $regressionOutput = dotnet run --project validation/BuoyCalc.EngineeringRegression/BuoyCalc.EngineeringRegression.csproj --configuration Release --no-restore -- --verify validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json 2>&1
+            $regressionExitCode = $LASTEXITCODE
+            $regressionOutput | ForEach-Object { Write-Host "$_" }
+            if ($regressionExitCode -ne 0) {
+              $errorLine = $regressionOutput |
+                ForEach-Object { "$_" } |
+                Where-Object { $_ -match "InvalidOperationException:" } |
+                Select-Object -First 1
+              if ($errorLine) {
+                $detail = $errorLine -replace '^.*InvalidOperationException:\s*', ''
+                if ($detail.Length -gt 108) {
+                  $detail = $detail.Substring(0, 108)
+                }
+                $stage = "regression: $detail"
+              }
+              throw "Engineering regression verification failed with exit code $regressionExitCode"
             }
 
             Set-BuoyCalcStatus "success" "Build succeeded"
