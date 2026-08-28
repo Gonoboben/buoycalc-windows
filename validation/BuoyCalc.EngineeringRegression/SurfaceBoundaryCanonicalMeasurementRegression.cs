@@ -164,7 +164,7 @@ internal static class SurfaceBoundaryCanonicalMeasurementRegression
     {
         return new CanonicalScenario(
             "A",
-            new EnvironmentInput(1025.0, 50.0, 0.8, 1.0, 6.0, new SeabedPreset("a", "Sand", 1.3, string.Empty)),
+            ConstantProfileEnvironment(50.0, 0.8, 1.0, 6.0, new SeabedPreset("a", "Sand", 1.3, string.Empty)),
             new BuoyInput("A buoy", 0.5, 80.0, 0.5, 0.8),
             StandardAssembly(55.0),
             new AnchorInput("A anchor", "Deadweight", "Concrete", 1000.0, 0.4, 1.0),
@@ -175,7 +175,7 @@ internal static class SurfaceBoundaryCanonicalMeasurementRegression
     {
         return new CanonicalScenario(
             "B",
-            new EnvironmentInput(1025.0, 120.0, 1.0, 2.0, 7.0, new SeabedPreset("b", "Mud", 1.8, string.Empty)),
+            ConstantProfileEnvironment(120.0, 1.0, 2.0, 7.0, new SeabedPreset("b", "Mud", 1.8, string.Empty)),
             new BuoyInput("B buoy", 1.2, 150.0, 0.9, 0.8),
             StandardAssembly(135.0, includeSecondPayload: true),
             new AnchorInput("B anchor", "Drag embedment", "Steel", 1800.0, 0.25, 1.0),
@@ -186,7 +186,7 @@ internal static class SurfaceBoundaryCanonicalMeasurementRegression
     {
         return new CanonicalScenario(
             "C",
-            new EnvironmentInput(1025.0, 380.0, 0.6, 1.5, 8.0, new SeabedPreset("c", "Silt", 1.5, string.Empty)),
+            ConstantProfileEnvironment(380.0, 0.6, 1.5, 8.0, new SeabedPreset("c", "Silt", 1.5, string.Empty)),
             new BuoyInput("C buoy", 2.2, 300.0, 1.3, 0.85),
             StandardAssembly(410.0, includeSecondPayload: true),
             new AnchorInput("C anchor", "Deadweight", "Concrete", 3000.0, 1.2, 1.1),
@@ -198,7 +198,7 @@ internal static class SurfaceBoundaryCanonicalMeasurementRegression
         var environment = new EnvironmentInput(
             1025.0,
             380.0,
-            0.2,
+            0.0,
             1.5,
             8.0,
             new SeabedPreset("d", "Silt", 1.5, string.Empty),
@@ -226,7 +226,7 @@ internal static class SurfaceBoundaryCanonicalMeasurementRegression
         var environment = new EnvironmentInput(
             1025.0,
             380.0,
-            0.2,
+            0.0,
             1.5,
             8.0,
             new SeabedPreset("e", "Silt", 1.5, string.Empty),
@@ -247,6 +247,28 @@ internal static class SurfaceBoundaryCanonicalMeasurementRegression
             StandardAssembly(410.0, includeSecondPayload: true),
             new AnchorInput("E anchor", "Deadweight", "Concrete", 3000.0, 1.2, 1.1),
             5.0);
+    }
+
+    private static EnvironmentInput ConstantProfileEnvironment(
+        double depthM,
+        double currentSpeedMS,
+        double waveHeightM,
+        double wavePeriodS,
+        SeabedPreset seabed)
+    {
+        return new EnvironmentInput(
+            1025.0,
+            depthM,
+            0.0,
+            waveHeightM,
+            wavePeriodS,
+            seabed,
+            true,
+            new[]
+            {
+                new CurrentProfilePointInput(0.0, currentSpeedMS, 0.0, 0.0, 1025.0),
+                new CurrentProfilePointInput(depthM, currentSpeedMS, 0.0, 0.0, 1025.0)
+            });
     }
 
     private static IReadOnlyList<AssemblyItemInput> StandardAssembly(double lineLengthM, bool includeSecondPayload = false)
