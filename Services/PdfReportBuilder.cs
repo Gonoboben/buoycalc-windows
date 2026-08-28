@@ -79,7 +79,7 @@ public static class PdfReportBuilder
             ("Снос selected X/Z", offset),
             ("Контакт якоря", anchorContact),
             ("Чистая плавучесть", $"{report.Calculation.NetBuoyancyKg:0.##} кг"),
-            ("Расчётное течение", $"{report.Environment.EffectiveCurrentSpeedMS:0.###} м/с")
+            ("Макс. горизонтальная скорость профиля", $"{report.Environment.EffectiveCurrentSpeedMS:0.###} м/с")
         });
         writer.Space(12);
         writer.Section("Граница применимости решения");
@@ -100,8 +100,7 @@ public static class PdfReportBuilder
             ("Плотность воды, ввод", $"{env.WaterDensityKgM3:0.##} кг/м³"),
             ("Плотность воды, эффективная", $"{env.EffectiveWaterDensityKgM3:0.##} кг/м³"),
             ("Глубина", $"{env.DepthM:0.##} м"),
-            ("Скорость течения, ввод", $"{env.CurrentSpeedMS:0.###} м/с"),
-            ("Скорость течения, расчётная", $"{env.EffectiveCurrentSpeedMS:0.###} м/с"),
+            ("Макс. горизонтальная скорость по профилю", $"{env.EffectiveCurrentSpeedMS:0.###} м/с"),
             ("Высота волны", $"{env.WaveHeightM:0.##} м"),
             ("Период волны", $"{env.WavePeriodS:0.##} с"),
             ("Грунт", $"{env.SeabedName} · K={env.SeabedHoldingMultiplier:0.##}")
@@ -109,15 +108,8 @@ public static class PdfReportBuilder
 
         writer.Space(10);
         writer.Section("Течение");
-        if (env.UsesCurrentProfile && env.CurrentProfile.Count > 0)
-        {
-            writer.Text("Используется заданный профиль течения по глубине.", 9.5f);
-            writer.CurrentProfileTable(env.CurrentProfile);
-        }
-        else
-        {
-            writer.Text($"Профиль течения отключён; используется одно значение {env.EffectiveCurrentSpeedMS:0.###} м/с.", 9.5f);
-        }
+        writer.Text("Профиль течения по глубине обязателен для расчёта; таблица ниже содержит профиль, использованный выполненным расчётом.", 9.5f);
+        writer.CurrentProfileTable(env.CurrentProfile);
 
         writer.Space(10);
         writer.Section("Буй");

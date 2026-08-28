@@ -27,6 +27,9 @@ Require-Contains $pdf "report.SelectedShape"
 Require-Contains $pdf "Mooring2DDiagramReadModelBuilder.Build(report.SelectedShape, diagramRows)"
 Require-Contains $pdf '"Ключевые показатели"'
 Require-Contains $pdf '"Исходные условия расчёта"'
+Require-Contains $pdf '"Профиль течения по глубине обязателен для расчёта; таблица ниже содержит профиль, использованный выполненным расчётом."'
+Require-Contains $pdf '"Макс. горизонтальная скорость по профилю"'
+Require-Contains $pdf "writer.CurrentProfileTable(env.CurrentProfile)"
 Require-Contains $pdf '"Состав постановки"'
 Require-Contains $pdf '"Расчётная геометрия постановки X/Z"'
 Require-Contains $pdf '"Плавучесть и расчётные нагрузки"'
@@ -45,6 +48,10 @@ Require-Contains $pdf '"Координатная конвенция: s=0 у бу
 Require-Contains $pdf "StructuralTable(structural.Rows)"
 Require-Contains $pdf "foreach (var check in assessment.Checks)"
 Require-Contains $pdf "AnchorHorizontalCapacityDisposition"
+Require-NotContains $pdf '"Скорость течения, ввод"'
+Require-NotContains $pdf '"Профиль течения отключён'
+Require-NotContains $pdf "env.CurrentSpeedMS"
+Require-NotContains $pdf "env.UsesCurrentProfile"
 Require-NotContains $pdf "resultText"
 Require-NotContains $pdf "reportText"
 Require-NotContains $pdf "PdfReportStructureGuide"
