@@ -36,7 +36,7 @@
       <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Spacing="10">
           <TextBlock Text="Профиль течения является обязательным исходным условием расчёта и всегда активен." FontSize="12" FontWeight="SemiBold" Foreground="#263653" TextWrapping="Wrap" />
-          <TextBox Text="{Binding PlanarXAxisAzimuthDeg}" PlaceholderText="Азимут оси +X, ° (0 = Север, 90 = Восток; пусто = не задан)" FontSize="12" />
+          <TextBox Text="{Binding PlanarXAxisAzimuthDeg}" Watermark="Азимут оси +X, ° (0 = Север, 90 = Восток; пусто = не задан)" FontSize="12" />
           <Border Background="#F7F9FC" CornerRadius="10" Padding="10">
             <TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
           </Border>
