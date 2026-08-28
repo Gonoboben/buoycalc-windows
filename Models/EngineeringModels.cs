@@ -277,7 +277,7 @@ public static class BuoyCalculator
             verdict,
             mainRisk,
             buoyancyKg,
-            totalWeightWaterKg: totalWeightWater,
+            totalWeightWater,
             netBuoyancyKg,
             currentForce,
             waveForce,
