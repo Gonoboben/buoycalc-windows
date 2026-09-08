@@ -8,8 +8,8 @@ namespace BuoyCalc.Windows.ApplicationModel;
 ///
 /// Technical report data and selected engineering X/Z are retained directly in the snapshot.
 /// User-facing consumers do not require mutable shape/report store publication.
-/// Signed-candidate state, typed selected-core decision and validated selected F1-F4
-/// engineering authorities are retained for diagnostics and downstream read models.
+/// Signed-candidate state, typed selected-core decision, physical-rejection disposition and
+/// validated selected F1-F4 engineering authorities are retained for downstream read models.
 /// </summary>
 public sealed partial record CalculationSnapshot(
     CalculationResult Result,
@@ -19,6 +19,7 @@ public sealed partial record CalculationSnapshot(
 public sealed partial record CalculationSnapshot
 {
     public MooringSignedCandidateResult? SignedCandidate { get; init; }
+    public MooringSignedPhysicalDispositionState? PhysicalDisposition { get; init; }
     public MooringSelectedShapeResult? ShadowSelectedCore { get; init; }
     public MooringSelectedDesignEnvelopeState? SelectedDesignEnvelope { get; init; }
     public MooringSelectedDesignTensionDemandState? SelectedDesignTensionDemand { get; init; }
@@ -42,9 +43,9 @@ public static class CalculationSnapshotBuilder
     {
         var data = TechnicalReportDataBuilder.Build(environment, buoy, result);
 
-        // Build the complete legacy read model first so it remains the exact fallback path.
-        // Package 5 replaces it only after typed core arbitration selects an accepted
-        // SignedBoundaryFeedback result.
+        // Build the complete legacy read model first so it remains the exact fallback path
+        // for non-physical non-Accepted states. RejectedPhysical is handled separately below
+        // and must not expose fallback geometry as engineering authority.
         var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);
 
         var currentSelection = MooringPrimaryShapeSelector.Select(data.Shape, data.IterativeSolver);
@@ -68,16 +69,21 @@ public static class CalculationSnapshotBuilder
             result,
             data.SequencePositions);
 
+        var physicalDisposition = MooringSignedPhysicalDispositionStateProjector.Project(
+            signedCandidate);
+
         var shadowSelectedCore = MooringSelectedShapeArbitrator.Arbitrate(
             currentSelectedCore,
             signedCandidate);
 
-        selectedShape = SelectedMooringShapeReadModelProjector.Project(
-            selectedShape,
-            shadowSelectedCore);
+        selectedShape = physicalDisposition?.BlocksEngineeringGeometry == true
+            ? null
+            : SelectedMooringShapeReadModelProjector.Project(
+                selectedShape,
+                shadowSelectedCore);
 
-        // F4-A retains the validated selected authority chain once per completed snapshot.
-        // Downstream presentation consumers are intentionally unchanged in this package.
+        // Accepted SignedBoundaryFeedback retains the validated selected F1-F4 authority chain.
+        // RejectedPhysical has no selected geometry and therefore cannot fabricate F1/F2/F3/F4.
         var selectedDesignEnvelope = MooringSelectedDesignEnvelopeStateProjector.Project(
             result,
             shadowSelectedCore,
@@ -108,6 +114,7 @@ public static class CalculationSnapshotBuilder
             selectedShape)
         {
             SignedCandidate = signedCandidate,
+            PhysicalDisposition = physicalDisposition,
             ShadowSelectedCore = shadowSelectedCore,
             SelectedDesignEnvelope = selectedDesignEnvelope,
             SelectedDesignTensionDemand = selectedDesignTensionDemand,
