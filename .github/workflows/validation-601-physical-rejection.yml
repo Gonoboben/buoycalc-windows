@@ -1,0 +1,55 @@
+name: BuoyCalc Validation 601 Physical Rejection
+
+on:
+  push:
+    branches:
+      - validation/601-physical-rejection-hard-failure
+    paths:
+      - 'validation/BuoyCalc.PhysicalRejectionValidation/**'
+      - 'docs/VALIDATION_601_PHYSICAL_REJECTION_DISPOSITION_2026-09-08.md'
+      - '.github/workflows/validation-601-physical-rejection.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'validation/BuoyCalc.PhysicalRejectionValidation/**'
+      - 'docs/VALIDATION_601_PHYSICAL_REJECTION_DISPOSITION_2026-09-08.md'
+      - '.github/workflows/validation-601-physical-rejection.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Physical rejection disposition matrix
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore validation package
+        run: dotnet restore validation/BuoyCalc.PhysicalRejectionValidation/BuoyCalc.PhysicalRejectionValidation.csproj
+
+      - name: Build validation package
+        run: dotnet build validation/BuoyCalc.PhysicalRejectionValidation/BuoyCalc.PhysicalRejectionValidation.csproj --configuration Release --no-restore
+
+      - name: Run physical rejection disposition matrix
+        run: dotnet run --project validation/BuoyCalc.PhysicalRejectionValidation/BuoyCalc.PhysicalRejectionValidation.csproj --configuration Release --no-build -- --output artifacts/validation-601-physical-rejection
+
+      - name: Print validation report
+        shell: pwsh
+        run: Get-Content artifacts/validation-601-physical-rejection/validation-601-report.md
+
+      - name: Upload validation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: buoycalc-validation-601-${{ github.sha }}
+          path: artifacts/validation-601-physical-rejection
+          if-no-files-found: error
