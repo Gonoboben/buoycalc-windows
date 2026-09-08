@@ -1,0 +1,55 @@
+name: BuoyCalc Feedback Diagnostics
+
+on:
+  push:
+    branches:
+      - validation/599-series-a-geometry-equilibrium
+    paths:
+      - validation/BuoyCalc.ValidationFeedbackDiagnostics/**
+      - .github/workflows/validation-feedback-diagnostics.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics:
+    name: Exact fixed-point budget diagnostics
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore diagnostics
+        shell: pwsh
+        run: dotnet restore validation/BuoyCalc.ValidationFeedbackDiagnostics/BuoyCalc.ValidationFeedbackDiagnostics.csproj
+
+      - name: Build diagnostics
+        shell: pwsh
+        run: dotnet build validation/BuoyCalc.ValidationFeedbackDiagnostics/BuoyCalc.ValidationFeedbackDiagnostics.csproj --configuration Release --no-restore
+
+      - name: Run exact feedback diagnostics
+        shell: pwsh
+        run: dotnet run --project validation/BuoyCalc.ValidationFeedbackDiagnostics/BuoyCalc.ValidationFeedbackDiagnostics.csproj --configuration Release --no-build -- --output artifacts/validation-feedback-diagnostics
+
+      - name: Print diagnostic report
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path artifacts/validation-feedback-diagnostics/feedback-budget-diagnostics.md) {
+            Get-Content artifacts/validation-feedback-diagnostics/feedback-budget-diagnostics.md
+          }
+
+      - name: Upload feedback diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buoycalc-feedback-diagnostics-${{ github.sha }}
+          path: artifacts/validation-feedback-diagnostics
+          if-no-files-found: error
