@@ -1,0 +1,55 @@
+name: BuoyCalc Validation Series A
+
+on:
+  push:
+    branches:
+      - validation/599-series-a-geometry-equilibrium
+    paths:
+      - validation/BuoyCalc.ValidationCampaign/**
+      - .github/workflows/validation-series-a.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  series-a:
+    name: Geometry and equilibrium truth matrix
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore campaign
+        shell: pwsh
+        run: dotnet restore validation/BuoyCalc.ValidationCampaign/BuoyCalc.ValidationCampaign.csproj
+
+      - name: Build campaign
+        shell: pwsh
+        run: dotnet build validation/BuoyCalc.ValidationCampaign/BuoyCalc.ValidationCampaign.csproj --configuration Release --no-restore
+
+      - name: Run Series A against production core
+        shell: pwsh
+        run: dotnet run --project validation/BuoyCalc.ValidationCampaign/BuoyCalc.ValidationCampaign.csproj --configuration Release --no-build -- --output artifacts/validation-series-a
+
+      - name: Print discrepancy report
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path artifacts/validation-series-a/series-a-report.md) {
+            Get-Content artifacts/validation-series-a/series-a-report.md
+          }
+
+      - name: Upload Series A evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buoycalc-validation-series-a-${{ github.sha }}
+          path: artifacts/validation-series-a
+          if-no-files-found: error
