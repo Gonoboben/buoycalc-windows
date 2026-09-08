@@ -8,8 +8,9 @@ namespace BuoyCalc.Windows.Services;
 
 /// <summary>
 /// Presentation-only projection that replaces legacy user-conclusion sections of the
-/// existing technical Markdown with retained selected F1/F2/F3/F4 authorities.
-/// The legacy renderer remains the exact fallback when no selected assessment exists.
+/// existing technical Markdown with retained selected engineering authority.
+/// RejectedPhysical uses its dedicated terminal disposition without fabricating F1/F2/F3/F4;
+/// other non-Accepted states retain the exact legacy renderer fallback.
 /// </summary>
 public static class SelectedTechnicalReportProjector
 {
@@ -17,6 +18,10 @@ public static class SelectedTechnicalReportProjector
     {
         ArgumentNullException.ThrowIfNull(legacyReport);
         ArgumentNullException.ThrowIfNull(snapshot);
+
+        var physicalDisposition = snapshot.PhysicalDisposition;
+        if (physicalDisposition is not null)
+            return ProjectPhysicalRejection(legacyReport, physicalDisposition);
 
         var assessment = snapshot.SelectedEngineeringAssessment;
         if (assessment is null)
@@ -83,6 +88,101 @@ public static class SelectedTechnicalReportProjector
             throw new InvalidOperationException("Selected technical report could not locate legacy verdict/main-risk headline fields.");
 
         return string.Join(newline, output);
+    }
+
+    private static string ProjectPhysicalRejection(
+        string legacyReport,
+        MooringSignedPhysicalDispositionState disposition)
+    {
+        if (disposition.CandidateStatus != MooringSignedCandidateStatus.RejectedPhysical ||
+            !disposition.HasHardFailure ||
+            !disposition.BlocksEngineeringGeometry)
+        {
+            throw new InvalidOperationException(
+                "Physical-rejection technical report requires a terminal RejectedPhysical hard-failure disposition.");
+        }
+
+        var newline = legacyReport.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        var lines = legacyReport.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var output = new List<string>(lines.Length + 40);
+        var verdictReplaced = false;
+        var mainRiskReplaced = false;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+
+            if (!verdictReplaced && line.StartsWith("Вердикт: ", StringComparison.Ordinal))
+            {
+                output.Add($"Вердикт: {disposition.Verdict}");
+                verdictReplaced = true;
+                continue;
+            }
+
+            if (!mainRiskReplaced && line.StartsWith("Главный риск: ", StringComparison.Ordinal))
+            {
+                output.Add($"Главный риск: {disposition.MainRisk}");
+                mainRiskReplaced = true;
+                continue;
+            }
+
+            if (line == "## Итоги")
+            {
+                AppendPhysicalRejectionSection(output, disposition);
+                output.Add(line);
+                continue;
+            }
+
+            if (line == "## Таблица элементов")
+            {
+                output.Add(line);
+                output.Add("Таблица ниже сохранена как compatibility evidence выполненного базового расчёта. Она не является selected F3 authority, поскольку signed candidate физически отклонён.");
+                continue;
+            }
+
+            if (line == "## Проверки")
+            {
+                AppendPhysicalRejectionChecks(output, disposition);
+                i = SkipSection(lines, i);
+                continue;
+            }
+
+            output.Add(MarkLegacyAuthorityAsCompatibilityOnly(line));
+        }
+
+        if (!verdictReplaced || !mainRiskReplaced)
+        {
+            throw new InvalidOperationException(
+                "Physical-rejection technical report could not locate legacy verdict/main-risk headline fields.");
+        }
+
+        return string.Join(newline, output);
+    }
+
+    private static void AppendPhysicalRejectionSection(
+        List<string> output,
+        MooringSignedPhysicalDispositionState disposition)
+    {
+        output.Add("## Физическая невозможность signed candidate");
+        output.Add("Signed calculation authority классифицировал постановку как физически недопустимую в рамках текущей нерастяжимой модели. Fallback/iterative X/Z не используется как инженерная selected-геометрия.");
+        output.Add($"- Вердикт: {disposition.Verdict}");
+        output.Add($"- Код физического отказа: {disposition.DiagnosticCode}");
+        output.Add($"- Диагностика: {disposition.DiagnosticText}");
+        output.Add("- Selected X/Z authority: отсутствует");
+        output.Add("- Selected F1/F2/F3/F4 authority: отсутствует; значения не синтезируются без физически допустимой selected-геометрии");
+        output.Add(string.Empty);
+    }
+
+    private static void AppendPhysicalRejectionChecks(
+        List<string> output,
+        MooringSignedPhysicalDispositionState disposition)
+    {
+        output.Add("## Проверки");
+        output.Add("Signed physical-disposition authority; legacy CalculationResult.Checks не определяют этот terminal verdict.");
+        output.Add($"- [FAIL] RejectedPhysical / {disposition.DiagnosticCode}: {disposition.DiagnosticText}");
+        output.Add("- [BLOCK] SelectedGeometry: fallback/iterative X/Z заблокирована как engineering authority.");
+        output.Add("- [N/A] F1/F2/F3/F4: не создаются без физически допустимой selected-геометрии.");
+        output.Add(string.Empty);
     }
 
     private static void AppendSelectedAuthoritySection(
