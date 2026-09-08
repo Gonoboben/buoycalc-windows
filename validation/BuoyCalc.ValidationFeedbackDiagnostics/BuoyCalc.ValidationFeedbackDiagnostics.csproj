@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Program.cs" />
     <ProjectReference Include="../../BuoyCalc.Windows.csproj" />
   </ItemGroup>
 </Project>
