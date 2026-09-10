@@ -7,6 +7,19 @@ public static class UserReportBuilder
 {
     public static string Build(EnvironmentInput environment, CalculationSnapshot snapshot)
     {
+        var physicalDisposition = snapshot.PhysicalDisposition;
+        if (physicalDisposition is not null)
+        {
+            return $"Вердикт: {physicalDisposition.Verdict}\n" +
+                   $"Главный риск: {physicalDisposition.MainRisk}\n" +
+                   $"Код физического отказа: {physicalDisposition.DiagnosticCode}\n" +
+                   $"Грунт: {environment.Seabed.DisplayName}\n" +
+                   $"Течение расчётное: {environment.EffectiveCurrentSpeedMS:0.###} м/с\n" +
+                   $"Чистая плавучесть: {snapshot.Result.NetBuoyancyKg:0.##} кг\n" +
+                   "Расчётная форма X/Z: недоступна — signed candidate физически отклонён\n" +
+                   "Selected F1/F2/F3: недоступны, поскольку физически допустимая selected-геометрия не существует";
+        }
+
         var assessment = snapshot.SelectedEngineeringAssessment;
         if (assessment is null)
         {
