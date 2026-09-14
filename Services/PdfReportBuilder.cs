@@ -48,9 +48,10 @@ public static class PdfReportBuilder
 
     private static void WriteExecutivePage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
     {
+        var physicalDisposition = report.PhysicalDisposition;
         var assessment = report.Assessment;
-        var verdict = assessment?.Verdict ?? "Требуется проверка";
-        var mainRisk = assessment?.MainRisk ?? "Selected F1-F4 инженерная оценка недоступна для этого расчёта.";
+        var verdict = physicalDisposition?.Verdict ?? assessment?.Verdict ?? "Требуется проверка";
+        var mainRisk = physicalDisposition?.MainRisk ?? assessment?.MainRisk ?? "Selected F1-F4 инженерная оценка недоступна для этого расчёта.";
         var designTension = report.DesignLoad is null ? "не определена" : $"{report.DesignLoad.DemandKn:0.##} кН";
         var governingReserve = report.Structural?.GoverningReserve is double reserve
             ? reserve.ToString("0.##", CultureInfo.InvariantCulture)
@@ -319,6 +320,27 @@ public static class PdfReportBuilder
         writer.BeginPage();
         writer.Title("Инженерные проверки и заключение — F4");
 
+        if (report.PhysicalDisposition is not null)
+        {
+            var disposition = report.PhysicalDisposition;
+            writer.VerdictBanner(disposition.Verdict, disposition.MainRisk);
+            writer.Space(12);
+            writer.Section("Физическая невозможность signed candidate");
+            writer.KeyValueTable(new[]
+            {
+                ("Candidate status", disposition.CandidateStatus.ToString()),
+                ("Код физического отказа", disposition.DiagnosticCode),
+                ("Диагностика", disposition.DiagnosticText),
+                ("Selected X/Z authority", "отсутствует"),
+                ("Selected F1/F2/F3/F4 authority", "отсутствует")
+            });
+            writer.Space(8);
+            writer.Text(disposition.MethodNote, 9.5f);
+            writer.Text("Физический отказ является terminal engineering evidence signed candidate. Fallback/iterative X/Z не используется как engineering authority.", 9.5f);
+            writer.EndPage();
+            return;
+        }
+
         if (report.Assessment is null)
         {
             writer.VerdictBanner("Требуется проверка", "Selected F4 engineering assessment недоступна для этого расчёта.");
@@ -369,6 +391,8 @@ public static class PdfReportBuilder
         var anchorSource = report.AnchorReaction?.SourceIdentity.ToString() ?? "не определён";
         var structuralSource = report.Structural?.SourceIdentity.ToString() ?? "не определён";
         var assessmentSource = report.Assessment?.SourceIdentity.ToString() ?? "не определён";
+        var physicalStatus = report.PhysicalDisposition?.CandidateStatus.ToString() ?? "не определён";
+        var physicalCode = report.PhysicalDisposition?.DiagnosticCode ?? "не определён";
 
         writer.BeginPage();
         writer.Title("Воспроизводимость и provenance");
@@ -395,7 +419,9 @@ public static class PdfReportBuilder
             ("F1 design-load source", designSource),
             ("F2 anchor-reaction source", anchorSource),
             ("F3 structural source", structuralSource),
-            ("F4 assessment source", assessmentSource)
+            ("F4 assessment source", assessmentSource),
+            ("Signed candidate status", physicalStatus),
+            ("Physical disposition code", physicalCode)
         });
 
         writer.Space(12);

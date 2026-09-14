@@ -302,12 +302,15 @@ internal static class SignedCandidateProductionEvaluatorRegression
         }
     }
 
-    private static SelectedSnapshot CaptureSelected(SelectedShapeReadModel? selected, string name)
+    private static SelectedSnapshot? CaptureSelected(SelectedShapeReadModel? selected, string name)
     {
-        if (selected is null || selected.Shape.AnchorPoint is null)
+        if (selected is null)
+            return null;
+
+        if (selected.Shape.AnchorPoint is null)
         {
             throw new InvalidOperationException(
-                $"Signed production evaluator {name}: current production selected shape is unavailable.");
+                $"Signed production evaluator {name}: current production selected shape has no anchor point.");
         }
 
         return new SelectedSnapshot(

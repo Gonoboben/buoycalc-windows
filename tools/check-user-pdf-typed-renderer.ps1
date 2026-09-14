@@ -20,6 +20,14 @@ $workflow = "Views/MainWindowPdfExportWorkflowBuilder.cs"
 
 Require-Contains $pdf "Build(string filePath, UserEngineeringReportReadModel report)"
 Require-Contains $pdf "report.Assessment"
+Require-Contains $pdf "var physicalDisposition = report.PhysicalDisposition;"
+Require-Contains $pdf "physicalDisposition?.Verdict"
+Require-Contains $pdf "if (report.PhysicalDisposition is not null)"
+Require-Contains $pdf '"Физическая невозможность signed candidate"'
+Require-Contains $pdf '"Код физического отказа"'
+Require-Contains $pdf '"Selected F1/F2/F3/F4 authority"'
+Require-Contains $pdf "disposition.DiagnosticText"
+Require-Contains $pdf "Physical disposition code"
 Require-Contains $pdf "report.DesignLoad"
 Require-Contains $pdf "report.Structural"
 Require-Contains $pdf "report.AnchorReaction"

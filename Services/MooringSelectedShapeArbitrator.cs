@@ -4,6 +4,8 @@ namespace BuoyCalc.Windows.Services;
 /// Typed calculation-core arbitration between the current selected geometry and the
 /// signed boundary-feedback candidate. This service selects geometry/source identity only;
 /// downstream scalar tension, anchor, verdict and other force authority remain unchanged.
+/// A physically rejected signed candidate blocks fallback geometry from becoming selected
+/// engineering authority.
 /// </summary>
 public static class MooringSelectedShapeArbitrator
 {
@@ -12,6 +14,9 @@ public static class MooringSelectedShapeArbitrator
         MooringSignedCandidateResult signedCandidate)
     {
         ArgumentNullException.ThrowIfNull(signedCandidate);
+
+        if (signedCandidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
+            return null;
 
         if (signedCandidate.Status != MooringSignedCandidateStatus.Accepted)
             return currentSelected;

@@ -152,6 +152,18 @@ public sealed record UserEngineeringAssessmentReadModel(
     IReadOnlyList<UserEngineeringAssessmentCheckReadModel> Checks,
     MooringAnchorHorizontalCapacityDisposition AnchorHorizontalCapacityDisposition);
 
+public sealed record UserEngineeringPhysicalDispositionReadModel(
+    MooringShapeSourceIdentity SourceIdentity,
+    MooringSignedCandidateStatus CandidateStatus,
+    string Verdict,
+    string MainRiskCode,
+    string MainRisk,
+    bool HasHardFailure,
+    bool BlocksEngineeringGeometry,
+    string DiagnosticCode,
+    string DiagnosticText,
+    string MethodNote);
+
 public sealed record UserEngineeringReportReadModel(
     string ProjectName,
     UserEngineeringEnvironmentReadModel Environment,
@@ -163,6 +175,7 @@ public sealed record UserEngineeringReportReadModel(
     UserEngineeringDesignLoadReadModel? DesignLoad,
     UserEngineeringAnchorReactionReadModel? AnchorReaction,
     UserEngineeringStructuralReadModel? Structural,
+    UserEngineeringPhysicalDispositionReadModel? PhysicalDisposition,
     UserEngineeringAssessmentReadModel? Assessment);
 
 public static class UserEngineeringReportReadModelProjector
@@ -254,6 +267,7 @@ public static class UserEngineeringReportReadModelProjector
             ProjectDesignLoad(snapshot.SelectedDesignTensionDemand, snapshot.SelectedDesignEnvelope),
             ProjectAnchorReaction(snapshot.SelectedAnchorReaction),
             ProjectStructural(snapshot.SelectedLocalStructuralCapacity),
+            ProjectPhysicalDisposition(snapshot.PhysicalDisposition),
             ProjectAssessment(snapshot.SelectedEngineeringAssessment));
     }
 
@@ -343,6 +357,24 @@ public static class UserEngineeringReportReadModelProjector
             state.GoverningReserve,
             state.GoverningDemandN,
             state.GoverningWorkingLoadKn);
+    }
+
+    private static UserEngineeringPhysicalDispositionReadModel? ProjectPhysicalDisposition(
+        MooringSignedPhysicalDispositionState? state)
+    {
+        return state is null
+            ? null
+            : new UserEngineeringPhysicalDispositionReadModel(
+                state.SourceIdentity,
+                state.CandidateStatus,
+                state.Verdict,
+                state.MainRiskCode,
+                state.MainRisk,
+                state.HasHardFailure,
+                state.BlocksEngineeringGeometry,
+                state.DiagnosticCode,
+                state.DiagnosticText,
+                state.MethodNote);
     }
 
     private static UserEngineeringAssessmentReadModel? ProjectAssessment(

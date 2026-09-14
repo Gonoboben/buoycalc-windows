@@ -77,10 +77,7 @@ internal static class SignedCandidateShadowArbitrationRegression
                 anchor,
                 safetyFactor);
 
-            var productionSelected = run.Snapshot.SelectedShape
-                ?? throw new InvalidOperationException(
-                    $"Signed shadow arbitration {name}: production selected shape is unavailable.");
-            var productionBefore = CaptureSelected(productionSelected);
+            var productionBefore = CaptureSelected(run.Snapshot.SelectedShape);
             var data = run.Snapshot.TechnicalReportData;
             var boundary = data.SurfaceBoundaryInfo;
             var trace = data.SurfaceBoundaryTensionTrace;
@@ -112,13 +109,13 @@ internal static class SignedCandidateShadowArbitrationRegression
                     indeterminateCount++;
             }
 
+            if (candidate.Status == ShadowCandidateStatus.RejectedPhysical)
+                ValidatePhysicalDisposition(name, run.Snapshot);
+
             var shadow = SelectShadow(productionBefore, candidate);
             ValidateShadowSelection(name, productionBefore, candidate, shadow);
 
-            var productionAfter = CaptureSelected(
-                run.Snapshot.SelectedShape
-                ?? throw new InvalidOperationException(
-                    $"Signed shadow arbitration {name}: production selected shape disappeared after shadow evaluation."));
+            var productionAfter = CaptureSelected(run.Snapshot.SelectedShape);
             AssertProductionUnchanged(name, productionBefore, productionAfter);
 
             Console.WriteLine(string.Join("|",
@@ -131,14 +128,14 @@ internal static class SignedCandidateShadowArbitrationRegression
                 $"CandidateIterations={candidate.FeedbackIterations}",
                 $"CandidatePointLoads={candidate.PointLoadCrossings}",
                 $"CandidateUsesDiscreteLoads={candidate.ContainsDiscreteLoads}",
-                $"ProductionSource={productionBefore.Source}",
-                $"ProductionConverged={productionBefore.Converged}",
-                $"ProductionUsesDiscreteLoads={productionBefore.UsesDiscreteLoads}",
-                $"ShadowSource={shadow.SourceIdentity}",
-                $"ShadowConverged={shadow.SelectedConverged}",
-                $"ShadowUsesDiscreteLoads={shadow.SelectedUsesDiscreteLoads}",
-                $"ShadowX={Format(shadow.HorizontalOffsetM)}",
-                $"ShadowZ={Format(shadow.AnchorDepthM)}",
+                $"ProductionSource={productionBefore?.Source ?? "none"}",
+                $"ProductionConverged={productionBefore?.Converged.ToString() ?? "none"}",
+                $"ProductionUsesDiscreteLoads={productionBefore?.UsesDiscreteLoads.ToString() ?? "none"}",
+                $"ShadowSource={shadow?.SourceIdentity ?? "none"}",
+                $"ShadowConverged={shadow?.SelectedConverged.ToString() ?? "none"}",
+                $"ShadowUsesDiscreteLoads={shadow?.SelectedUsesDiscreteLoads.ToString() ?? "none"}",
+                $"ShadowX={(shadow is null ? "none" : Format(shadow.HorizontalOffsetM))}",
+                $"ShadowZ={(shadow is null ? "none" : Format(shadow.AnchorDepthM))}",
                 $"ProductionRuntimeUnchanged=True"));
         }
 
@@ -317,8 +314,8 @@ internal static class SignedCandidateShadowArbitrationRegression
             boundary.Classification.ToString());
     }
 
-    private static ShadowSelection SelectShadow(
-        SelectedSnapshot current,
+    private static ShadowSelection? SelectShadow(
+        SelectedSnapshot? current,
         ShadowCandidate candidate)
     {
         if (candidate.Status == ShadowCandidateStatus.Accepted)
@@ -339,6 +336,15 @@ internal static class SignedCandidateShadowArbitrationRegression
                 candidate.NodeCount);
         }
 
+        if (candidate.Status == ShadowCandidateStatus.RejectedPhysical)
+            return null;
+
+        if (current is null)
+        {
+            throw new InvalidOperationException(
+                $"Signed shadow arbitration {candidate.Status}: production selected shape is unexpectedly unavailable.");
+        }
+
         return new ShadowSelection(
             current.Source,
             current.Converged,
@@ -350,9 +356,9 @@ internal static class SignedCandidateShadowArbitrationRegression
 
     private static void ValidateShadowSelection(
         string name,
-        SelectedSnapshot current,
+        SelectedSnapshot? current,
         ShadowCandidate candidate,
-        ShadowSelection shadow)
+        ShadowSelection? shadow)
     {
         if (candidate.Status == ShadowCandidateStatus.Accepted)
         {
@@ -369,6 +375,22 @@ internal static class SignedCandidateShadowArbitrationRegression
             return;
         }
 
+        if (candidate.Status == ShadowCandidateStatus.RejectedPhysical)
+        {
+            if (current is not null || shadow is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Signed shadow arbitration {name}: RejectedPhysical must expose neither production nor shadow selected geometry.");
+            }
+            return;
+        }
+
+        if (current is null || shadow is null)
+        {
+            throw new InvalidOperationException(
+                $"Signed shadow arbitration {name}: non-physical non-Accepted candidate lost selected-source truth.");
+        }
+
         if (!string.Equals(shadow.SourceIdentity, current.Source, StringComparison.Ordinal) ||
             shadow.SelectedConverged != current.Converged ||
             shadow.SelectedUsesDiscreteLoads != current.UsesDiscreteLoads ||
@@ -381,8 +403,41 @@ internal static class SignedCandidateShadowArbitrationRegression
         }
     }
 
-    private static SelectedSnapshot CaptureSelected(SelectedShapeReadModel selected)
+    private static void ValidatePhysicalDisposition(
+        string name,
+        CalculationSnapshot snapshot)
     {
+        if (snapshot.SelectedShape is not null || snapshot.ShadowSelectedCore is not null)
+        {
+            throw new InvalidOperationException(
+                $"Signed shadow arbitration {name}: RejectedPhysical still exposes selected engineering geometry.");
+        }
+
+        var candidate = snapshot.SignedCandidate
+            ?? throw new InvalidOperationException(
+                $"Signed shadow arbitration {name}: RejectedPhysical SignedCandidate is null.");
+        var disposition = snapshot.PhysicalDisposition
+            ?? throw new InvalidOperationException(
+                $"Signed shadow arbitration {name}: RejectedPhysical PhysicalDisposition is null.");
+
+        if (candidate.Status != MooringSignedCandidateStatus.RejectedPhysical ||
+            disposition.CandidateStatus != candidate.Status ||
+            disposition.Verdict != "Не подходит" ||
+            !disposition.HasHardFailure ||
+            !disposition.BlocksEngineeringGeometry ||
+            disposition.DiagnosticCode != candidate.DiagnosticCode ||
+            disposition.DiagnosticText != candidate.DiagnosticText)
+        {
+            throw new InvalidOperationException(
+                $"Signed shadow arbitration {name}: RejectedPhysical disposition lost exact signed diagnostic provenance.");
+        }
+    }
+
+    private static SelectedSnapshot? CaptureSelected(SelectedShapeReadModel? selected)
+    {
+        if (selected is null)
+            return null;
+
         var anchor = selected.Shape.AnchorPoint
             ?? throw new InvalidOperationException(
                 $"Signed shadow arbitration: selected source {selected.Source} has no anchor point.");
@@ -398,9 +453,19 @@ internal static class SignedCandidateShadowArbitrationRegression
 
     private static void AssertProductionUnchanged(
         string name,
-        SelectedSnapshot before,
-        SelectedSnapshot after)
+        SelectedSnapshot? before,
+        SelectedSnapshot? after)
     {
+        if (before is null || after is null)
+        {
+            if (before is not null || after is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Signed shadow arbitration {name}: validation-only arbitration changed selected-shape availability.");
+            }
+            return;
+        }
+
         if (!string.Equals(before.Source, after.Source, StringComparison.Ordinal) ||
             before.Converged != after.Converged ||
             before.UsesDiscreteLoads != after.UsesDiscreteLoads ||

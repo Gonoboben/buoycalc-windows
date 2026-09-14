@@ -45,12 +45,8 @@ internal static class SignedCandidateSnapshotShadowIntegrationRegression
             var safetyFactor = RequireProperty<double>(definition, "SafetyFactor");
             var run = ApplicationCalculationRunner.Run(environment, buoy, assembly, anchor, safetyFactor);
             var snapshot = run.Snapshot;
-            var selected = snapshot.SelectedShape
-                ?? throw new InvalidOperationException($"Signed snapshot integration {name}: SelectedShape is null.");
             var candidate = snapshot.SignedCandidate
                 ?? throw new InvalidOperationException($"Signed snapshot integration {name}: SignedCandidate is null.");
-            var selectedCore = snapshot.ShadowSelectedCore
-                ?? throw new InvalidOperationException($"Signed snapshot integration {name}: selected core is null.");
             var legacy = SelectedMooringShapeProvider.Build(
                 snapshot.TechnicalReportData.Shape,
                 snapshot.TechnicalReportData.IterativeSolver);
@@ -61,6 +57,11 @@ internal static class SignedCandidateSnapshotShadowIntegrationRegression
             if (candidate.Status == MooringSignedCandidateStatus.Accepted)
             {
                 accepted++;
+                var selected = snapshot.SelectedShape
+                    ?? throw new InvalidOperationException($"Signed snapshot integration {name}: Accepted SelectedShape is null.");
+                var selectedCore = snapshot.ShadowSelectedCore
+                    ?? throw new InvalidOperationException($"Signed snapshot integration {name}: Accepted selected core is null.");
+
                 if (candidate.Shape is null ||
                     selectedCore.SourceIdentity != MooringShapeSourceIdentity.SignedBoundaryFeedback ||
                     !selectedCore.SelectedConverged ||
@@ -75,14 +76,37 @@ internal static class SignedCandidateSnapshotShadowIntegrationRegression
                         $"Signed snapshot integration {name}: Accepted candidate is not represented truthfully by typed core/read model.");
                 }
             }
-            else
+            else if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
             {
-                if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
-                    rejectedPhysical++;
-                else if (candidate.Status == MooringSignedCandidateStatus.Indeterminate)
-                    indeterminate++;
-                else
-                    throw new InvalidOperationException($"Signed snapshot integration {name}: unexpected status {candidate.Status}.");
+                rejectedPhysical++;
+
+                if (snapshot.SelectedShape is not null || snapshot.ShadowSelectedCore is not null)
+                {
+                    throw new InvalidOperationException(
+                        $"Signed snapshot integration {name}: RejectedPhysical still exposes selected engineering geometry.");
+                }
+
+                var disposition = snapshot.PhysicalDisposition
+                    ?? throw new InvalidOperationException(
+                        $"Signed snapshot integration {name}: RejectedPhysical physical disposition is null.");
+                if (disposition.CandidateStatus != MooringSignedCandidateStatus.RejectedPhysical ||
+                    disposition.Verdict != "Не подходит" ||
+                    !disposition.HasHardFailure ||
+                    !disposition.BlocksEngineeringGeometry ||
+                    disposition.DiagnosticCode != candidate.DiagnosticCode ||
+                    disposition.DiagnosticText != candidate.DiagnosticText)
+                {
+                    throw new InvalidOperationException(
+                        $"Signed snapshot integration {name}: RejectedPhysical disposition lost exact signed diagnostic provenance.");
+                }
+            }
+            else if (candidate.Status == MooringSignedCandidateStatus.Indeterminate)
+            {
+                indeterminate++;
+                var selected = snapshot.SelectedShape
+                    ?? throw new InvalidOperationException($"Signed snapshot integration {name}: Indeterminate SelectedShape is null.");
+                var selectedCore = snapshot.ShadowSelectedCore
+                    ?? throw new InvalidOperationException($"Signed snapshot integration {name}: Indeterminate selected core is null.");
 
                 AssertReadModelEquivalent(name + " legacy preservation", legacy, selected);
                 var expectedSource = legacy.UsesDiscreteLoads
@@ -93,9 +117,13 @@ internal static class SignedCandidateSnapshotShadowIntegrationRegression
                     selectedCore.SelectedUsesDiscreteLoads != legacy.UsesDiscreteLoads)
                 {
                     throw new InvalidOperationException(
-                        $"Signed snapshot integration {name}: non-Accepted candidate contaminated selected-core truth.");
+                        $"Signed snapshot integration {name}: Indeterminate candidate contaminated selected-core truth.");
                 }
-                AssertShapeEquivalent(name + " non-Accepted core", legacy.Shape, selectedCore.Shape);
+                AssertShapeEquivalent(name + " Indeterminate core", legacy.Shape, selectedCore.Shape);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Signed snapshot integration {name}: unexpected status {candidate.Status}.");
             }
 
             Console.WriteLine(string.Join("|",
@@ -103,8 +131,8 @@ internal static class SignedCandidateSnapshotShadowIntegrationRegression
                 name,
                 $"CandidateStatus={candidate.Status}",
                 $"LegacySource={legacy.Source}",
-                $"SelectedSource={selected.Source}",
-                $"TypedSource={selectedCore.SourceIdentity}",
+                $"SelectedSource={snapshot.SelectedShape?.Source ?? "none"}",
+                $"TypedSource={snapshot.ShadowSelectedCore?.SourceIdentity.ToString() ?? "none"}",
                 $"AuthoritySwitch={candidate.Status == MooringSignedCandidateStatus.Accepted}"));
         }
 

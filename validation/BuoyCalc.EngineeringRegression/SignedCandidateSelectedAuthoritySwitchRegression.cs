@@ -58,12 +58,10 @@ internal static class SignedCandidateSelectedAuthoritySwitchRegression
                 anchor,
                 safetyFactor);
             var snapshot = run.Snapshot;
-            var selected = snapshot.SelectedShape
-                ?? throw new InvalidOperationException($"Selected authority switch {name}: SelectedShape is null.");
+            var selected = snapshot.SelectedShape;
             var candidate = snapshot.SignedCandidate
                 ?? throw new InvalidOperationException($"Selected authority switch {name}: SignedCandidate is null.");
-            var selectedCore = snapshot.ShadowSelectedCore
-                ?? throw new InvalidOperationException($"Selected authority switch {name}: selected core is null.");
+            var selectedCore = snapshot.ShadowSelectedCore;
             var legacy = SelectedMooringShapeProvider.Build(
                 snapshot.TechnicalReportData.Shape,
                 snapshot.TechnicalReportData.IterativeSolver);
@@ -79,7 +77,7 @@ internal static class SignedCandidateSelectedAuthoritySwitchRegression
             {
                 accepted++;
                 switched++;
-                if (candidate.Shape is null ||
+                if (candidate.Shape is null || selected is null || selectedCore is null ||
                     selectedCore.SourceIdentity != MooringShapeSourceIdentity.SignedBoundaryFeedback ||
                     !selectedCore.SelectedConverged ||
                     selectedCore.SelectedUsesDiscreteLoads != candidate.ContainsDiscreteLoads ||
@@ -94,36 +92,53 @@ internal static class SignedCandidateSelectedAuthoritySwitchRegression
                         $"Selected authority switch {name}: Accepted signed source was not projected truthfully into SelectedShapeReadModel.");
                 }
             }
-            else
+            else if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
             {
                 preserved++;
-                if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
-                    rejectedPhysical++;
-                else if (candidate.Status == MooringSignedCandidateStatus.Indeterminate)
-                    indeterminate++;
-                else
+                rejectedPhysical++;
+                var disposition = snapshot.PhysicalDisposition;
+                if (selected is not null || selectedCore is not null ||
+                    disposition is null ||
+                    disposition.CandidateStatus != MooringSignedCandidateStatus.RejectedPhysical ||
+                    disposition.Verdict != "Не подходит" ||
+                    !disposition.HasHardFailure ||
+                    !disposition.BlocksEngineeringGeometry)
+                {
                     throw new InvalidOperationException(
-                        $"Selected authority switch {name}: unexpected non-Accepted status {candidate.Status}.");
-
+                        $"Selected authority switch {name}: RejectedPhysical must have no selected authority and must preserve terminal disposition.");
+                }
+            }
+            else if (candidate.Status == MooringSignedCandidateStatus.Indeterminate)
+            {
+                preserved++;
+                indeterminate++;
+                if (selected is null || selectedCore is null)
+                    throw new InvalidOperationException(
+                        $"Selected authority switch {name}: Indeterminate selected authority is unavailable.");
                 AssertReadModelEquivalent(name + " preserved legacy", legacy, selected);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Selected authority switch {name}: unexpected non-Accepted status {candidate.Status}.");
             }
 
             var oldX = legacy.Shape.HorizontalOffsetM;
             var oldZ = AnchorDepth(legacy.Shape);
-            var newX = selected.Shape.HorizontalOffsetM;
-            var newZ = AnchorDepth(selected.Shape);
+            var newX = selected is null ? "none" : Format(selected.Shape.HorizontalOffsetM);
+            var newZ = selected is null ? "none" : Format(AnchorDepth(selected.Shape));
 
             Console.WriteLine(string.Join("|",
                 "SIGNED_SELECTED_AUTHORITY_SWITCH",
                 name,
                 $"CandidateStatus={candidate.Status}",
                 $"OldSource={legacy.Source}",
-                $"NewSource={selected.Source}",
+                $"NewSource={selected?.Source ?? "none"}",
                 $"OldX={Format(oldX)}",
-                $"NewX={Format(newX)}",
+                $"NewX={newX}",
                 $"OldZ={Format(oldZ)}",
-                $"NewZ={Format(newZ)}",
-                $"UsesDiscreteLoads={selected.UsesDiscreteLoads}",
+                $"NewZ={newZ}",
+                $"UsesDiscreteLoads={selected?.UsesDiscreteLoads.ToString() ?? "none"}",
                 $"Switched={isAccepted}",
                 "DownstreamScalarAuthority=LegacyUnchanged"));
         }
