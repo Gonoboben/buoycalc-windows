@@ -134,8 +134,8 @@ internal static class SignedCandidateShadowArbitrationRegression
                 $"ShadowSource={shadow?.SourceIdentity ?? "none"}",
                 $"ShadowConverged={shadow?.SelectedConverged.ToString() ?? "none"}",
                 $"ShadowUsesDiscreteLoads={shadow?.SelectedUsesDiscreteLoads.ToString() ?? "none"}",
-                $"ShadowX={shadow is null ? "none" : Format(shadow.HorizontalOffsetM)}",
-                $"ShadowZ={shadow is null ? "none" : Format(shadow.AnchorDepthM)}",
+                $"ShadowX={(shadow is null ? "none" : Format(shadow.HorizontalOffsetM))}",
+                $"ShadowZ={(shadow is null ? "none" : Format(shadow.AnchorDepthM))}",
                 $"ProductionRuntimeUnchanged=True"));
         }
 
