@@ -47,8 +47,7 @@ internal static class SignedCandidateTypedArbitrationRegression
             var snapshot = run.Snapshot;
             var candidate = snapshot.SignedCandidate
                 ?? throw new InvalidOperationException($"Typed arbitration {name}: signed candidate is null.");
-            var snapshotSelectedCore = snapshot.ShadowSelectedCore
-                ?? throw new InvalidOperationException($"Typed arbitration {name}: selected core is null.");
+            var snapshotSelectedCore = snapshot.ShadowSelectedCore;
 
             if (candidate.Status != expectedStatus)
                 throw new InvalidOperationException($"Typed arbitration {name}: expected {expectedStatus}, got {candidate.Status}.");
@@ -68,13 +67,12 @@ internal static class SignedCandidateTypedArbitrationRegression
                 currentSelection.Shape.Converged,
                 currentSelection.UsesDiscreteLoads,
                 "Typed shadow mirror of the existing production primary-shape selection; user-facing authority is unchanged.");
-            var direct = MooringSelectedShapeArbitrator.Arbitrate(currentCore, candidate)
-                ?? throw new InvalidOperationException($"Typed arbitration {name}: direct result is null.");
+            var direct = MooringSelectedShapeArbitrator.Arbitrate(currentCore, candidate);
 
             if (candidate.Status == MooringSignedCandidateStatus.Accepted)
             {
                 accepted++;
-                if (ReferenceEquals(direct, currentCore) || candidate.Shape is null ||
+                if (direct is null || ReferenceEquals(direct, currentCore) || candidate.Shape is null ||
                     direct.SourceIdentity != MooringShapeSourceIdentity.SignedBoundaryFeedback ||
                     !direct.SelectedConverged || direct.SelectedConverged != candidate.ExactFixedPointReached ||
                     direct.SelectedUsesDiscreteLoads != candidate.ContainsDiscreteLoads ||
@@ -83,32 +81,54 @@ internal static class SignedCandidateTypedArbitrationRegression
                     throw new InvalidOperationException($"Typed arbitration {name}: Accepted candidate was not selected truthfully.");
                 }
             }
+            else if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
+            {
+                rejectedPhysical++;
+                if (direct is not null || snapshotSelectedCore is not null ||
+                    snapshot.SelectedShape is not null ||
+                    snapshot.PhysicalDisposition is null ||
+                    snapshot.PhysicalDisposition.CandidateStatus != MooringSignedCandidateStatus.RejectedPhysical ||
+                    snapshot.PhysicalDisposition.Verdict != "Не подходит" ||
+                    !snapshot.PhysicalDisposition.HasHardFailure ||
+                    !snapshot.PhysicalDisposition.BlocksEngineeringGeometry)
+                {
+                    throw new InvalidOperationException(
+                        $"Typed arbitration {name}: RejectedPhysical must leave selected geometry/core unavailable and preserve terminal disposition.");
+                }
+            }
+            else if (candidate.Status == MooringSignedCandidateStatus.Indeterminate)
+            {
+                indeterminate++;
+                if (direct is null || !ReferenceEquals(direct, currentCore))
+                    throw new InvalidOperationException($"Typed arbitration {name}: Indeterminate result was not preserved exactly.");
+                if (MooringSelectedShapeArbitrator.Arbitrate(null, candidate) is not null)
+                    throw new InvalidOperationException($"Typed arbitration {name}: Indeterminate candidate contaminated null current selection.");
+            }
             else
             {
-                if (!ReferenceEquals(direct, currentCore))
-                    throw new InvalidOperationException($"Typed arbitration {name}: non-Accepted result was not preserved exactly.");
-                if (MooringSelectedShapeArbitrator.Arbitrate(null, candidate) is not null)
-                    throw new InvalidOperationException($"Typed arbitration {name}: non-Accepted candidate contaminated null current selection.");
-
-                if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
-                    rejectedPhysical++;
-                else if (candidate.Status == MooringSignedCandidateStatus.Indeterminate)
-                    indeterminate++;
-                else
-                    throw new InvalidOperationException($"Typed arbitration {name}: unexpected non-Accepted status {candidate.Status}.");
+                throw new InvalidOperationException($"Typed arbitration {name}: unexpected non-Accepted status {candidate.Status}.");
             }
 
-            AssertSelectedCoreEquivalent(name, direct, snapshotSelectedCore);
+            if (direct is null || snapshotSelectedCore is null)
+            {
+                if (direct is not null || snapshotSelectedCore is not null)
+                    throw new InvalidOperationException($"Typed arbitration {name}: snapshot/direct selected-core nullability differs.");
+            }
+            else
+            {
+                AssertSelectedCoreEquivalent(name, direct, snapshotSelectedCore);
+            }
 
-            var selected = snapshot.SelectedShape
-                ?? throw new InvalidOperationException($"Typed arbitration {name}: SelectedShapeReadModel is null.");
+            var selected = snapshot.SelectedShape;
             var legacy = SelectedMooringShapeProvider.Build(
                 snapshot.TechnicalReportData.Shape,
                 snapshot.TechnicalReportData.IterativeSolver);
 
             if (candidate.Status == MooringSignedCandidateStatus.Accepted)
             {
-                if (selected.Source != MooringShapeSourceIdentity.SignedBoundaryFeedback.ToString() ||
+                if (selected is null ||
+                    direct is null ||
+                    selected.Source != MooringShapeSourceIdentity.SignedBoundaryFeedback.ToString() ||
                     !ReferenceEquals(selected.Shape, direct.Shape) ||
                     selected.UsesDiscreteLoads != direct.SelectedUsesDiscreteLoads ||
                     selected.HasGateSelection || selected.GateDecision is not null)
@@ -116,8 +136,15 @@ internal static class SignedCandidateTypedArbitrationRegression
                     throw new InvalidOperationException($"Typed arbitration {name}: selected read model does not project the typed signed result.");
                 }
             }
+            else if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
+            {
+                if (selected is not null)
+                    throw new InvalidOperationException($"Typed arbitration {name}: RejectedPhysical selected read model is not null.");
+            }
             else
             {
+                if (selected is null)
+                    throw new InvalidOperationException($"Typed arbitration {name}: Indeterminate selected read model is null.");
                 AssertReadModelEquivalent(name, legacy, selected);
             }
 
@@ -126,8 +153,8 @@ internal static class SignedCandidateTypedArbitrationRegression
                 name,
                 $"CandidateStatus={candidate.Status}",
                 $"CurrentSource={currentCore.SourceIdentity}",
-                $"ArbitratedSource={direct.SourceIdentity}",
-                $"ReadModelSource={selected.Source}",
+                $"ArbitratedSource={direct?.SourceIdentity.ToString() ?? "none"}",
+                $"ReadModelSource={selected?.Source ?? "none"}",
                 $"ReadModelAuthoritySwitch={candidate.Status == MooringSignedCandidateStatus.Accepted}"));
         }
 
