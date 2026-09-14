@@ -54,8 +54,7 @@ internal static class SignedScalarDivergenceEvidenceRegression
             var snapshot = run.Snapshot;
             var candidate = snapshot.SignedCandidate
                 ?? throw new InvalidOperationException($"Signed scalar divergence evidence {name}: signed candidate is null.");
-            var selected = snapshot.SelectedShape
-                ?? throw new InvalidOperationException($"Signed scalar divergence evidence {name}: selected read model is null.");
+            var selected = snapshot.SelectedShape;
             var selectedCore = snapshot.ShadowSelectedCore;
             var signedState = MooringSelectedSignedBoundaryStateProjector.Project(selectedCore, candidate);
 
@@ -65,7 +64,7 @@ internal static class SignedScalarDivergenceEvidenceRegression
                     $"Signed scalar divergence evidence {name}: expected {expectedStatus}, got {candidate.Status}.");
             }
 
-            RequireFiniteLegacyScalars(name, result, selected.Shape.HorizontalOffsetM);
+            RequireFiniteLegacyScalars(name, result, selected?.Shape.HorizontalOffsetM);
 
             total++;
             switch (candidate.Status)
@@ -75,13 +74,14 @@ internal static class SignedScalarDivergenceEvidenceRegression
                     signedAvailable++;
                     if (signedState is null ||
                         selectedCore is null ||
+                        selected is null ||
                         selectedCore.SourceIdentity != MooringShapeSourceIdentity.SignedBoundaryFeedback ||
                         selected.Source != MooringShapeSourceIdentity.SignedBoundaryFeedback.ToString())
                     {
                         throw new InvalidOperationException(
                             $"Signed scalar divergence evidence {name}: Accepted signed selected source has no direct boundary-state evidence.");
                     }
-                    if (signedState.EndpointXM != selected.Shape.HorizontalOffsetM)
+                    if (signedState.EndpointXM != selected!.Shape.HorizontalOffsetM)
                     {
                         throw new InvalidOperationException(
                             $"Signed scalar divergence evidence {name}: selected endpoint X differs from direct signed boundary endpoint X.");
@@ -135,10 +135,10 @@ internal static class SignedScalarDivergenceEvidenceRegression
     private static void RequireNoSignedState(
         string name,
         MooringSelectedSignedBoundaryState? signedState,
-        SelectedShapeReadModel selected)
+        SelectedShapeReadModel? selected)
     {
         if (signedState is not null ||
-            selected.Source == MooringShapeSourceIdentity.SignedBoundaryFeedback.ToString())
+            selected?.Source == MooringShapeSourceIdentity.SignedBoundaryFeedback.ToString())
         {
             throw new InvalidOperationException(
                 $"Signed scalar divergence evidence {name}: non-Accepted fixture exposed signed selected authority/state.");
@@ -148,7 +148,7 @@ internal static class SignedScalarDivergenceEvidenceRegression
     private static void RequireFiniteLegacyScalars(
         string name,
         CalculationResult result,
-        double selectedEndpointXM)
+        double? selectedEndpointXM)
     {
         var values = new[]
         {
@@ -156,11 +156,11 @@ internal static class SignedScalarDivergenceEvidenceRegression
             result.RequiredAnchorHoldingKg,
             result.AnchorReserve,
             result.TensionReserve,
-            result.EstimatedOffsetM,
-            selectedEndpointXM
+            result.EstimatedOffsetM
         };
 
-        if (values.Any(value => !double.IsFinite(value)))
+        if (values.Any(value => !double.IsFinite(value)) ||
+            (selectedEndpointXM.HasValue && !double.IsFinite(selectedEndpointXM.Value)))
         {
             throw new InvalidOperationException(
                 $"Signed scalar divergence evidence {name}: legacy scalar/selected endpoint evidence contains a non-finite value.");
@@ -170,7 +170,7 @@ internal static class SignedScalarDivergenceEvidenceRegression
     private static string Evidence(
         string name,
         CalculationResult result,
-        SelectedShapeReadModel selected,
+        SelectedShapeReadModel? selected,
         MooringSignedCandidateResult candidate,
         MooringSelectedSignedBoundaryState? signedState)
     {
@@ -178,7 +178,7 @@ internal static class SignedScalarDivergenceEvidenceRegression
             "SIGNED_SCALAR_DIVERGENCE",
             name,
             $"CandidateStatus={candidate.Status}",
-            $"SelectedSource={selected.Source}",
+            $"SelectedSource={selected?.Source ?? "none"}",
             $"SignedStateAvailable={signedState is not null}",
             $"LegacyTensionKn={F(result.TensionKn)}",
             $"BoundaryQ0N={Maybe(signedState?.Q0N)}",
@@ -186,7 +186,7 @@ internal static class SignedScalarDivergenceEvidenceRegression
             $"BoundaryEndHN={Maybe(signedState?.EndHN)}",
             $"BoundaryEndVN={Maybe(signedState?.EndVN)}",
             $"LegacyEstimatedOffsetM={F(result.EstimatedOffsetM)}",
-            $"SelectedEndpointX={F(selected.Shape.HorizontalOffsetM)}",
+            $"SelectedEndpointX={Maybe(selected?.Shape.HorizontalOffsetM)}",
             $"LegacyRequiredAnchorHoldingKg={F(result.RequiredAnchorHoldingKg)}",
             $"LegacyAnchorReserve={F(result.AnchorReserve)}",
             $"LegacyTensionReserve={F(result.TensionReserve)}",
