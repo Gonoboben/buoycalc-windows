@@ -18,6 +18,7 @@ internal static class SelectedUserPresentationReadModelRegression
         var definitions = HistoricalDefinitions().Cast<object>().ToList();
         var selectedCount = 0;
         var fallbackCount = 0;
+        var physicalCount = 0;
 
         Console.WriteLine("F4B1_SELECTED_USER_PRESENTATION_BEGIN");
 
@@ -32,6 +33,8 @@ internal static class SelectedUserPresentationReadModelRegression
 
             var run = ApplicationCalculationRunner.Run(environment, buoy, assembly, anchor, safetyFactor);
             var snapshot = run.Snapshot;
+            var candidate = snapshot.SignedCandidate
+                ?? throw new InvalidOperationException($"F4-B1 {name}: signed candidate missing.");
             var legacySummary = UserReportBuilder.Build(environment, run.Result);
             var legacyRows = run.Result.ElementRows.Select(ElementCalculationDisplayRow.From).ToList();
             var legacyTechnical = TechnicalReportMarkdownBuilder.Build("F4-B1 regression", environment, buoy, anchor, snapshot);
@@ -65,19 +68,46 @@ internal static class SelectedUserPresentationReadModelRegression
                     throw new InvalidOperationException($"F4-B1 {name}: fallback fixture unexpectedly has selected assessment/capacity state.");
                 }
 
-                if (boundary.UserResultText != legacySummary)
-                    throw new InvalidOperationException($"F4-B1 {name}: non-selected user summary is not exact legacy fallback.");
-                AssertRowsEqual(projectedRows, legacyRows, name + " legacy rows");
-                AssertTechnicalUnchanged(boundary.TechnicalReportText, legacyTechnical, name);
+                if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
+                {
+                    ValidatePhysicalRejection(
+                        name,
+                        candidate,
+                        snapshot,
+                        boundary.UserResultText,
+                        legacySummary,
+                        boundary.TechnicalReportText,
+                        legacyTechnical);
+                    physicalCount++;
 
-                fallbackCount++;
-                Console.WriteLine(string.Join("|",
-                    "F4B1_SELECTED_USER_PRESENTATION",
-                    name,
-                    "Selected=False",
-                    "UserSummary=LegacyExact",
-                    "ElementRows=LegacyExact",
-                    "TechnicalReportMigration=False"));
+                    Console.WriteLine(string.Join("|",
+                        "F4B1_SELECTED_USER_PRESENTATION",
+                        name,
+                        "Selected=False",
+                        "CandidateStatus=RejectedPhysical",
+                        "UserSummary=PhysicalDisposition",
+                        "ElementRows=LegacyCompatibility",
+                        "TechnicalReportMigration=PhysicalDisposition"));
+                }
+                else
+                {
+                    if (snapshot.PhysicalDisposition is not null)
+                        throw new InvalidOperationException($"F4-B1 {name}: non-physical fallback fixture has physical disposition.");
+                    if (boundary.UserResultText != legacySummary)
+                        throw new InvalidOperationException($"F4-B1 {name}: non-physical user summary is not exact legacy fallback.");
+                    AssertRowsEqual(projectedRows, legacyRows, name + " legacy rows");
+                    AssertTechnicalUnchanged(boundary.TechnicalReportText, legacyTechnical, name);
+                    fallbackCount++;
+
+                    Console.WriteLine(string.Join("|",
+                        "F4B1_SELECTED_USER_PRESENTATION",
+                        name,
+                        "Selected=False",
+                        "CandidateStatus=" + candidate.Status,
+                        "UserSummary=LegacyExact",
+                        "ElementRows=LegacyExact",
+                        "TechnicalReportMigration=False"));
+                }
             }
             else
             {
@@ -125,15 +155,75 @@ internal static class SelectedUserPresentationReadModelRegression
             }
         }
 
-        if (definitions.Count != 5 || selectedCount != 2 || fallbackCount != 3)
+        if (definitions.Count != 5 || selectedCount != 2 || physicalCount != 2 || fallbackCount != 1)
         {
             throw new InvalidOperationException(
-                $"F4-B1 canonical coverage mismatch: scenarios={definitions.Count}, selected={selectedCount}, fallback={fallbackCount}.");
+                $"F4-B1 canonical coverage mismatch: scenarios={definitions.Count}, selected={selectedCount}, physical={physicalCount}, fallback={fallbackCount}.");
         }
 
         Console.WriteLine(
-            "F4B1_SELECTED_USER_PRESENTATION_ROLLUP|CanonicalScenarios=5|Selected=2|LegacyFallback=3|UserSummarySelectedAuthority=True|ElementTableSelectedAuthority=True|PdfRendererPhysicsChanged=False|TechnicalReportMigration=F4B2Selected|CalculationResultMutated=False|SelectedGeometryChanged=False");
+            "F4B1_SELECTED_USER_PRESENTATION_ROLLUP|CanonicalScenarios=5|Selected=2|PhysicalRejection=2|LegacyFallback=1|UserSummarySelectedAuthority=True|PhysicalDispositionPresentation=True|ElementTableSelectedAuthority=True|PdfRendererPhysicsChanged=False|TechnicalReportMigration=F4B2SelectedOrPhysicalDisposition|CalculationResultMutated=False|SelectedGeometryChanged=False");
         Console.WriteLine("F4B1_SELECTED_USER_PRESENTATION_END");
+    }
+
+    private static void ValidatePhysicalRejection(
+        string scenario,
+        MooringSignedCandidateResult candidate,
+        CalculationSnapshot snapshot,
+        string summary,
+        string legacySummary,
+        string technical,
+        string legacyTechnical)
+    {
+        var disposition = snapshot.PhysicalDisposition;
+        if (candidate.Status != MooringSignedCandidateStatus.RejectedPhysical ||
+            disposition is null ||
+            disposition.CandidateStatus != MooringSignedCandidateStatus.RejectedPhysical ||
+            !disposition.HasHardFailure ||
+            !disposition.BlocksEngineeringGeometry ||
+            disposition.Verdict != "Не подходит" ||
+            string.IsNullOrWhiteSpace(disposition.DiagnosticCode) ||
+            string.IsNullOrWhiteSpace(disposition.DiagnosticText) ||
+            snapshot.SelectedShape is not null ||
+            snapshot.ShadowSelectedCore is not null ||
+            snapshot.SelectedDesignEnvelope is not null ||
+            snapshot.SelectedDesignTensionDemand is not null ||
+            snapshot.SelectedAnchorReaction is not null ||
+            snapshot.SelectedLocalElementDemand is not null ||
+            snapshot.SelectedLocalStructuralCapacity is not null ||
+            snapshot.SelectedEngineeringAssessment is not null)
+        {
+            throw new InvalidOperationException($"F4-B1 {scenario}: RejectedPhysical exposed incomplete or selected engineering authority.");
+        }
+
+        if (summary == legacySummary || technical == legacyTechnical)
+            throw new InvalidOperationException($"F4-B1 {scenario}: RejectedPhysical did not switch presentation.");
+
+        foreach (var expected in new[]
+        {
+            "Вердикт: Не подходит",
+            "Код физического отказа: " + disposition.DiagnosticCode,
+            disposition.DiagnosticText,
+            "Расчётная форма X/Z: недоступна — signed candidate физически отклонён"
+        })
+        {
+            if (!summary.Contains(expected, StringComparison.Ordinal))
+                throw new InvalidOperationException($"F4-B1 {scenario}: user physical disposition is missing '{expected}'.");
+        }
+
+        foreach (var expected in new[]
+        {
+            "## Физическая невозможность signed candidate",
+            "Вердикт: Не подходит",
+            disposition.DiagnosticCode,
+            disposition.DiagnosticText,
+            "Selected X/Z authority: отсутствует",
+            "Selected F1/F2/F3/F4 authority: отсутствует"
+        })
+        {
+            if (!technical.Contains(expected, StringComparison.Ordinal))
+                throw new InvalidOperationException($"F4-B2 {scenario}: technical physical disposition is missing '{expected}'.");
+        }
     }
 
     private static void ValidateSelectedSummary(
