@@ -32,7 +32,8 @@ $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
 $requiredWorkflows = @(
     ".NET Build",
     "Selected Shape Consumer Scan",
-    "Report Store Consumer Scan"
+    "Report Store Consumer Scan",
+    "BuoyCalc Validation 601 Main Gate"
 )
 
 foreach ($requiredName in $requiredWorkflows) {
@@ -58,4 +59,22 @@ foreach ($requiredName in $requiredWorkflows) {
     Write-Host "Exact-main CI gate confirmed: $requiredName | run=$($run.id) | conclusion=$($run.conclusion)"
 }
 
-Write-Host "All exact-main RC prerequisite workflows are green for $SourceCommit."
+$statusUri = "https://api.github.com/repos/$Repository/commits/$SourceCommit/statuses?per_page=100"
+$statusResponse = Invoke-RestMethod -Uri $statusUri -Method Get -Headers $headers
+$buildStatuses = @(
+    $statusResponse |
+        Where-Object { $_.context -eq "BuoyCalc Windows Build" } |
+        Select-Object -First 1
+)
+
+if ($buildStatuses.Count -eq 0) {
+    throw "Required exact-main commit status BuoyCalc Windows Build is missing for source $SourceCommit."
+}
+
+$buildStatus = $buildStatuses[0]
+if ($buildStatus.state -ne "success") {
+    throw "Required exact-main commit status BuoyCalc Windows Build is not green for ${SourceCommit}: state=$($buildStatus.state), target=$($buildStatus.target_url)"
+}
+
+Write-Host "Exact-main commit status confirmed: BuoyCalc Windows Build | state=$($buildStatus.state) | target=$($buildStatus.target_url)"
+Write-Host "All exact-main RC prerequisite workflows and statuses are green for $SourceCommit."

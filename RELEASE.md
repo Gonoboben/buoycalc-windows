@@ -115,6 +115,7 @@ BuoyCalc-Windows-v1.0.0-win-x64-RC
 .NET Build
 Selected Shape Consumer Scan
 Report Store Consumer Scan
+BuoyCalc Validation 601 Main Gate
 BuoyCalc Windows Build: success
 ```
 
@@ -137,6 +138,9 @@ BuoyCalc Windows Build: success
 11. PDF использует рассчитанную выбранную геометрию/read models;
 12. полный technical report открывается и показывает selected authority там, где она доступна;
 13. проверяются несколько реальных постановок, включая рабочий сценарий пользователя.
+14. на каноническом сценарии `RejectedPhysical` проверяется terminal verdict `Не подходит`;
+15. в PDF отображаются exact signed diagnostic code и diagnostic text;
+16. для `RejectedPhysical` PDF не показывает selected X/Z и selected F1/F2/F3/F4 authority.
 
 Перед smoke нужно сверить SHA-256 ZIP со значением одновременно в `.sha256` и manifest.
 
