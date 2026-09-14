@@ -56,6 +56,12 @@ internal static class SelectedEngineeringAssessmentStateRegression
                 buoy,
                 anchor,
                 snapshot).UserResultText;
+            var userEngineeringReport = UserEngineeringReportReadModelProjector.Project(
+                "F4-A regression",
+                environment,
+                buoy,
+                anchor,
+                snapshot);
 
             if (!AcceptedFixtures.Contains(name))
             {
@@ -66,20 +72,52 @@ internal static class SelectedEngineeringAssessmentStateRegression
                     snapshot.SelectedLocalStructuralCapacity is not null ||
                     snapshot.SelectedEngineeringAssessment is not null)
                 {
-                    throw new InvalidOperationException($"F4-A {name}: non-Accepted selection exposed selected F1-F4 authority state.");
+                    throw new InvalidOperationException(
+                        "F4-A " + name + ": non-Accepted selection exposed selected F1-F4 authority state.");
                 }
 
-                if (selectedUserReport != legacyUserReport || boundaryUserReport != legacyUserReport)
-                    throw new InvalidOperationException($"F4-B1 {name}: non-Accepted user summary did not preserve exact legacy fallback.");
+                if (candidate.Status == MooringSignedCandidateStatus.RejectedPhysical)
+                {
+                    ValidatePhysicalRejectionPresentation(
+                        name,
+                        candidate,
+                        snapshot,
+                        userEngineeringReport,
+                        selectedUserReport,
+                        boundaryUserReport,
+                        legacyUserReport);
 
-                unavailable++;
-                Console.WriteLine(string.Join("|",
-                    "F4A_SELECTED_ENGINEERING_ASSESSMENT",
-                    name,
-                    $"CandidateStatus={candidate.Status}",
-                    "Available=False",
-                    "PresentationMigration=False",
-                    "LegacyPresentationFallback=True"));
+                    unavailable++;
+                    Console.WriteLine(string.Join("|",
+                        "F4A_SELECTED_ENGINEERING_ASSESSMENT",
+                        name,
+                        "CandidateStatus=RejectedPhysical",
+                        "Available=False",
+                        "PresentationMigration=True",
+                        "LegacyPresentationFallback=False"));
+                }
+                else
+                {
+                    if (snapshot.PhysicalDisposition is not null ||
+                        userEngineeringReport.PhysicalDisposition is not null)
+                    {
+                        throw new InvalidOperationException(
+                            "F4-A " + name + ": non-physical candidate received a physical disposition.");
+                    }
+
+                    if (selectedUserReport != legacyUserReport || boundaryUserReport != legacyUserReport)
+                        throw new InvalidOperationException(
+                            "F4-B1 " + name + ": non-physical user summary did not preserve exact legacy fallback.");
+
+                    unavailable++;
+                    Console.WriteLine(string.Join("|",
+                        "F4A_SELECTED_ENGINEERING_ASSESSMENT",
+                        name,
+                        "CandidateStatus=" + candidate.Status,
+                        "Available=False",
+                        "PresentationMigration=False",
+                        "LegacyPresentationFallback=True"));
+                }
             }
             else
             {
@@ -140,6 +178,65 @@ internal static class SelectedEngineeringAssessmentStateRegression
         Console.WriteLine(
             "F4A_SELECTED_ENGINEERING_ASSESSMENT_ROLLUP|CanonicalScenarios=5|Available=2|Unavailable=3|HardPreconditions=DirectInputs|AnchorContact=F2|LocalStructuralCapacity=F3|AnchorHorizontalCapacity=RequiresAdditionalPhysicalModel|LegacyAnchorReserveAuthorizesPass=False|LegacyChecksVerdictChanged=False|PresentationMigration=AcceptedOnly|LegacyPresentationFallback=NonAccepted|SelectedGeometryChanged=False");
         Console.WriteLine("F4A_SELECTED_ENGINEERING_ASSESSMENT_END");
+    }
+
+    private static void ValidatePhysicalRejectionPresentation(
+        string scenario,
+        MooringSignedCandidateResult candidate,
+        CalculationSnapshot snapshot,
+        UserEngineeringReportReadModel report,
+        string selectedUserReport,
+        string boundaryUserReport,
+        string legacyUserReport)
+    {
+        var disposition = snapshot.PhysicalDisposition;
+        var readDisposition = report.PhysicalDisposition;
+        if (candidate.Status != MooringSignedCandidateStatus.RejectedPhysical ||
+            disposition is null ||
+            readDisposition is null ||
+            disposition.CandidateStatus != MooringSignedCandidateStatus.RejectedPhysical ||
+            !disposition.HasHardFailure ||
+            !disposition.BlocksEngineeringGeometry ||
+            disposition.Verdict != "Не подходит" ||
+            disposition.DiagnosticCode != candidate.DiagnosticCode ||
+            disposition.DiagnosticText != candidate.DiagnosticText ||
+            readDisposition.DiagnosticCode != candidate.DiagnosticCode ||
+            readDisposition.DiagnosticText != candidate.DiagnosticText)
+        {
+            throw new InvalidOperationException(
+                "F4-B1 " + scenario + ": RejectedPhysical lost typed disposition or exact signed diagnostic provenance.");
+        }
+
+        if (snapshot.SelectedShape is not null ||
+            snapshot.ShadowSelectedCore is not null ||
+            report.SelectedShape is not null ||
+            report.DesignLoad is not null ||
+            report.AnchorReaction is not null ||
+            report.Structural is not null ||
+            report.Assessment is not null)
+        {
+            throw new InvalidOperationException(
+                "F4-B1 " + scenario + ": RejectedPhysical exposed selected engineering authority.");
+        }
+
+        if (selectedUserReport == legacyUserReport || boundaryUserReport != selectedUserReport)
+        {
+            throw new InvalidOperationException(
+                "F4-B1 " + scenario + ": RejectedPhysical user presentation did not switch to the terminal disposition.");
+        }
+
+        foreach (var expected in new[]
+        {
+            "Вердикт: Не подходит",
+            "Код физического отказа: " + candidate.DiagnosticCode,
+            candidate.DiagnosticText,
+            "Расчётная форма X/Z: недоступна — signed candidate физически отклонён"
+        })
+        {
+            if (!selectedUserReport.Contains(expected, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "F4-B1 " + scenario + ": RejectedPhysical user presentation is missing '" + expected + "'.");
+        }
     }
 
     private static void ValidateAccepted(
