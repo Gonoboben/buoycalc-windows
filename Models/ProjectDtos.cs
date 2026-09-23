@@ -49,6 +49,40 @@ public sealed class AssemblyItemDto
     public string PayloadVolumeM3 { get; set; } = string.Empty;
     public string PayloadProjectedAreaM2 { get; set; } = string.Empty;
     public string PayloadDragCoefficient { get; set; } = string.Empty;
+    public ResolvedRopePresetDto? ResolvedRopePreset { get; set; }
+    public ResolvedConnectorPresetDto? ResolvedConnectorPreset { get; set; }
+}
+
+/// <summary>
+/// Resolved rope engineering input retained by the project. The library ID remains
+/// a source hint; these values are the replay authority after the project is saved.
+/// Presentation-only library notes are deliberately excluded.
+/// </summary>
+public sealed class ResolvedRopePresetDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Material { get; set; } = string.Empty;
+    public double DiameterMm { get; set; }
+    public double BreakingLoadKn { get; set; }
+    public double WeightWaterKgM { get; set; }
+    public double DragCoefficient { get; set; }
+}
+
+/// <summary>
+/// Resolved connector engineering input retained by the project. The library ID
+/// remains a source hint; these values are the replay authority after save.
+/// </summary>
+public sealed class ResolvedConnectorPresetDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public double WeightAirKg { get; set; }
+    public double VolumeM3 { get; set; }
+    public double BreakingLoadKn { get; set; }
+    public double ProjectedAreaM2 { get; set; }
+    public double DragCoefficient { get; set; }
 }
 
 public sealed class CurrentProfilePointDto

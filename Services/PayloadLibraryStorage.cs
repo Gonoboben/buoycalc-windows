@@ -47,13 +47,17 @@ public static class PayloadLibraryStorage
 
     public static PayloadLibraryItem ById(string id)
     {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            return BuiltInPayloads[0];
-        }
+        return TryById(id, out var payload)
+            ? payload!
+            : throw new InvalidOperationException($"Payload preset '{id}' was not found.");
+    }
 
-        var payload = LoadAllPayloads().FirstOrDefault(x => x.Id == id || x.Id == "built-in:" + id);
-        return payload ?? BuiltInPayloads[0];
+    public static bool TryById(string id, out PayloadLibraryItem? payload)
+    {
+        payload = string.IsNullOrWhiteSpace(id)
+            ? null
+            : LoadAllPayloads().FirstOrDefault(x => x.Id == id || x.Id == "built-in:" + id);
+        return payload is not null;
     }
 
     public static void SaveUserPayloads(IEnumerable<PayloadLibraryItem> payloads)

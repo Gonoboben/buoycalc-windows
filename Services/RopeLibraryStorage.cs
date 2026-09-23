@@ -64,7 +64,7 @@ public static class RopeLibraryStorage
     {
         if (string.IsNullOrWhiteSpace(id))
         {
-            return RopeCatalog.Presets[0];
+            throw new InvalidOperationException("Rope preset ID is missing.");
         }
 
         if (!id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
@@ -77,7 +77,8 @@ public static class RopeLibraryStorage
         }
 
         var rope = LoadAllRopes().FirstOrDefault(x => x.Id == id || x.Id == "built-in:" + id);
-        return rope?.ToRopePreset() ?? RopeCatalog.Presets[0];
+        return rope?.ToRopePreset()
+            ?? throw new InvalidOperationException($"Rope preset '{id}' was not found and no embedded project snapshot is available.");
     }
 
     public static void SaveUserRopes(IEnumerable<RopeLibraryItem> ropes)
