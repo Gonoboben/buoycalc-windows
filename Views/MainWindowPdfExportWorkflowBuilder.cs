@@ -23,7 +23,7 @@ internal static class MainWindowPdfExportWorkflowBuilder
 
     internal static string BuildPreconditionStatus()
     {
-        return "Сначала выполните расчёт, затем экспортируйте PDF.";
+        return "Расчёт отсутствует или входные данные изменены. Выполните расчёт повторно, затем экспортируйте PDF.";
     }
 
     internal static string BuildCanceledStatus()

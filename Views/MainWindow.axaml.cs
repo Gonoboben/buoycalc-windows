@@ -105,9 +105,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(viewModel.ReportText))
+        if (!viewModel.CanExportFullReport)
         {
-            viewModel.ProjectStatusText = "Сначала выполните расчёт, затем откройте полный отчёт.";
+            viewModel.ProjectStatusText = "Расчёт отсутствует или входные данные изменены. Выполните расчёт повторно, затем откройте полный отчёт.";
             return;
         }
 
@@ -126,7 +126,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!MainWindowPdfExportWorkflowBuilder.CanExport(viewModel.UserEngineeringReport))
+        if (!viewModel.IsCalculationCurrent ||
+            !MainWindowPdfExportWorkflowBuilder.CanExport(viewModel.UserEngineeringReport))
         {
             viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildPreconditionStatus();
             return;

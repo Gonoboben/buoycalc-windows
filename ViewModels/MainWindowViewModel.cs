@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using BuoyCalc.Windows.ApplicationModel;
@@ -45,6 +46,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _reportText = "";
     private SelectedShapeReadModel? _selectedShape;
     private UserEngineeringReportReadModel? _userEngineeringReport;
+    private bool _isCalculationCurrent;
     private string _sequenceSummary = "";
     private string _projectStatusText = "Проект ещё не сохранён.";
     private string _buoyLibraryStatusText = "Библиотека готова.";
@@ -108,19 +110,21 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand DeleteBuoyPresetCommand { get; }
     public ICommand RefreshBuoyLibraryCommand { get; }
 
-    public string ProjectName { get => _projectName; set => SetProperty(ref _projectName, value); }
+    // ProjectName is report identity, not physics. Because export filenames use the live value,
+    // changing it invalidates current presentation authority and prevents State-B-name/Run-A-content artifacts.
+    public string ProjectName { get => _projectName; set => SetCalculationInput(ref _projectName, value); }
     public string ProjectFilePath { get => _projectFilePath; set => SetProperty(ref _projectFilePath, value); }
-    public string WaterDensity { get => _waterDensity; set { if (SetProperty(ref _waterDensity, value)) UpdateVisualizationSummary(); } }
-    public string Depth { get => _depth; set { if (SetProperty(ref _depth, value)) UpdateVisualizationSummary(); } }
-    public string CurrentSpeed { get => _currentSpeed; set { if (SetProperty(ref _currentSpeed, value)) UpdateCurrentProfileSummary(); } }
-    public string PlanarXAxisAzimuthDeg { get => _planarXAxisAzimuthDeg; set => SetProperty(ref _planarXAxisAzimuthDeg, value); }
+    public string WaterDensity { get => _waterDensity; set { if (SetCalculationInput(ref _waterDensity, value)) UpdateVisualizationSummary(); } }
+    public string Depth { get => _depth; set { if (SetCalculationInput(ref _depth, value)) UpdateVisualizationSummary(); } }
+    public string CurrentSpeed { get => _currentSpeed; set { if (SetCalculationInput(ref _currentSpeed, value)) UpdateCurrentProfileSummary(); } }
+    public string PlanarXAxisAzimuthDeg { get => _planarXAxisAzimuthDeg; set => SetCalculationInput(ref _planarXAxisAzimuthDeg, value); }
 
     public bool UseCurrentProfile
     {
         get => _useCurrentProfile;
         set
         {
-            if (SetProperty(ref _useCurrentProfile, value))
+            if (SetCalculationInput(ref _useCurrentProfile, value))
             {
                 UpdateCurrentProfileSummary();
             }
@@ -128,23 +132,23 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     public string CurrentProfileSummary { get => _currentProfileSummary; set => SetProperty(ref _currentProfileSummary, value); }
-    public string WaveHeight { get => _waveHeight; set => SetProperty(ref _waveHeight, value); }
-    public string WavePeriod { get => _wavePeriod; set => SetProperty(ref _wavePeriod, value); }
+    public string WaveHeight { get => _waveHeight; set => SetCalculationInput(ref _waveHeight, value); }
+    public string WavePeriod { get => _wavePeriod; set => SetCalculationInput(ref _wavePeriod, value); }
 
     public SeabedPreset? SelectedSeabedPreset
     {
         get => _selectedSeabedPreset;
-        set => SetProperty(ref _selectedSeabedPreset, value);
+        set => SetCalculationInput(ref _selectedSeabedPreset, value);
     }
 
-    public string BuoyName { get => _buoyName; set { if (SetProperty(ref _buoyName, value)) UpdateSequenceDiagram(); } }
+    public string BuoyName { get => _buoyName; set { if (SetCalculationInput(ref _buoyName, value)) UpdateSequenceDiagram(); } }
 
     public BuoyLibraryItem? SelectedBuoyPreset
     {
         get => _selectedBuoyPreset;
         set
         {
-            if (SetProperty(ref _selectedBuoyPreset, value))
+            if (SetCalculationInput(ref _selectedBuoyPreset, value))
             {
                 ApplySelectedBuoyPreset();
                 UpdateSequenceDiagram();
@@ -157,7 +161,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         get => _selectedAnchorPreset;
         set
         {
-            if (SetProperty(ref _selectedAnchorPreset, value))
+            if (SetCalculationInput(ref _selectedAnchorPreset, value))
             {
                 ApplySelectedAnchorPreset();
                 UpdateSequenceDiagram();
@@ -165,21 +169,24 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public string BuoyVolume { get => _buoyVolume; set => SetProperty(ref _buoyVolume, value); }
-    public string BuoyWeight { get => _buoyWeight; set => SetProperty(ref _buoyWeight, value); }
-    public string BuoyArea { get => _buoyArea; set => SetProperty(ref _buoyArea, value); }
-    public string BuoyCd { get => _buoyCd; set => SetProperty(ref _buoyCd, value); }
-    public string AnchorName { get => _anchorName; set { if (SetProperty(ref _anchorName, value)) UpdateSequenceDiagram(); } }
-    public string AnchorType { get => _anchorType; set { if (SetProperty(ref _anchorType, value)) UpdateSequenceDiagram(); } }
-    public string AnchorMaterial { get => _anchorMaterial; set => SetProperty(ref _anchorMaterial, value); }
-    public string AnchorWeight { get => _anchorWeight; set => SetProperty(ref _anchorWeight, value); }
-    public string AnchorVolume { get => _anchorVolume; set => SetProperty(ref _anchorVolume, value); }
-    public string AnchorCoefficient { get => _anchorCoefficient; set => SetProperty(ref _anchorCoefficient, value); }
-    public string SafetyFactor { get => _safetyFactor; set => SetProperty(ref _safetyFactor, value); }
+    public string BuoyVolume { get => _buoyVolume; set => SetCalculationInput(ref _buoyVolume, value); }
+    public string BuoyWeight { get => _buoyWeight; set => SetCalculationInput(ref _buoyWeight, value); }
+    public string BuoyArea { get => _buoyArea; set => SetCalculationInput(ref _buoyArea, value); }
+    public string BuoyCd { get => _buoyCd; set => SetCalculationInput(ref _buoyCd, value); }
+    public string AnchorName { get => _anchorName; set { if (SetCalculationInput(ref _anchorName, value)) UpdateSequenceDiagram(); } }
+    public string AnchorType { get => _anchorType; set { if (SetCalculationInput(ref _anchorType, value)) UpdateSequenceDiagram(); } }
+    public string AnchorMaterial { get => _anchorMaterial; set => SetCalculationInput(ref _anchorMaterial, value); }
+    public string AnchorWeight { get => _anchorWeight; set => SetCalculationInput(ref _anchorWeight, value); }
+    public string AnchorVolume { get => _anchorVolume; set => SetCalculationInput(ref _anchorVolume, value); }
+    public string AnchorCoefficient { get => _anchorCoefficient; set => SetCalculationInput(ref _anchorCoefficient, value); }
+    public string SafetyFactor { get => _safetyFactor; set => SetCalculationInput(ref _safetyFactor, value); }
     public string ResultText { get => _resultText; set => SetProperty(ref _resultText, value); }
-    public string ReportText { get => _reportText; set => SetProperty(ref _reportText, value); }
+    public string ReportText { get => _reportText; set { if (SetProperty(ref _reportText, value)) OnPropertyChanged(nameof(CanExportFullReport)); } }
     public SelectedShapeReadModel? SelectedShape { get => _selectedShape; private set => SetProperty(ref _selectedShape, value); }
-    public UserEngineeringReportReadModel? UserEngineeringReport { get => _userEngineeringReport; private set => SetProperty(ref _userEngineeringReport, value); }
+    public UserEngineeringReportReadModel? UserEngineeringReport { get => _userEngineeringReport; private set { if (SetProperty(ref _userEngineeringReport, value)) OnPropertyChanged(nameof(CanExportPdf)); } }
+    public bool IsCalculationCurrent => _isCalculationCurrent;
+    public bool CanExportPdf => IsCalculationCurrent && UserEngineeringReport is not null;
+    public bool CanExportFullReport => IsCalculationCurrent && !string.IsNullOrWhiteSpace(ReportText);
     public string SequenceSummary { get => _sequenceSummary; set => SetProperty(ref _sequenceSummary, value); }
     public string ProjectStatusText { get => _projectStatusText; set => SetProperty(ref _projectStatusText, value); }
     public string BuoyLibraryStatusText { get => _buoyLibraryStatusText; set => SetProperty(ref _buoyLibraryStatusText, value); }
@@ -191,6 +198,47 @@ public sealed class MainWindowViewModel : ViewModelBase
     public double VisualizationDepthM { get => _visualizationDepthM; set => SetProperty(ref _visualizationDepthM, value); }
     public double VisualizationLineLengthM { get => _visualizationLineLengthM; set => SetProperty(ref _visualizationLineLengthM, value); }
     public double VisualizationOffsetM { get => _visualizationOffsetM; set => SetProperty(ref _visualizationOffsetM, value); }
+
+    private bool SetCalculationInput<T>(
+        ref T field,
+        T value,
+        [CallerMemberName] string? propertyName = null)
+    {
+        if (!SetProperty(ref field, value, propertyName))
+        {
+            return false;
+        }
+
+        InvalidateCurrentCalculation();
+        return true;
+    }
+
+    private void SetCalculationCurrent(bool value)
+    {
+        if (!SetProperty(ref _isCalculationCurrent, value, nameof(IsCalculationCurrent)))
+        {
+            return;
+        }
+
+        OnPropertyChanged(nameof(CanExportPdf));
+        OnPropertyChanged(nameof(CanExportFullReport));
+    }
+
+    private void InvalidateCurrentCalculation()
+    {
+        if (!IsCalculationCurrent)
+        {
+            return;
+        }
+
+        SetCalculationCurrent(false);
+        SelectedShape = null;
+        UserEngineeringReport = null;
+        ReportText = string.Empty;
+        ResultText = "Входные данные изменены. Выполните расчёт повторно.";
+        ElementRows.Clear();
+        UpdateVisualizationSummary();
+    }
 
     private void RefreshLibraries()
     {
@@ -280,6 +328,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         if (item.IsConnector) item.Count = "1";
         WireItem(item);
         AssemblyItems.Add(item);
+        InvalidateCurrentCalculation();
         UpdateSequenceSummary();
     }
 
@@ -330,6 +379,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void OnAssemblyItemChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is AssemblyItemViewModel { IsConnector: true } connector) connector.Count = "1";
+        if (IsAssemblyCalculationInput(e.PropertyName)) InvalidateCurrentCalculation();
         UpdateSequenceSummary();
     }
 
@@ -338,6 +388,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var routes = MainWindowAssemblyItemLifecyclePlanBuilder.Build().UnwireRoutes;
         ApplyAssemblyItemLifecycleRoutes(item, routes, subscribe: false);
         AssemblyItems.Remove(item);
+        InvalidateCurrentCalculation();
         UpdateSequenceSummary();
     }
 
@@ -347,6 +398,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var targetIndex = MainWindowAssemblyItemLifecyclePlanBuilder.ResolveMoveUpTarget(index);
         if (!targetIndex.HasValue) return;
         AssemblyItems.Move(index, targetIndex.Value);
+        InvalidateCurrentCalculation();
         UpdateSequenceSummary();
     }
 
@@ -356,6 +408,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var targetIndex = MainWindowAssemblyItemLifecyclePlanBuilder.ResolveMoveDownTarget(index, AssemblyItems.Count);
         if (!targetIndex.HasValue) return;
         AssemblyItems.Move(index, targetIndex.Value);
+        InvalidateCurrentCalculation();
         UpdateSequenceSummary();
     }
 
@@ -366,6 +419,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         WireItem(copy);
         var insertionIndex = MainWindowAssemblyItemLifecyclePlanBuilder.ResolveDuplicateInsertionIndex(index, AssemblyItems.Count);
         if (insertionIndex.HasValue) AssemblyItems.Insert(insertionIndex.Value, copy); else AssemblyItems.Add(copy);
+        InvalidateCurrentCalculation();
         UpdateSequenceSummary();
     }
 
@@ -395,6 +449,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var routes = MainWindowCurrentProfilePointLifecyclePlanBuilder.Build().WireRoutes;
         ApplyCurrentProfilePointLifecycleRoutes(point, routes, subscribe: true);
         CurrentProfilePoints.Add(point);
+        InvalidateCurrentCalculation();
         UpdateCurrentProfileSummary();
     }
 
@@ -403,6 +458,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var routes = MainWindowCurrentProfilePointLifecyclePlanBuilder.Build().UnwireRoutes;
         ApplyCurrentProfilePointLifecycleRoutes(point, routes, subscribe: false);
         CurrentProfilePoints.Remove(point);
+        InvalidateCurrentCalculation();
         UpdateCurrentProfileSummary();
     }
 
@@ -437,6 +493,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void ResetCurrentProfile()
     {
+        InvalidateCurrentCalculation();
         var template = MainWindowDefaultProjectTemplateBuilder.Build();
         ClearCurrentProfilePoints();
         foreach (var pointTemplate in template.CurrentProfilePoints)
@@ -448,6 +505,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void OnCurrentProfilePointChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (IsCurrentProfileCalculationInput(e.PropertyName)) InvalidateCurrentCalculation();
         if (sender is CurrentProfilePointViewModel point)
         {
             point.RefreshSummary();
@@ -490,6 +548,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void ResetToDefaultProject()
     {
+        InvalidateCurrentCalculation();
         var template = MainWindowDefaultProjectTemplateBuilder.Build();
 
         ProjectName = template.ProjectName;
@@ -510,7 +569,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         ResultText = template.ResultText;
         ReportText = template.ReportText;
         SelectedShape = null;
-        UserEngineeringReport = null;
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
 
@@ -676,6 +734,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void FromDto(BuoyProjectDto dto)
     {
+        InvalidateCurrentCalculation();
         var restore = MainWindowProjectDtoMapper.FromDto(dto);
 
         ProjectName = restore.Environment.ProjectName;
@@ -867,6 +926,35 @@ public sealed class MainWindowViewModel : ViewModelBase
         VisualizationOffsetText = display.VisualizationOffsetText;
         VisualizationSlackRatioText = display.VisualizationSlackRatioText;
         VisualizationStatusText = display.VisualizationStatusText;
+        SetCalculationCurrent(true);
+    }
+
+    private static bool IsAssemblyCalculationInput(string? propertyName)
+    {
+        return propertyName is nameof(AssemblyItemViewModel.IsEnabled)
+            or nameof(AssemblyItemViewModel.Kind)
+            or nameof(AssemblyItemViewModel.Title)
+            or nameof(AssemblyItemViewModel.RopePresetId)
+            or nameof(AssemblyItemViewModel.RopePresetStorageId)
+            or nameof(AssemblyItemViewModel.ConnectorPresetId)
+            or nameof(AssemblyItemViewModel.ConnectorPresetStorageId)
+            or nameof(AssemblyItemViewModel.PayloadPresetId)
+            or nameof(AssemblyItemViewModel.PayloadPresetStorageId)
+            or nameof(AssemblyItemViewModel.LengthM)
+            or nameof(AssemblyItemViewModel.Count)
+            or nameof(AssemblyItemViewModel.PayloadWeightAirKg)
+            or nameof(AssemblyItemViewModel.PayloadVolumeM3)
+            or nameof(AssemblyItemViewModel.PayloadProjectedAreaM2)
+            or nameof(AssemblyItemViewModel.PayloadDragCoefficient);
+    }
+
+    private static bool IsCurrentProfileCalculationInput(string? propertyName)
+    {
+        return propertyName is nameof(CurrentProfilePointViewModel.DepthM)
+            or nameof(CurrentProfilePointViewModel.EastCurrentMS)
+            or nameof(CurrentProfilePointViewModel.NorthCurrentMS)
+            or nameof(CurrentProfilePointViewModel.VerticalCurrentMS)
+            or nameof(CurrentProfilePointViewModel.WaterDensityKgM3);
     }
 
     private static double Parse(string value)
