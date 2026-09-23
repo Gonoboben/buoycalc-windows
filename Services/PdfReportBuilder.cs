@@ -32,6 +32,9 @@ public static class PdfReportBuilder
         var diagram = report.SelectedShape is null
             ? null
             : Mooring2DDiagramReadModelBuilder.Build(report.SelectedShape, diagramRows);
+        var provenance = PdfReportProvenanceReadModelProjector.Project(
+            report.Provenance,
+            DateTimeOffset.UtcNow);
 
         WriteExecutivePage(writer, report);
         WriteConditionsPage(writer, report);
@@ -41,7 +44,7 @@ public static class PdfReportBuilder
         WriteStructuralCapacityPage(writer, report);
         WriteAnchorPage(writer, report);
         WriteAssessmentPage(writer, report);
-        WriteReproducibilityPage(writer, report);
+        WriteReproducibilityPage(writer, report, provenance);
 
         document.Close();
     }
@@ -379,9 +382,11 @@ public static class PdfReportBuilder
         writer.EndPage();
     }
 
-    private static void WriteReproducibilityPage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
+    private static void WriteReproducibilityPage(
+        PdfCanvasWriter writer,
+        UserEngineeringReportReadModel report,
+        PdfReportProvenanceReadModel provenance)
     {
-        var generatedUtc = DateTimeOffset.UtcNow;
         var shapeSource = report.SelectedShape?.Source ?? "не определён";
         var shapeStatus = report.SelectedShape is null
             ? "не определён"
@@ -404,8 +409,12 @@ public static class PdfReportBuilder
         writer.KeyValueTable(new[]
         {
             ("Проект", report.ProjectName),
-            ("Версия", AppInfo.DisplayVersion),
-            ("Создан PDF, UTC", generatedUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture)),
+            ("Run ID", provenance.RunId),
+            ("Время расчёта, UTC", provenance.CalculationTimestampUtc.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture)),
+            ("Input hash (SHA-256)", provenance.InputHash),
+            ("Result hash (SHA-256)", provenance.ResultHash),
+            ("Source identity", provenance.SourceIdentity),
+            ("Время экспорта PDF, UTC", provenance.ExportTimestampUtc.ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture)),
             ("Typed source", "UserEngineeringReportReadModel")
         });
 

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using BuoyCalc.Windows.ApplicationModel;
@@ -44,6 +46,8 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"Главный риск: {result.MainRisk}");
         sb.AppendLine($"Инженерная диагностика: {diagnostics.Summary}");
         sb.AppendLine();
+
+        AppendCalculationRunProvenance(sb, snapshot.Provenance);
 
         AppendEnvironment(sb, environment);
         AppendBuoy(sb, buoy, shape);
@@ -97,6 +101,24 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine("Расчёт формы остаётся предварительным: итерационный solver формирует кандидатную форму с дискретными нагрузками. Только кандидат, прошедший MooringPrimaryShapeGate, становится основной выбранной формой; иначе используется fallback MooringShapeSolver. 2D читает выбранную форму, а PDF сохраняет собственный порядок источников: альтернативная форма, выбранная форма, метрики отчёта и визуализационный fallback.");
 
         return sb.ToString();
+    }
+
+    private static void AppendCalculationRunProvenance(
+        StringBuilder sb,
+        CalculationRunProvenance? provenance)
+    {
+        if (provenance is null)
+            return;
+
+        sb.AppendLine("## Calculation run provenance");
+        sb.AppendLine($"- Run ID: {provenance.RunId}");
+        sb.AppendLine($"- Calculation timestamp UTC: {provenance.CalculationTimestampUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)}");
+        sb.AppendLine($"- Input hash ({CalculationRunFingerprint.Algorithm}): {provenance.InputHash}");
+        sb.AppendLine($"- Result hash ({CalculationRunFingerprint.Algorithm}): {provenance.ResultHash}");
+        sb.AppendLine($"- Source identity: {provenance.SourceIdentity}");
+        sb.AppendLine($"- Input schema: {CalculationRunFingerprint.InputSchema}");
+        sb.AppendLine($"- Result schema: {CalculationRunFingerprint.ResultSchema}");
+        sb.AppendLine();
     }
 
     private static void AppendEnvironment(StringBuilder sb, EnvironmentInput environment)
