@@ -133,6 +133,8 @@ internal static class ProjectDtoCompatibilityRegression
             throw new InvalidOperationException("Project DTO compatibility regression: missing optional field must restore as empty string.");
         if (legacy.CurrentSpeed != "0.5" || legacy.UseCurrentProfile != "false")
             throw new InvalidOperationException("Project DTO compatibility regression: legacy scalar fields must remain readable for migration.");
+        if (legacy.AssemblyItems.Any(x => x.ResolvedRopePreset is not null || x.ResolvedConnectorPreset is not null))
+            throw new InvalidOperationException("Project DTO compatibility regression: absent resolved snapshots must deserialize as null.");
 
         var source = new BuoyProjectDto
         {
@@ -150,5 +152,34 @@ internal static class ProjectDtoCompatibilityRegression
             throw new InvalidOperationException("Project DTO compatibility regression: optional field did not round-trip.");
         if (restored.UseCurrentProfile != "true" || restored.WaterDensity != "1025" || restored.CurrentSpeed != string.Empty)
             throw new InvalidOperationException("Project DTO compatibility regression: profile-only compatibility fields changed during round-trip.");
+
+        var snapshotSource = new BuoyProjectDto
+        {
+            AssemblyItems =
+            {
+                new AssemblyItemDto
+                {
+                    Kind = "Line",
+                    RopePresetId = "user:round-trip",
+                    ResolvedRopePreset = new ResolvedRopePresetDto
+                    {
+                        Id = "user:round-trip",
+                        Name = "Round-trip rope",
+                        Material = "Polyester",
+                        DiameterMm = 12.5,
+                        BreakingLoadKn = 60,
+                        WeightWaterKgM = 0.2,
+                        DragCoefficient = 1.1
+                    }
+                }
+            }
+        };
+        var snapshotJson = JsonSerializer.Serialize(snapshotSource);
+        var snapshotRestored = JsonSerializer.Deserialize<BuoyProjectDto>(snapshotJson)
+            ?? throw new InvalidOperationException("Project DTO compatibility regression: snapshot JSON did not deserialize.");
+        var rope = snapshotRestored.AssemblyItems.Single().ResolvedRopePreset
+            ?? throw new InvalidOperationException("Project DTO compatibility regression: optional resolved snapshot did not round-trip.");
+        if (rope.Id != "user:round-trip" || rope.DiameterMm != 12.5 || rope.WeightWaterKgM != 0.2)
+            throw new InvalidOperationException("Project DTO compatibility regression: resolved snapshot values changed during round-trip.");
     }
 }

@@ -58,7 +58,11 @@ internal sealed record MainWindowProjectEnvironmentRestoreModel(
 
 internal sealed record MainWindowProjectBuoyRestoreModel(
     string Name,
-    string SelectedPresetId);
+    string SelectedPresetId,
+    string Volume,
+    string Weight,
+    string Area,
+    string DragCoefficient);
 
 internal sealed record MainWindowProjectAnchorRestoreModel(
     string SelectedPresetId,
@@ -112,21 +116,7 @@ internal static class MainWindowProjectDtoMapper
                 .Select(x => x.ToDto())
                 .ToList(),
             AssemblyItems = source.AssemblyItems
-                .Select(x => new AssemblyItemDto
-                {
-                    IsEnabled = x.IsEnabled,
-                    Kind = x.Kind,
-                    Title = x.Title,
-                    RopePresetId = x.RopePresetStorageId,
-                    ConnectorPresetId = x.ConnectorPresetStorageId,
-                    PayloadPresetId = x.PayloadPresetStorageId,
-                    LengthM = x.LengthM,
-                    Count = x.IsConnector ? "1" : x.Count,
-                    PayloadWeightAirKg = x.PayloadWeightAirKg,
-                    PayloadVolumeM3 = x.PayloadVolumeM3,
-                    PayloadProjectedAreaM2 = x.PayloadProjectedAreaM2,
-                    PayloadDragCoefficient = x.PayloadDragCoefficient
-                })
+                .Select(ToAssemblyItemDto)
                 .ToList()
         };
     }
@@ -147,8 +137,12 @@ internal static class MainWindowProjectDtoMapper
                 PlanarXAxisAzimuthDeg = dto.PlanarXAxisAzimuthDeg
             },
             new MainWindowProjectBuoyRestoreModel(
-                string.IsNullOrWhiteSpace(dto.BuoyName) ? "Буй" : dto.BuoyName,
-                dto.SelectedBuoyPresetId),
+                dto.BuoyName,
+                dto.SelectedBuoyPresetId,
+                dto.BuoyVolume,
+                dto.BuoyWeight,
+                dto.BuoyArea,
+                dto.BuoyCd),
             new MainWindowProjectAnchorRestoreModel(
                 dto.SelectedAnchorPresetId,
                 dto.AnchorName,
@@ -160,5 +154,50 @@ internal static class MainWindowProjectDtoMapper
             dto.SafetyFactor,
             dto.CurrentProfilePoints,
             dto.AssemblyItems);
+    }
+
+    private static AssemblyItemDto ToAssemblyItemDto(AssemblyItemViewModel item)
+    {
+        var input = item.ToInput();
+        return new AssemblyItemDto
+        {
+            IsEnabled = item.IsEnabled,
+            Kind = item.Kind,
+            Title = item.Title,
+            RopePresetId = item.RopePresetStorageId,
+            ConnectorPresetId = item.ConnectorPresetStorageId,
+            PayloadPresetId = item.PayloadPresetStorageId,
+            LengthM = item.LengthM,
+            Count = item.IsConnector ? "1" : item.Count,
+            PayloadWeightAirKg = item.PayloadWeightAirKg,
+            PayloadVolumeM3 = item.PayloadVolumeM3,
+            PayloadProjectedAreaM2 = item.PayloadProjectedAreaM2,
+            PayloadDragCoefficient = item.PayloadDragCoefficient,
+            ResolvedRopePreset = input.RopePreset is null
+                ? null
+                : new ResolvedRopePresetDto
+                {
+                    Id = input.RopePreset.Id,
+                    Name = input.RopePreset.Name,
+                    Material = input.RopePreset.Material,
+                    DiameterMm = input.RopePreset.DiameterMm,
+                    BreakingLoadKn = input.RopePreset.BreakingLoadKn,
+                    WeightWaterKgM = input.RopePreset.WeightWaterKgM,
+                    DragCoefficient = input.RopePreset.DragCoefficient
+                },
+            ResolvedConnectorPreset = input.ConnectorPreset is null
+                ? null
+                : new ResolvedConnectorPresetDto
+                {
+                    Id = input.ConnectorPreset.Id,
+                    Name = input.ConnectorPreset.Name,
+                    Type = input.ConnectorPreset.Type,
+                    WeightAirKg = input.ConnectorPreset.WeightAirKg,
+                    VolumeM3 = input.ConnectorPreset.VolumeM3,
+                    BreakingLoadKn = input.ConnectorPreset.BreakingLoadKn,
+                    ProjectedAreaM2 = input.ConnectorPreset.ProjectedAreaM2,
+                    DragCoefficient = input.ConnectorPreset.DragCoefficient
+                }
+        };
     }
 }

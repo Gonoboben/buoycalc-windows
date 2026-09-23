@@ -22,6 +22,8 @@ public sealed class AssemblyItemViewModel : ViewModelBase
     private string _payloadVolumeM3 = "0.015";
     private string _payloadProjectedAreaM2 = "0.05";
     private string _payloadDragCoefficient = "1.0";
+    private RopePreset? _resolvedRopePresetSnapshot;
+    private ConnectorPreset? _resolvedConnectorPresetSnapshot;
 
     public AssemblyItemViewModel()
     {
@@ -141,6 +143,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             var nextId = ResolveRopeId(value);
             if (SetProperty(ref _ropePresetStorageId, nextId))
             {
+                _resolvedRopePresetSnapshot = null;
                 OnPropertyChanged(nameof(RopePresetId));
                 OnPropertyChanged(nameof(Summary));
             }
@@ -155,6 +158,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             var nextId = ResolveRopeId(value);
             if (SetProperty(ref _ropePresetStorageId, nextId))
             {
+                _resolvedRopePresetSnapshot = null;
                 OnPropertyChanged(nameof(RopePresetId));
                 OnPropertyChanged(nameof(Summary));
             }
@@ -169,6 +173,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             var nextId = ResolveConnectorId(value);
             if (SetProperty(ref _connectorPresetStorageId, nextId))
             {
+                _resolvedConnectorPresetSnapshot = null;
                 OnPropertyChanged(nameof(ConnectorPresetId));
                 OnPropertyChanged(nameof(Summary));
             }
@@ -183,6 +188,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             var nextId = ResolveConnectorId(value);
             if (SetProperty(ref _connectorPresetStorageId, nextId))
             {
+                _resolvedConnectorPresetSnapshot = null;
                 OnPropertyChanged(nameof(ConnectorPresetId));
                 OnPropertyChanged(nameof(Summary));
             }
@@ -250,7 +256,7 @@ public sealed class AssemblyItemViewModel : ViewModelBase
 
     public AssemblyItemViewModel Clone()
     {
-        return new AssemblyItemViewModel
+        var clone = new AssemblyItemViewModel
         {
             IsEnabled = IsEnabled,
             IsExpanded = false,
@@ -266,6 +272,18 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             PayloadProjectedAreaM2 = PayloadProjectedAreaM2,
             PayloadDragCoefficient = PayloadDragCoefficient
         };
+        clone.RestoreResolvedPresetSnapshots(
+            _resolvedRopePresetSnapshot,
+            _resolvedConnectorPresetSnapshot);
+        return clone;
+    }
+
+    internal void RestoreResolvedPresetSnapshots(
+        RopePreset? ropePreset,
+        ConnectorPreset? connectorPreset)
+    {
+        _resolvedRopePresetSnapshot = ropePreset;
+        _resolvedConnectorPresetSnapshot = connectorPreset;
     }
 
     public AssemblyItemInput ToInput()
@@ -277,8 +295,12 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             kind,
             Title,
             IsEnabled,
-            kind == AssemblyItemKind.Line ? RopeLibraryStorage.ById(RopePresetStorageId) : null,
-            kind == AssemblyItemKind.Connector ? ConnectorLibraryStorage.ById(ConnectorPresetStorageId) : null,
+            kind == AssemblyItemKind.Line
+                ? _resolvedRopePresetSnapshot ?? RopeLibraryStorage.ById(RopePresetStorageId)
+                : null,
+            kind == AssemblyItemKind.Connector
+                ? _resolvedConnectorPresetSnapshot ?? ConnectorLibraryStorage.ById(ConnectorPresetStorageId)
+                : null,
             ParseDouble(LengthM),
             count,
             ParseDouble(PayloadWeightAirKg),
@@ -289,7 +311,10 @@ public sealed class AssemblyItemViewModel : ViewModelBase
 
     private void ApplyPayloadPreset()
     {
-        var payload = PayloadLibraryStorage.ById(_payloadPresetStorageId);
+        if (!PayloadLibraryStorage.TryById(_payloadPresetStorageId, out var payload) || payload is null)
+        {
+            return;
+        }
         PayloadWeightAirKg = FormatDouble(payload.WeightAirKg);
         PayloadVolumeM3 = FormatDouble(payload.VolumeM3);
         PayloadProjectedAreaM2 = FormatDouble(payload.ProjectedAreaM2);

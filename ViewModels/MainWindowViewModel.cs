@@ -734,6 +734,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void FromDto(BuoyProjectDto dto)
     {
+        ProjectReplayDependencyValidator.EnsureSafe(dto);
         InvalidateCurrentCalculation();
         var restore = MainWindowProjectDtoMapper.FromDto(dto);
 
@@ -748,14 +749,19 @@ public sealed class MainWindowViewModel : ViewModelBase
         SelectedSeabedPreset = SeabedPresets.FirstOrDefault(x => x.Id == restore.Environment.SelectedSeabedPresetId) ?? SeabedCatalog.ById("unknown");
         BuoyName = restore.Buoy.Name;
         RefreshLibraries();
-        SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == restore.Buoy.SelectedPresetId) ?? SelectedBuoyPreset;
-        SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == restore.Anchor.SelectedPresetId) ?? SelectedAnchorPreset;
-        if (!string.IsNullOrWhiteSpace(restore.Anchor.Name)) AnchorName = restore.Anchor.Name;
-        if (!string.IsNullOrWhiteSpace(restore.Anchor.Type)) AnchorType = restore.Anchor.Type;
-        if (!string.IsNullOrWhiteSpace(restore.Anchor.Material)) AnchorMaterial = restore.Anchor.Material;
-        if (!string.IsNullOrWhiteSpace(restore.Anchor.Weight)) AnchorWeight = restore.Anchor.Weight;
-        if (!string.IsNullOrWhiteSpace(restore.Anchor.Volume)) AnchorVolume = restore.Anchor.Volume;
-        if (!string.IsNullOrWhiteSpace(restore.Anchor.BaseHoldingCoefficient)) AnchorCoefficient = restore.Anchor.BaseHoldingCoefficient;
+        SelectedBuoyPreset = BuoyPresets.FirstOrDefault(x => x.Id == restore.Buoy.SelectedPresetId);
+        BuoyName = restore.Buoy.Name;
+        BuoyVolume = restore.Buoy.Volume;
+        BuoyWeight = restore.Buoy.Weight;
+        BuoyArea = restore.Buoy.Area;
+        BuoyCd = restore.Buoy.DragCoefficient;
+        SelectedAnchorPreset = AnchorPresets.FirstOrDefault(x => x.Id == restore.Anchor.SelectedPresetId);
+        AnchorName = restore.Anchor.Name;
+        AnchorType = restore.Anchor.Type;
+        AnchorMaterial = restore.Anchor.Material;
+        AnchorWeight = restore.Anchor.Weight;
+        AnchorVolume = restore.Anchor.Volume;
+        AnchorCoefficient = restore.Anchor.BaseHoldingCoefficient;
         SafetyFactor = restore.SafetyFactor;
         ResultText = "Проект загружен. Нажмите «Рассчитать».";
         ReportText = "";
@@ -777,7 +783,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ClearAssemblyItems();
         foreach (var item in restore.AssemblyItems)
         {
-            AddAssemblyItem(new AssemblyItemViewModel
+            var viewModel = new AssemblyItemViewModel
             {
                 IsEnabled = item.IsEnabled,
                 Kind = item.Kind,
@@ -791,7 +797,32 @@ public sealed class MainWindowViewModel : ViewModelBase
                 PayloadVolumeM3 = item.PayloadVolumeM3,
                 PayloadProjectedAreaM2 = item.PayloadProjectedAreaM2,
                 PayloadDragCoefficient = item.PayloadDragCoefficient
-            });
+            };
+            viewModel.RestoreResolvedPresetSnapshots(
+                item.ResolvedRopePreset is null
+                    ? null
+                    : new RopePreset(
+                        item.ResolvedRopePreset.Id,
+                        item.ResolvedRopePreset.Name,
+                        item.ResolvedRopePreset.Material,
+                        item.ResolvedRopePreset.DiameterMm,
+                        item.ResolvedRopePreset.BreakingLoadKn,
+                        item.ResolvedRopePreset.WeightWaterKgM,
+                        item.ResolvedRopePreset.DragCoefficient,
+                        string.Empty),
+                item.ResolvedConnectorPreset is null
+                    ? null
+                    : new ConnectorPreset(
+                        item.ResolvedConnectorPreset.Id,
+                        item.ResolvedConnectorPreset.Name,
+                        item.ResolvedConnectorPreset.Type,
+                        item.ResolvedConnectorPreset.WeightAirKg,
+                        item.ResolvedConnectorPreset.VolumeM3,
+                        item.ResolvedConnectorPreset.BreakingLoadKn,
+                        item.ResolvedConnectorPreset.ProjectedAreaM2,
+                        item.ResolvedConnectorPreset.DragCoefficient,
+                        string.Empty));
+            AddAssemblyItem(viewModel);
         }
         UpdateSequenceSummary();
         UpdateCurrentProfileSummary();

@@ -58,7 +58,7 @@ public static class ConnectorLibraryStorage
     {
         if (string.IsNullOrWhiteSpace(id))
         {
-            return ConnectorCatalog.Presets[0];
+            throw new InvalidOperationException("Connector preset ID is missing.");
         }
 
         if (!id.StartsWith("built-in:", StringComparison.OrdinalIgnoreCase))
@@ -71,7 +71,8 @@ public static class ConnectorLibraryStorage
         }
 
         var connector = LoadAllConnectors().FirstOrDefault(x => x.Id == id || x.Id == "built-in:" + id);
-        return connector?.ToConnectorPreset() ?? ConnectorCatalog.Presets[0];
+        return connector?.ToConnectorPreset()
+            ?? throw new InvalidOperationException($"Connector preset '{id}' was not found and no embedded project snapshot is available.");
     }
 
     public static void SaveUserConnectors(IEnumerable<ConnectorLibraryItem> connectors)
