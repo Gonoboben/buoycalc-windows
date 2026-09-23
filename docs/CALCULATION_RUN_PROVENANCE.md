@@ -46,13 +46,11 @@ does not hash rendered TXT or PDF bytes.
 
 `SourceIdentity` is derived from the executing `BuoyCalc.Windows` assembly
 informational version. If that version contains a `+<40-hex>` source revision, it is
-reported as an exact revision. The current release build declares informational
-version `1.0.0`, so its honest runtime identity is
-`BuoyCalc.Windows/1.0.0;source-revision=unavailable`; it must not be interpreted as
-an exact Git commit SHA.
-
-Embedding an exact commit in future binaries is a build/release-pipeline concern and
-is not fabricated at runtime by this package.
+reported as the exact revision embedded in that binary. The project declares base
+informational version `1.0.0`; the .NET SDK/source-control integration appends the
+exact revision in the GitHub build (verified by the targeted regression). Builds
+made without source-revision metadata honestly report `source-revision=unavailable`.
+The runtime never reads a working tree or fabricates a commit SHA.
 
 ## Persistence boundary
 
