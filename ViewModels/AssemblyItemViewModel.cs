@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
 using BuoyCalc.Windows.Models;
+using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Services;
 
 namespace BuoyCalc.Windows.ViewModels;
@@ -301,12 +302,12 @@ public sealed class AssemblyItemViewModel : ViewModelBase
             kind == AssemblyItemKind.Connector
                 ? _resolvedConnectorPresetSnapshot ?? ConnectorLibraryStorage.ById(ConnectorPresetStorageId)
                 : null,
-            ParseDouble(LengthM),
+            EngineeringNumberParser.ParseFinite("AssemblyItem.LengthM", LengthM),
             count,
-            ParseDouble(PayloadWeightAirKg),
-            ParseDouble(PayloadVolumeM3),
-            ParseDouble(PayloadProjectedAreaM2),
-            ParseDouble(PayloadDragCoefficient));
+            EngineeringNumberParser.ParseFinite("AssemblyItem.PayloadWeightAirKg", PayloadWeightAirKg),
+            EngineeringNumberParser.ParseFinite("AssemblyItem.PayloadVolumeM3", PayloadVolumeM3),
+            EngineeringNumberParser.ParseFinite("AssemblyItem.PayloadProjectedAreaM2", PayloadProjectedAreaM2),
+            EngineeringNumberParser.ParseFinite("AssemblyItem.PayloadDragCoefficient", PayloadDragCoefficient));
     }
 
     private void ApplyPayloadPreset()
@@ -382,16 +383,8 @@ public sealed class AssemblyItemViewModel : ViewModelBase
         };
     }
 
-    private static double ParseDouble(string value)
-    {
-        value = (value ?? string.Empty).Replace(',', '.');
-        return double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : 0;
-    }
-
-    private static int ParseInt(string value)
-    {
-        return int.TryParse(value, out var result) ? result : 0;
-    }
+    private static int ParseInt(string value) =>
+        EngineeringNumberParser.ParseInteger("AssemblyItem.Count", value);
 
     private static string FormatDouble(double value)
     {

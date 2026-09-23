@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Windows.Input;
 using BuoyCalc.Windows.Models;
+using BuoyCalc.Windows.ApplicationModel;
 
 namespace BuoyCalc.Windows.ViewModels;
 
@@ -33,19 +34,26 @@ public sealed class CurrentProfilePointViewModel : ViewModelBase
     {
         get
         {
-            var input = ToInput();
-            return $"z={input.DepthM:0.##} м · U={input.EastCurrentMS:0.###} · V={input.NorthCurrentMS:0.###} · W={input.VerticalCurrentMS:0.###} · |Uгор|={input.HorizontalSpeedMS:0.###} м/с · |U3D|={input.SpeedMS:0.###} м/с · ρ={input.WaterDensityKgM3:0.##}";
+            try
+            {
+                var input = ToInput();
+                return $"z={input.DepthM:0.##} м · U={input.EastCurrentMS:0.###} · V={input.NorthCurrentMS:0.###} · W={input.VerticalCurrentMS:0.###} · |Uгор|={input.HorizontalSpeedMS:0.###} м/с · |U3D|={input.SpeedMS:0.###} м/с · ρ={input.WaterDensityKgM3:0.##}";
+            }
+            catch (EngineeringInputValidationException ex)
+            {
+                return $"Некорректная точка профиля: {ex.Diagnostic}";
+            }
         }
     }
 
     public CurrentProfilePointInput ToInput()
     {
         return new CurrentProfilePointInput(
-            Parse(DepthM),
-            Parse(EastCurrentMS),
-            Parse(NorthCurrentMS),
-            Parse(VerticalCurrentMS),
-            Parse(WaterDensityKgM3));
+            EngineeringNumberParser.ParseFinite("CurrentProfilePoint.DepthM", DepthM),
+            EngineeringNumberParser.ParseFinite("CurrentProfilePoint.EastCurrentMS", EastCurrentMS),
+            EngineeringNumberParser.ParseFinite("CurrentProfilePoint.NorthCurrentMS", NorthCurrentMS),
+            EngineeringNumberParser.ParseFinite("CurrentProfilePoint.VerticalCurrentMS", VerticalCurrentMS),
+            EngineeringNumberParser.ParseFinite("CurrentProfilePoint.WaterDensityKgM3", WaterDensityKgM3));
     }
 
     public CurrentProfilePointDto ToDto()
@@ -90,9 +98,4 @@ public sealed class CurrentProfilePointViewModel : ViewModelBase
         }
     }
 
-    private static double Parse(string value)
-    {
-        value = (value ?? string.Empty).Replace(',', '.');
-        return double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : 0;
-    }
 }

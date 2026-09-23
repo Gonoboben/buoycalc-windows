@@ -120,13 +120,17 @@ internal static class NegativePhysicalInputsBlockBeforeCoreRegression
                 $"BC-AUD-004 {name}: invalid input created a completed run and provenance {completedRun.Snapshot.Provenance?.RunId}.");
         }
 
-        if (failure is null || !failure.Message.Contains(BlockingMarker, StringComparison.Ordinal))
+        if (failure is not EngineeringInputValidationException validationFailure ||
+            string.IsNullOrWhiteSpace(validationFailure.Code) ||
+            string.IsNullOrWhiteSpace(validationFailure.Field) ||
+            !validationFailure.Message.Contains(BlockingMarker, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"BC-AUD-004 {name}: expected a stable pre-core validation failure, got {failure?.GetType().Name ?? "no failure"}: {failure?.Message ?? "<none>"}.");
         }
 
-        Console.WriteLine($"BC_AUD_004_BLOCKED|Case={name}|CompletedRun=False|Provenance=False|Failure={failure.GetType().Name}");
+        Console.WriteLine(
+            $"BC_AUD_004_BLOCKED|Case={name}|CompletedRun=False|Provenance=False|Code={validationFailure.Code}|Field={validationFailure.Field}");
     }
 
     private static void RequireRawUiValueBlocked(string rawValue)
@@ -159,15 +163,26 @@ internal static class NegativePhysicalInputsBlockBeforeCoreRegression
             {
                 EastCurrentMS = index == 0 ? -0.30 : -0.10,
                 NorthCurrentMS = index == 0 ? -0.20 : -0.05,
-                VerticalCurrentMS = index == 0 ? -0.04 : 0.02
+                VerticalCurrentMS = index == 0 ? -0.04 : 0.02,
+                WaterDensityKgM3 = index == 0 ? point.WaterDensityKgM3 : 0
             })
             .ToArray();
         var line = request.AssemblyItems.Single(x => x.Kind == AssemblyItemKind.Line);
         var signedLine = line with { RopePreset = line.RopePreset! with { WeightWaterKgM = -0.05 } };
+        var payload = request.AssemblyItems.Single(x => x.Kind == AssemblyItemKind.Payload);
+        var zeroPayload = payload with
+        {
+            PayloadWeightAirKg = 0,
+            PayloadVolumeM3 = 0,
+            PayloadProjectedAreaM2 = 0,
+            PayloadDragCoefficient = 0
+        };
         request = request with
         {
             Environment = request.Environment with { CurrentProfile = signedProfile },
-            AssemblyItems = Replace(request, line, signedLine)
+            AssemblyItems = request.AssemblyItems
+                .Select(x => ReferenceEquals(x, line) ? signedLine : ReferenceEquals(x, payload) ? zeroPayload : x)
+                .ToArray()
         };
 
         var run = ApplicationCalculationRunner.Run(
@@ -182,7 +197,8 @@ internal static class NegativePhysicalInputsBlockBeforeCoreRegression
         if (request.Environment.EffectiveCurrentProfile[0].EastCurrentMS != -0.30 ||
             request.Environment.EffectiveCurrentProfile[0].NorthCurrentMS != -0.20 ||
             request.Environment.EffectiveCurrentProfile[0].VerticalCurrentMS != -0.04 ||
-            request.AssemblyItems.Single(x => x.Kind == AssemblyItemKind.Line).RopePreset!.WeightWaterKgM != -0.05)
+            request.AssemblyItems.Single(x => x.Kind == AssemblyItemKind.Line).RopePreset!.WeightWaterKgM != -0.05 ||
+            request.AssemblyItems.Single(x => x.Kind == AssemblyItemKind.Payload).PayloadWeightAirKg != 0)
         {
             throw new InvalidOperationException("BC-AUD-004 positive controls: signed inputs were normalized or changed.");
         }
@@ -227,7 +243,8 @@ internal static class NegativePhysicalInputsBlockBeforeCoreRegression
             viewModel.UserEngineeringReport is not null ||
             viewModel.SelectedShape is not null ||
             viewModel.CanExportPdf ||
-            viewModel.CanExportFullReport)
+            viewModel.CanExportFullReport ||
+            !viewModel.ResultText.Contains(BlockingMarker, StringComparison.Ordinal))
         {
             throw new InvalidOperationException("BC-AUD-004/003: invalid restored project created calculation authority.");
         }
