@@ -18,6 +18,12 @@ public sealed partial record CalculationSnapshot(
 
 public sealed partial record CalculationSnapshot
 {
+    /// <summary>
+    /// Present on every completed ApplicationCalculationRunner run. Direct low-level
+    /// snapshot-builder use is diagnostic/test-only and does not claim run provenance.
+    /// </summary>
+    public CalculationRunProvenance? Provenance { get; init; }
+
     public MooringSignedCandidateResult? SignedCandidate { get; init; }
     public MooringSignedPhysicalDispositionState? PhysicalDisposition { get; init; }
     public MooringSelectedShapeResult? ShadowSelectedCore { get; init; }

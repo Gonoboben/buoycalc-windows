@@ -166,6 +166,7 @@ public sealed record UserEngineeringPhysicalDispositionReadModel(
 
 public sealed record UserEngineeringReportReadModel(
     string ProjectName,
+    CalculationRunProvenance Provenance,
     UserEngineeringEnvironmentReadModel Environment,
     UserEngineeringBuoyReadModel Buoy,
     UserEngineeringAnchorReadModel Anchor,
@@ -191,6 +192,10 @@ public static class UserEngineeringReportReadModelProjector
         ArgumentNullException.ThrowIfNull(buoy);
         ArgumentNullException.ThrowIfNull(anchor);
         ArgumentNullException.ThrowIfNull(snapshot);
+
+        var provenance = snapshot.Provenance
+            ?? throw new InvalidOperationException(
+                "A user engineering report requires retained calculation-run provenance.");
 
         var result = snapshot.Result;
         var environmentReadModel = new UserEngineeringEnvironmentReadModel(
@@ -258,6 +263,7 @@ public static class UserEngineeringReportReadModelProjector
 
         return new UserEngineeringReportReadModel(
             string.IsNullOrWhiteSpace(projectName) ? "BuoyCalc Project" : projectName.Trim(),
+            provenance,
             environmentReadModel,
             buoyReadModel,
             anchorReadModel,

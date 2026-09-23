@@ -22,6 +22,13 @@ public static class ApplicationCalculationRunner
     {
         CurrentProfileRequirement.EnsureUsable(environment);
 
+        var inputHash = CalculationRunFingerprint.ComputeInputHash(
+            environment,
+            buoy,
+            assemblyItems,
+            anchor,
+            safetyFactor);
+
         var result = BuoyCalculator.Calculate(
             environment,
             buoy,
@@ -30,6 +37,8 @@ public static class ApplicationCalculationRunner
             safetyFactor);
 
         var snapshot = CalculationSnapshotBuilder.Build(environment, buoy, result);
+        var provenance = CalculationRunProvenanceFactory.Create(inputHash, snapshot);
+        snapshot = snapshot with { Provenance = provenance };
 
         return new ApplicationCalculationRun(result, snapshot);
     }

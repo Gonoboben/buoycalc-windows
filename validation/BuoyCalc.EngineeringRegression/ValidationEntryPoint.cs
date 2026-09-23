@@ -5,6 +5,21 @@ internal static class ValidationEntryPoint
 {
     public static int Main(string[] args)
     {
+        if (args.Contains("--bc-aud-005-only", StringComparer.Ordinal))
+        {
+            try
+            {
+                CalculationRunIdentityRegression.CalculationRunIdentity_PropagatesExactlyAcrossArtifacts();
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("BC-AUD-005 targeted regression failure:");
+                Console.Error.WriteLine(ex);
+                return 1;
+            }
+        }
+
         try
         {
             MandatoryCurrentProfileRegression.Validate();
@@ -56,6 +71,7 @@ internal static class ValidationEntryPoint
             SelectedTechnicalReportReadModelRegression.Validate();
             OneRunAllArtifactsSelectedAuthorityExactlyEqualRegression.OneRun_AllArtifacts_SelectedAuthorityExactlyEqual();
             InputMutationInvalidatesLastRunAndBlocksEveryExportRegression.InputMutation_InvalidatesLastRunAndBlocksEveryExport();
+            CalculationRunIdentityRegression.CalculationRunIdentity_PropagatesExactlyAcrossArtifacts();
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();
