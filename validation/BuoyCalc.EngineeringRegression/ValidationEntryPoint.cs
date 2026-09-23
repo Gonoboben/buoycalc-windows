@@ -55,6 +55,7 @@ internal static class ValidationEntryPoint
             SelectedUserPresentationReadModelRegression.Validate();
             SelectedTechnicalReportReadModelRegression.Validate();
             OneRunAllArtifactsSelectedAuthorityExactlyEqualRegression.OneRun_AllArtifacts_SelectedAuthorityExactlyEqual();
+            InputMutationInvalidatesLastRunAndBlocksEveryExportRegression.InputMutation_InvalidatesLastRunAndBlocksEveryExport();
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();

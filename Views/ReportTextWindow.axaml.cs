@@ -20,9 +20,9 @@ public partial class ReportTextWindow : Window
 
     private async void ExportReportButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel viewModel || string.IsNullOrWhiteSpace(viewModel.ReportText))
+        if (DataContext is not MainWindowViewModel viewModel || !viewModel.CanExportFullReport)
         {
-            SetExportStatus("Нет рассчитанного полного отчёта для экспорта.");
+            SetExportStatus("Расчёт отсутствует или входные данные изменены. Выполните расчёт повторно.");
             return;
         }
 
