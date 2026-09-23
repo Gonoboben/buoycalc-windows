@@ -20,6 +20,22 @@ internal static class ValidationEntryPoint
             }
         }
 
+        if (args.Contains("--bc-aud-003-only", StringComparer.Ordinal))
+        {
+            try
+            {
+                ProjectReplayPersistenceRegression.ProjectReplay_UsesEmbeddedResolvedPresetSnapshotOrFails();
+                ProjectReplayPersistenceRegression.MissingPresetId_MustNotFallbackSilently();
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("BC-AUD-003 targeted regression failure:");
+                Console.Error.WriteLine(ex);
+                return 1;
+            }
+        }
+
         try
         {
             MandatoryCurrentProfileRegression.Validate();
@@ -72,6 +88,8 @@ internal static class ValidationEntryPoint
             OneRunAllArtifactsSelectedAuthorityExactlyEqualRegression.OneRun_AllArtifacts_SelectedAuthorityExactlyEqual();
             InputMutationInvalidatesLastRunAndBlocksEveryExportRegression.InputMutation_InvalidatesLastRunAndBlocksEveryExport();
             CalculationRunIdentityRegression.CalculationRunIdentity_PropagatesExactlyAcrossArtifacts();
+            ProjectReplayPersistenceRegression.ProjectReplay_UsesEmbeddedResolvedPresetSnapshotOrFails();
+            ProjectReplayPersistenceRegression.MissingPresetId_MustNotFallbackSilently();
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();
