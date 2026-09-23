@@ -569,7 +569,6 @@ public sealed class MainWindowViewModel : ViewModelBase
         ResultText = template.ResultText;
         ReportText = template.ReportText;
         SelectedShape = null;
-        UserEngineeringReport = null;
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
 
