@@ -966,9 +966,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void PublishInputValidationFailure(EngineeringInputValidationException failure)
     {
+        InvalidateCurrentCalculation();
         SetCalculationCurrent(false);
-        SelectedShape = null;
-        UserEngineeringReport = null;
         ReportText = string.Empty;
         ElementRows.Clear();
         ResultText = $"Расчёт заблокирован. {failure.Message}";
