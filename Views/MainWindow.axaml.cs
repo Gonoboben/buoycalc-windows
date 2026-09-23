@@ -126,9 +126,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!MainWindowPdfExportWorkflowBuilder.CanExport(
-                viewModel.IsCalculationCurrent,
-                viewModel.UserEngineeringReport))
+        if (!viewModel.IsCalculationCurrent ||
+            !MainWindowPdfExportWorkflowBuilder.CanExport(viewModel.UserEngineeringReport))
         {
             viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildPreconditionStatus();
             return;

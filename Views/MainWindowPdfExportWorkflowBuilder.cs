@@ -6,9 +6,9 @@ namespace BuoyCalc.Windows.Views;
 
 internal static class MainWindowPdfExportWorkflowBuilder
 {
-    internal static bool CanExport(bool isCalculationCurrent, UserEngineeringReportReadModel? report)
+    internal static bool CanExport(UserEngineeringReportReadModel? report)
     {
-        return isCalculationCurrent && report is not null;
+        return report is not null;
     }
 
     internal static string BuildSuggestedFileName(string projectName)
