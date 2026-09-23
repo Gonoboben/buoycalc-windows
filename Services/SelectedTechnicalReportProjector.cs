@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
@@ -33,14 +34,19 @@ public static class SelectedTechnicalReportProjector
             ?? throw new InvalidOperationException("Selected technical report requires retained F2 anchor-reaction authority.");
         var capacity = snapshot.SelectedLocalStructuralCapacity
             ?? throw new InvalidOperationException("Selected technical report requires retained F3 local-capacity authority.");
+        var selectedShape = snapshot.SelectedShape
+            ?? throw new InvalidOperationException("Selected technical report requires retained selected X/Z authority.");
 
         RequireCommonSource(assessment.SourceIdentity, tension.SourceIdentity, anchorReaction.SourceIdentity, capacity.SourceIdentity);
+        if (!string.Equals(selectedShape.Source, assessment.SourceIdentity.ToString(), StringComparison.Ordinal))
+            throw new InvalidOperationException("Selected technical report requires one retained source across selected X/Z and F1/F2/F3/F4.");
 
         var newline = legacyReport.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
         var lines = legacyReport.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         var output = new List<string>(lines.Length + 80);
         var verdictReplaced = false;
         var mainRiskReplaced = false;
+        var inLegacySummary = false;
 
         for (var i = 0; i < lines.Length; i++)
         {
@@ -62,8 +68,22 @@ public static class SelectedTechnicalReportProjector
 
             if (line == "## Итоги")
             {
+                AppendSelectedGeometrySection(output, selectedShape);
                 AppendSelectedAuthoritySection(output, assessment, tension, anchorReaction, capacity);
-                output.Add(line);
+                output.Add("## Итоги базовой/fallback-модели — compatibility-only");
+                output.Add("Секция сохранена как compatibility evidence. Её X/Z, solver и derived shape-значения не являются selected engineering geometry этого Accepted run.");
+                inLegacySummary = true;
+                continue;
+            }
+
+            if (inLegacySummary && line.StartsWith("## ", StringComparison.Ordinal))
+                inLegacySummary = false;
+
+            if (inLegacySummary && line.StartsWith("- ", StringComparison.Ordinal))
+            {
+                output.Add(line.StartsWith("- compatibility-only — ", StringComparison.Ordinal)
+                    ? line
+                    : "- compatibility-only — " + line[2..]);
                 continue;
             }
 
@@ -81,7 +101,7 @@ public static class SelectedTechnicalReportProjector
                 continue;
             }
 
-            output.Add(MarkLegacyAuthorityAsCompatibilityOnly(line));
+            output.Add(MarkAcceptedLegacyGeometryAsCompatibilityOnly(line));
         }
 
         if (!verdictReplaced || !mainRiskReplaced)
@@ -223,6 +243,23 @@ public static class SelectedTechnicalReportProjector
         output.Add(string.Empty);
     }
 
+    private static void AppendSelectedGeometrySection(
+        List<string> output,
+        SelectedShapeReadModel selectedShape)
+    {
+        var shape = selectedShape.Shape;
+        output.Add("## Выбранная инженерная геометрия X/Z");
+        output.Add("Единственная authoritative selected X/Z geometry этого Accepted run. UI, typed PDF/read model и эта Full TXT секция используют CalculationSnapshot.SelectedShape; остальные X/Z-разделы ниже являются compatibility-only diagnostic evidence.");
+        output.Add($"- Источник selected X/Z authority: {selectedShape.Source}");
+        output.Add($"- Authoritative horizontal offset X, m: {Exact(shape.HorizontalOffsetM)}");
+        output.Add($"- Authoritative node count: {shape.Nodes.Count.ToString(CultureInfo.InvariantCulture)}");
+        output.Add("| Узел | X, м | Z, м |");
+        output.Add("|---:|---:|---:|");
+        foreach (var node in shape.Nodes)
+            output.Add($"| {node.Number.ToString(CultureInfo.InvariantCulture)} | {Exact(node.XOffsetM)} | {Exact(node.ZDepthM)} |");
+        output.Add(string.Empty);
+    }
+
     private static void AppendSelectedElementTable(List<string> output, CalculationSnapshot snapshot)
     {
         var rows = SelectedElementCalculationDisplayProjector.Project(snapshot);
@@ -256,6 +293,30 @@ public static class SelectedTechnicalReportProjector
         while (i < lines.Length && !lines[i].StartsWith("## ", StringComparison.Ordinal))
             i++;
         return i - 1;
+    }
+
+    private static string MarkAcceptedLegacyGeometryAsCompatibilityOnly(string line)
+    {
+        string[] diagnosticHeadings =
+        {
+            "## Расчётная форма постановки X/Z",
+            "## Проекции формы X/Z по сегментам",
+            "## Силы линии по форме X/Z и ориентации сегментов",
+            "## Натяжения линии по форме X/Z",
+            "## Согласованность направления силы и X/Z-касательной",
+            "## Натяжения линии с дискретными нагрузками по s",
+            "## Альтернативная форма X/Z с дискретными нагрузками",
+            "## Signed-равновесие внутренних дискретных узлов",
+            "## Дискретные X/Z-узлы альтернативной формы",
+            "## Итерационный solver — итерации и кандидатная форма",
+            "## Выбор основной формы",
+            "## Signed-равновесие внутренних узлов — финальная итерационная кандидатная форма"
+        };
+
+        if (diagnosticHeadings.Contains(line, StringComparer.Ordinal))
+            return "## compatibility-only diagnostic — " + line[3..];
+
+        return MarkLegacyAuthorityAsCompatibilityOnly(line);
     }
 
     private static string MarkLegacyAuthorityAsCompatibilityOnly(string line)
@@ -302,6 +363,8 @@ public static class SelectedTechnicalReportProjector
     };
 
     private static string Format(double? value) => value.HasValue ? value.Value.ToString("0.####") : "n/a";
+
+    private static string Exact(double value) => value.ToString("R", CultureInfo.InvariantCulture);
 
     private static string Escape(string value) => (value ?? string.Empty).Replace("|", "\\|", StringComparison.Ordinal);
 }
