@@ -17,7 +17,7 @@ Raw calculation fields use `EngineeringNumberParser`. Syntax errors and non-fini
 | Legacy/profile-derived scalar current magnitude | required | allowed | blocked | `>= 0`; not independent production authority |
 | Wave height | required | allowed | blocked | `>= 0` |
 | Wave period | required | allowed only when wave height is zero | blocked | `T > 0` when `H > 0` |
-| Current-profile depth | required | allowed | blocked | `>= 0` |
+| Current-profile depth | required | allowed once | blocked | `>= 0`; every exact depth value must occur once |
 | East/North/Vertical current component | required | allowed | **allowed** | signed direction is preserved |
 | Profile-point water density | required | allowed | blocked | `0` retains the existing base-density fallback meaning |
 | Seabed holding multiplier | required | allowed | blocked | raw nonnegative coefficient only; derived anchor prerequisites are out of scope |
@@ -34,4 +34,10 @@ Raw calculation fields use `EngineeringNumberParser`. Syntax errors and non-fini
 | Enabled element count | integer | blocked | blocked | `> 0` |
 | Safety factor | required | blocked | blocked | `> 0` |
 
-Duplicate current-profile depths remain governed by the existing current-profile contract and BC-AUD-007. Short-line rejection, fixed-point convergence, selected-shape arbitration, derived anchor submerged-weight prerequisites, and all engineering formulas are unchanged.
+## Current-profile structure
+
+BC-AUD-007 extends the shared production profile requirement: a profile must contain at least two points, every point must satisfy the numeric rules above, and every depth must be unique. Duplicate detection uses exact deterministic `double` equality after strict parsing. No epsilon or depth tolerance is used: for example, `10.0` and `10.000001` remain distinct.
+
+An exact duplicate throws `CurrentProfileValidationException` with code `CURRENT_PROFILE_DUPLICATE_DEPTH` before `CalculationRunFingerprint.ComputeInputHash(...)` and before `BuoyCalculator.Calculate(...)`. No first/last selection, averaging, merging, or other correction is performed. The UI retains the entered rows and identifies the duplicate depth; project persistence remains an exact input replay boundary.
+
+Short-line rejection, fixed-point convergence, selected-shape arbitration, derived anchor submerged-weight prerequisites, and all engineering formulas are unchanged.

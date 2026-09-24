@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace BuoyCalc.Windows.Models;
@@ -7,13 +8,15 @@ namespace BuoyCalc.Windows.Models;
 /// <summary>
 /// Production environmental-current input invariant.
 /// A current profile is mandatory and must contain at least two finite points
-/// at distinct non-negative depths. Legacy scalar current fields do not satisfy
+/// at unique non-negative depths. Legacy scalar current fields do not satisfy
 /// this requirement and must never be promoted into a synthetic profile.
 /// </summary>
 public static class CurrentProfileRequirement
 {
     public const string UserMessage =
         "Для расчёта обязателен профиль течения минимум из двух точек на разных глубинах. Одно значение скорости для всей толщи воды не используется.";
+
+    public const string DuplicateDepthCode = "CURRENT_PROFILE_DUPLICATE_DEPTH";
 
     public static bool IsUsable(IReadOnlyList<CurrentProfilePointInput>? points)
     {
@@ -22,14 +25,8 @@ public static class CurrentProfileRequirement
             return false;
         }
 
-        var finiteDepths = points
-            .Where(x => double.IsFinite(x.DepthM) && x.DepthM >= 0)
-            .Select(x => x.DepthM)
-            .Distinct()
-            .Take(2)
-            .Count();
-
-        return finiteDepths >= 2 && points.All(IsFinitePoint);
+        return points.All(IsFinitePoint) &&
+               points.Select(x => x.DepthM).Distinct().Count() == points.Count;
     }
 
     public static bool IsUsable(EnvironmentInput environment)
@@ -40,7 +37,24 @@ public static class CurrentProfileRequirement
 
     public static void EnsureUsable(EnvironmentInput environment)
     {
-        if (!IsUsable(environment))
+        ArgumentNullException.ThrowIfNull(environment);
+        EnsureUsable(environment.EffectiveCurrentProfile);
+    }
+
+    public static void EnsureUsable(IReadOnlyList<CurrentProfilePointInput>? points)
+    {
+        if (points is not null && points.Count >= 2 && points.All(IsFinitePoint))
+        {
+            var duplicate = points
+                .GroupBy(x => x.DepthM)
+                .FirstOrDefault(x => x.Count() > 1);
+            if (duplicate is not null)
+            {
+                throw new CurrentProfileValidationException(duplicate.Key);
+            }
+        }
+
+        if (!IsUsable(points))
         {
             throw new InvalidOperationException(UserMessage);
         }
@@ -55,4 +69,20 @@ public static class CurrentProfileRequirement
                double.IsFinite(point.VerticalCurrentMS) &&
                double.IsFinite(point.WaterDensityKgM3);
     }
+}
+
+public sealed class CurrentProfileValidationException : InvalidOperationException
+{
+    public CurrentProfileValidationException(double duplicateDepthM)
+        : base(
+            $"BC-AUD-007 [{CurrentProfileRequirement.DuplicateDepthCode}] " +
+            $"Профиль течения содержит несколько точек на глубине {duplicateDepthM.ToString("R", CultureInfo.InvariantCulture)} м. " +
+            "Для каждой глубины допускается одна точка.")
+    {
+        Code = CurrentProfileRequirement.DuplicateDepthCode;
+        DuplicateDepthM = duplicateDepthM;
+    }
+
+    public string Code { get; }
+    public double DuplicateDepthM { get; }
 }

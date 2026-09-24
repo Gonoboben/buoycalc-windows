@@ -65,9 +65,13 @@ public partial class MainWindow : Window
         var profile = viewModel.CurrentProfilePoints
             .Select(x => x.ToInput())
             .ToList();
-        if (!CurrentProfileRequirement.IsUsable(profile))
+        try
         {
-            viewModel.ProjectStatusText = CurrentProfileRequirement.UserMessage;
+            CurrentProfileRequirement.EnsureUsable(profile);
+        }
+        catch (InvalidOperationException ex)
+        {
+            viewModel.ProjectStatusText = ex.Message;
             return;
         }
 
