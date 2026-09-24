@@ -92,7 +92,8 @@ public static class MooringSelectedEngineeringAssessmentStateProjector
         ArgumentNullException.ThrowIfNull(environment);
         ArgumentNullException.ThrowIfNull(result);
 
-        if (selectedSourceIdentity is null)
+        if (selectedSourceIdentity is null ||
+            selectedSourceIdentity.Value != MooringShapeSourceIdentity.SignedBoundaryFeedback)
             return null;
 
         RequireSelectedSource(selectedSourceIdentity.Value, nameof(selectedSourceIdentity));
