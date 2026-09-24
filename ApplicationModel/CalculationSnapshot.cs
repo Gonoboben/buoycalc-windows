@@ -110,6 +110,7 @@ public static class CalculationSnapshotBuilder
         var selectedEngineeringAssessment = MooringSelectedEngineeringAssessmentStateProjector.Project(
             environment,
             result,
+            shadowSelectedCore?.SourceIdentity,
             selectedDesignTensionDemand,
             selectedAnchorReaction,
             selectedLocalStructuralCapacity);
