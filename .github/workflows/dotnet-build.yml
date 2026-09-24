@@ -151,3 +151,10 @@ jobs:
             Set-BuoyCalcStatus "failure" "Build failed"
             throw
           }
+
+      - name: Upload BC-AUD-009 preflight report evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: bc-aud-009-preflight-${{ github.sha }}
+          path: artifacts/bc-aud-009
+          if-no-files-found: error

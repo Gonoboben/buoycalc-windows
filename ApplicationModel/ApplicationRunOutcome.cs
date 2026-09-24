@@ -155,6 +155,34 @@ public sealed record PreflightPhysicalRejectedApplicationRunOutcome : Applicatio
         EngineeringInputValidator.Validate(environment, buoy, assemblyItems, anchor, safetyFactor);
         CurrentProfileRequirement.EnsureUsable(environment);
 
+        if (TryCreateLineShorterThanDepthFromValidatedInputs(
+                environment,
+                buoy,
+                assemblyItems,
+                anchor,
+                safetyFactor,
+                out var outcome))
+        {
+            return outcome;
+        }
+
+        throw new InvalidOperationException(
+            "LineShorterThanDepth preflight authority requires the active line to be shorter than depth under the existing signed length-tolerance contract.");
+    }
+
+    internal static bool TryCreateLineShorterThanDepthFromValidatedInputs(
+        EnvironmentInput environment,
+        BuoyInput buoy,
+        IReadOnlyList<AssemblyItemInput> assemblyItems,
+        AnchorInput anchor,
+        double safetyFactor,
+        out PreflightPhysicalRejectedApplicationRunOutcome outcome)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        ArgumentNullException.ThrowIfNull(buoy);
+        ArgumentNullException.ThrowIfNull(assemblyItems);
+        ArgumentNullException.ThrowIfNull(anchor);
+
         var depthM = environment.DepthM;
         var availableActiveLineLengthM = assemblyItems
             .Where(x => x.IsEnabled &&
@@ -165,8 +193,8 @@ public sealed record PreflightPhysicalRejectedApplicationRunOutcome : Applicatio
         if (availableActiveLineLengthM + MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM >=
             minimumRequiredActiveLineLengthM)
         {
-            throw new InvalidOperationException(
-                "LineShorterThanDepth preflight authority requires the active line to be shorter than depth under the existing signed length-tolerance contract.");
+            outcome = null!;
+            return false;
         }
 
         var deficitM = minimumRequiredActiveLineLengthM - availableActiveLineLengthM;
@@ -184,7 +212,8 @@ public sealed record PreflightPhysicalRejectedApplicationRunOutcome : Applicatio
             safetyFactor);
         var provenance = CalculationRunProvenanceFactory.Create(inputHash, rejection);
 
-        return new PreflightPhysicalRejectedApplicationRunOutcome(rejection, provenance);
+        outcome = new PreflightPhysicalRejectedApplicationRunOutcome(rejection, provenance);
+        return true;
     }
 }
 
@@ -210,5 +239,22 @@ public static class ApplicationRunOutcomeFactory
             assemblyItems,
             anchor,
             safetyFactor);
+    }
+
+    internal static bool TryCreateLineShorterThanDepthFromValidatedInputs(
+        EnvironmentInput environment,
+        BuoyInput buoy,
+        IReadOnlyList<AssemblyItemInput> assemblyItems,
+        AnchorInput anchor,
+        double safetyFactor,
+        out PreflightPhysicalRejectedApplicationRunOutcome outcome)
+    {
+        return PreflightPhysicalRejectedApplicationRunOutcome.TryCreateLineShorterThanDepthFromValidatedInputs(
+            environment,
+            buoy,
+            assemblyItems,
+            anchor,
+            safetyFactor,
+            out outcome);
     }
 }
