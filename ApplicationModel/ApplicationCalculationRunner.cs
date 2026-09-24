@@ -13,6 +13,22 @@ public sealed record ApplicationCalculationRun(
 
 public static class ApplicationCalculationRunner
 {
+    /// <summary>
+    /// Typed calculated branch of the completed application-run outcome contract.
+    /// Existing callers may continue to use <see cref="Run"/> without losing their
+    /// non-null CalculationResult/CalculationSnapshot convenience contract.
+    /// </summary>
+    public static CalculatedApplicationRunOutcome RunCalculatedOutcome(
+        EnvironmentInput environment,
+        BuoyInput buoy,
+        IReadOnlyList<AssemblyItemInput> assemblyItems,
+        AnchorInput anchor,
+        double safetyFactor)
+    {
+        return ApplicationRunOutcomeFactory.FromCalculated(
+            Run(environment, buoy, assemblyItems, anchor, safetyFactor));
+    }
+
     public static ApplicationCalculationRun Run(
         EnvironmentInput environment,
         BuoyInput buoy,

@@ -1,9 +1,21 @@
 # Calculation run provenance
 
-BC-AUD-005 introduces one immutable provenance value for every completed
-`ApplicationCalculationRunner.Run` authority. The value is created once after the
-calculation snapshot has been formed and is retained on `CalculationSnapshot`.
-Typed UI/report models and renderers only consume that retained value.
+BC-AUD-005 introduces one immutable provenance value for every completed application
+execution authority. A completed outcome is explicitly one of two sealed typed states:
+
+- `Calculated`: retains the existing non-null `ApplicationCalculationRun`,
+  `CalculationResult` and `CalculationSnapshot` contract;
+- `PreflightPhysicalRejected`: retains typed terminal physical-rejection evidence and
+  creates no `CalculationResult`, calculation-result `CalculationSnapshot`, selected
+  X/Z, F1/F2/F3/F4 state, or engineering loads.
+
+The calculated value is created once after the calculation snapshot has been formed
+and remains retained on `CalculationSnapshot`. The preflight-rejected value is created
+from canonical input identity and typed rejection evidence without invoking the
+calculation core. Both outcomes expose the same immutable provenance contract.
+
+The prerequisite architecture does not yet route production short-line input through
+the preflight branch. That decision remains in the separate BC-AUD-009 remediation.
 
 ## Identity semantics
 
@@ -27,7 +39,7 @@ destinations and export timestamps are excluded.
 The first canonical field is a schema identifier:
 
 - input: `buoycalc-engineering-input/v1`;
-- result: `buoycalc-engineering-result/v2`.
+- result/outcome: `buoycalc-engineering-result/v3`.
 
 Changing encoding, member set/order, numeric/null rules or list semantics requires a
 new schema identifier.
@@ -38,15 +50,33 @@ and safety factor actually supplied to the calculation boundary. Legacy scalar
 current switches, preset notes and project/report metadata are not calculation
 authority and are excluded.
 
-`ResultHash` covers the retained `CalculationResult`, selected X/Z authority, signed
-candidate/disposition, selected core and retained F1/F2/F3/F4 authority states. It
-does not hash rendered TXT or PDF bytes.
+`ResultHash` v3 begins with `Schema`, followed by the explicit `OutcomeKind`, then the
+nullable `CalculatedResult` and `PreflightPhysicalRejection` union branches in that
+order. Exactly one typed branch is populated:
+
+- `Calculated` covers the retained `CalculationResult`, selected X/Z authority,
+  signed candidate/disposition, selected core and retained F1/F2/F3/F4 authority
+  states, preserving the v2 calculated member order inside the branch;
+- `PreflightPhysicalRejected` covers classification, stable diagnostic code, typed
+  terminal-verdict identity/flags and typed engineering evidence only. For the
+  short-line evidence type, field order is depth, available active line length,
+  minimum required active line length and deficit.
+
+Null union branches are explicit. Outcome names and classification names are canonical
+stable strings. `ResultHash` does not hash rendered TXT/PDF bytes, export time,
+localized verdict/summary/action text, filenames, destinations, or renderer state.
 
 Result schema v2 makes direct hard-precondition terminal assessment evidence explicit:
 when a selected signed geometry exists but a derived hard prerequisite prevents F2/F3
 composition, nullable composed-authority fields remain null and the terminal F4 state
 is still fingerprinted. Schema v1 never represented that state. Input schema and
 `InputHash` are unchanged.
+
+Result schema v3 adds the discriminated completed-outcome envelope. Schema v2 always
+assumed a calculation-result snapshot and therefore could not honestly fingerprint a
+completed preflight physical rejection. The v3 preflight branch does not fabricate a
+calculation result or loads. Input schema `buoycalc-engineering-input/v1`, input member
+order, source identity, RunId and calculation-timestamp semantics are unchanged.
 
 ## Source identity
 

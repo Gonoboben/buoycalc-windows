@@ -31,7 +31,7 @@ public static class CalculationRunFingerprint
     public const string Algorithm = "SHA-256";
     public const string Encoding = "UTF-8 JSON";
     public const string InputSchema = "buoycalc-engineering-input/v1";
-    public const string ResultSchema = "buoycalc-engineering-result/v2";
+    public const string ResultSchema = "buoycalc-engineering-result/v3";
 
     private static readonly JsonSerializerOptions CanonicalOptions = new()
     {
@@ -94,19 +94,45 @@ public static class CalculationRunFingerprint
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        var canonical = new CanonicalResult(
+        var canonical = new CanonicalRunOutcome(
             ResultSchema,
-            snapshot.Result,
-            snapshot.SelectedShape,
-            snapshot.SignedCandidate,
-            snapshot.PhysicalDisposition,
-            snapshot.ShadowSelectedCore,
-            snapshot.SelectedDesignEnvelope,
-            snapshot.SelectedDesignTensionDemand,
-            snapshot.SelectedAnchorReaction,
-            snapshot.SelectedLocalElementDemand,
-            snapshot.SelectedLocalStructuralCapacity,
-            snapshot.SelectedEngineeringAssessment);
+            ApplicationRunOutcomeKind.Calculated.ToString(),
+            new CanonicalCalculatedResult(
+                snapshot.Result,
+                snapshot.SelectedShape,
+                snapshot.SignedCandidate,
+                snapshot.PhysicalDisposition,
+                snapshot.ShadowSelectedCore,
+                snapshot.SelectedDesignEnvelope,
+                snapshot.SelectedDesignTensionDemand,
+                snapshot.SelectedAnchorReaction,
+                snapshot.SelectedLocalElementDemand,
+                snapshot.SelectedLocalStructuralCapacity,
+                snapshot.SelectedEngineeringAssessment),
+            PreflightPhysicalRejection: null);
+
+        return Hash(canonical);
+    }
+
+    public static string ComputeResultHash(PreflightPhysicalRejectionState rejection)
+    {
+        ArgumentNullException.ThrowIfNull(rejection);
+
+        var canonical = new CanonicalRunOutcome(
+            ResultSchema,
+            ApplicationRunOutcomeKind.PreflightPhysicalRejected.ToString(),
+            CalculatedResult: null,
+            new CanonicalPreflightPhysicalRejection(
+                rejection.Classification.ToString(),
+                rejection.DiagnosticCode,
+                rejection.VerdictKind.ToString(),
+                rejection.HasHardFailure,
+                rejection.BlocksEngineeringGeometry,
+                new CanonicalShortLinePreflightEvidence(
+                    rejection.Evidence.DepthM,
+                    rejection.Evidence.AvailableActiveLineLengthM,
+                    rejection.Evidence.MinimumRequiredActiveLineLengthM,
+                    rejection.Evidence.DeficitM)));
 
         return Hash(canonical);
     }
@@ -224,8 +250,13 @@ public static class CalculationRunFingerprint
         double VolumeM3,
         double BaseHoldingCoefficient);
 
-    private sealed record CanonicalResult(
+    private sealed record CanonicalRunOutcome(
         string Schema,
+        string OutcomeKind,
+        CanonicalCalculatedResult? CalculatedResult,
+        CanonicalPreflightPhysicalRejection? PreflightPhysicalRejection);
+
+    private sealed record CanonicalCalculatedResult(
         CalculationResult Result,
         SelectedShapeReadModel? SelectedShape,
         MooringSignedCandidateResult? SignedCandidate,
@@ -237,6 +268,20 @@ public static class CalculationRunFingerprint
         MooringSelectedLocalElementDemandState? LocalElementDemand,
         MooringSelectedLocalStructuralCapacityState? LocalStructuralCapacity,
         MooringSelectedEngineeringAssessmentState? EngineeringAssessment);
+
+    private sealed record CanonicalPreflightPhysicalRejection(
+        string Classification,
+        string DiagnosticCode,
+        string VerdictKind,
+        bool HasHardFailure,
+        bool BlocksEngineeringGeometry,
+        CanonicalShortLinePreflightEvidence Evidence);
+
+    private sealed record CanonicalShortLinePreflightEvidence(
+        double DepthM,
+        double AvailableActiveLineLengthM,
+        double MinimumRequiredActiveLineLengthM,
+        double DeficitM);
 }
 
 internal static class CalculationRunProvenanceFactory
@@ -253,6 +298,21 @@ internal static class CalculationRunProvenanceFactory
             DateTimeOffset.UtcNow,
             inputHash,
             CalculationRunFingerprint.ComputeResultHash(snapshot),
+            CalculationSourceIdentity.Current);
+    }
+
+    internal static CalculationRunProvenance Create(
+        string inputHash,
+        PreflightPhysicalRejectionState rejection)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(inputHash);
+        ArgumentNullException.ThrowIfNull(rejection);
+
+        return new CalculationRunProvenance(
+            Guid.NewGuid().ToString("D"),
+            DateTimeOffset.UtcNow,
+            inputHash,
+            CalculationRunFingerprint.ComputeResultHash(rejection),
             CalculationSourceIdentity.Current);
     }
 }
