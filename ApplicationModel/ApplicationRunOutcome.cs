@@ -1,4 +1,5 @@
 using BuoyCalc.Windows.Models;
+using BuoyCalc.Windows.Services;
 
 namespace BuoyCalc.Windows.ApplicationModel;
 
@@ -52,7 +53,7 @@ public sealed record PreflightPhysicalRejectionState
     public bool BlocksEngineeringGeometry => true;
     public ShortLinePreflightPhysicalRejectionEvidence Evidence { get; }
 
-    public static PreflightPhysicalRejectionState CreateLineShorterThanDepth(
+    internal static PreflightPhysicalRejectionState CreateLineShorterThanDepth(
         string diagnosticCode,
         double depthM,
         double availableActiveLineLengthM,
@@ -74,12 +75,12 @@ public sealed record PreflightPhysicalRejectionState
         if (depthM <= 0.0 ||
             availableActiveLineLengthM < 0.0 ||
             minimumRequiredActiveLineLengthM != depthM ||
-            availableActiveLineLengthM >= minimumRequiredActiveLineLengthM ||
+            availableActiveLineLengthM + MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM >= minimumRequiredActiveLineLengthM ||
             deficitM <= 0.0 ||
             deficitM != minimumRequiredActiveLineLengthM - availableActiveLineLengthM)
         {
             throw new ArgumentException(
-                "LineShorterThanDepth evidence must exactly retain depth, available active line, minimum required line, and positive deficit without tolerance.");
+                "LineShorterThanDepth evidence must exactly retain depth, available active line, minimum required line, and positive deficit under the existing signed length-tolerance contract.");
         }
 
         return new PreflightPhysicalRejectionState(
@@ -131,7 +132,9 @@ public sealed record CalculatedApplicationRunOutcome : ApplicationRunOutcome
 
 public sealed record PreflightPhysicalRejectedApplicationRunOutcome : ApplicationRunOutcome
 {
-    internal PreflightPhysicalRejectedApplicationRunOutcome(
+    private const string LineShorterThanDepthDiagnosticCode = "Preflight_LineShorterThanDepth";
+
+    private PreflightPhysicalRejectedApplicationRunOutcome(
         PreflightPhysicalRejectionState rejection,
         CalculationRunProvenance provenance)
         : base(ApplicationRunOutcomeKind.PreflightPhysicalRejected, provenance)
@@ -141,6 +144,48 @@ public sealed record PreflightPhysicalRejectedApplicationRunOutcome : Applicatio
     }
 
     public PreflightPhysicalRejectionState Rejection { get; }
+
+    internal static PreflightPhysicalRejectedApplicationRunOutcome CreateLineShorterThanDepth(
+        EnvironmentInput environment,
+        BuoyInput buoy,
+        IReadOnlyList<AssemblyItemInput> assemblyItems,
+        AnchorInput anchor,
+        double safetyFactor)
+    {
+        EngineeringInputValidator.Validate(environment, buoy, assemblyItems, anchor, safetyFactor);
+        CurrentProfileRequirement.EnsureUsable(environment);
+
+        var depthM = environment.DepthM;
+        var availableActiveLineLengthM = assemblyItems
+            .Where(x => x.IsEnabled &&
+                        x.Kind == AssemblyItemKind.Line &&
+                        x.RopePreset is not null)
+            .Sum(x => Math.Max(0.0, x.LengthM));
+        var minimumRequiredActiveLineLengthM = depthM;
+        if (availableActiveLineLengthM + MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM >=
+            minimumRequiredActiveLineLengthM)
+        {
+            throw new InvalidOperationException(
+                "LineShorterThanDepth preflight authority requires the active line to be shorter than depth under the existing signed length-tolerance contract.");
+        }
+
+        var deficitM = minimumRequiredActiveLineLengthM - availableActiveLineLengthM;
+        var rejection = PreflightPhysicalRejectionState.CreateLineShorterThanDepth(
+            LineShorterThanDepthDiagnosticCode,
+            depthM,
+            availableActiveLineLengthM,
+            minimumRequiredActiveLineLengthM,
+            deficitM);
+        var inputHash = CalculationRunFingerprint.ComputeInputHash(
+            environment,
+            buoy,
+            assemblyItems,
+            anchor,
+            safetyFactor);
+        var provenance = CalculationRunProvenanceFactory.Create(inputHash, rejection);
+
+        return new PreflightPhysicalRejectedApplicationRunOutcome(rejection, provenance);
+    }
 }
 
 public static class ApplicationRunOutcomeFactory
@@ -152,24 +197,18 @@ public static class ApplicationRunOutcomeFactory
         return new CalculatedApplicationRunOutcome(calculation);
     }
 
-    public static PreflightPhysicalRejectedApplicationRunOutcome CreatePreflightPhysicalRejected(
+    public static PreflightPhysicalRejectedApplicationRunOutcome CreateLineShorterThanDepthPreflightPhysicalRejected(
         EnvironmentInput environment,
         BuoyInput buoy,
         IReadOnlyList<AssemblyItemInput> assemblyItems,
         AnchorInput anchor,
-        double safetyFactor,
-        PreflightPhysicalRejectionState rejection)
+        double safetyFactor)
     {
-        ArgumentNullException.ThrowIfNull(rejection);
-
-        var inputHash = CalculationRunFingerprint.ComputeInputHash(
+        return PreflightPhysicalRejectedApplicationRunOutcome.CreateLineShorterThanDepth(
             environment,
             buoy,
             assemblyItems,
             anchor,
             safetyFactor);
-        var provenance = CalculationRunProvenanceFactory.Create(inputHash, rejection);
-
-        return new PreflightPhysicalRejectedApplicationRunOutcome(rejection, provenance);
     }
 }

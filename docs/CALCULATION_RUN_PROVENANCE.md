@@ -14,6 +14,16 @@ and remains retained on `CalculationSnapshot`. The preflight-rejected value is c
 from canonical input identity and typed rejection evidence without invoking the
 calculation core. Both outcomes expose the same immutable provenance contract.
 
+The public short-line preflight factory is the trusted construction boundary. It first
+applies `EngineeringInputValidator.Validate` and
+`CurrentProfileRequirement.EnsureUsable`, then derives depth, enabled active-line
+length, minimum required line length and exact deficit from the same typed inputs used
+for `InputHash`. Callers cannot supply independent authoritative rejection evidence.
+Active-line length follows the calculation-core rule: sum non-negative `LengthM` for
+enabled `AssemblyItemKind.Line` inputs with resolved rope presets; item `Count`,
+disabled lines and non-line items do not add line length. The short-line decision uses
+the existing signed-boundary `LengthToleranceM`; no new tolerance is introduced.
+
 The prerequisite architecture does not yet route production short-line input through
 the preflight branch. That decision remains in the separate BC-AUD-009 remediation.
 

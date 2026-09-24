@@ -1,3 +1,4 @@
+using System.Reflection;
 using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
 
@@ -7,13 +8,13 @@ internal static class CompletedRunOutcomeSupportsPreflightPhysicalRejectionWitho
     {
         Console.WriteLine("BC_AUD_009_PREREQUISITE_RUN_OUTCOME_BEGIN");
 
-        var fixture = CreateFixture();
+        var fixtureA = CreateFixture(depthM: 85.0, activeLineLengthM: 60.0);
         var calculated = ApplicationCalculationRunner.RunCalculatedOutcome(
-            fixture.Environment,
-            fixture.Buoy,
-            fixture.Assembly,
-            fixture.Anchor,
-            fixture.SafetyFactor);
+            fixtureA.Environment,
+            fixtureA.Buoy,
+            fixtureA.Assembly,
+            fixtureA.Anchor,
+            fixtureA.SafetyFactor);
 
         if (calculated.Kind != ApplicationRunOutcomeKind.Calculated ||
             calculated.Calculation.Result is null ||
@@ -24,37 +25,32 @@ internal static class CompletedRunOutcomeSupportsPreflightPhysicalRejectionWitho
                 "BC-AUD-009 prerequisite: calculated outcome lost the existing non-null run/snapshot/provenance contract.");
         }
 
-        var rejection = PreflightPhysicalRejectionState.CreateLineShorterThanDepth(
-            "Preflight_LineShorterThanDepth",
-            depthM: 85.0,
-            availableActiveLineLengthM: 60.0,
-            minimumRequiredActiveLineLengthM: 85.0,
-            deficitM: 25.0);
-        var first = CreatePreflight(fixture, rejection);
-        var second = CreatePreflight(fixture, rejection);
+        var first = CreatePreflight(fixtureA);
+        var second = CreatePreflight(fixtureA);
 
-        AssertPreflightAuthority(first);
-        AssertPreflightAuthority(second);
+        AssertPreflightAuthority(first, expectedDepthM: 85.0, expectedActiveLineLengthM: 60.0, expectedDeficitM: 25.0);
+        AssertPreflightAuthority(second, expectedDepthM: 85.0, expectedActiveLineLengthM: 60.0, expectedDeficitM: 25.0);
         AssertComplete(first.Provenance, "first preflight run");
         AssertComplete(second.Provenance, "second preflight run");
 
+        Equal(ComputeInputHash(fixtureA), first.Provenance.InputHash, "Fixture A canonical InputHash binding");
         Equal(calculated.Provenance.InputHash, first.Provenance.InputHash, "calculated/preflight InputHash");
         Equal(first.Provenance.InputHash, second.Provenance.InputHash, "repeated preflight InputHash");
         Equal(first.Provenance.ResultHash, second.Provenance.ResultHash, "repeated preflight ResultHash");
         NotEqual(first.Provenance.RunId, second.Provenance.RunId, "explicit preflight RunId");
         NotEqual(calculated.Provenance.ResultHash, first.Provenance.ResultHash, "calculated/preflight outcome identity");
 
-        var changedEvidence = PreflightPhysicalRejectionState.CreateLineShorterThanDepth(
-            "Preflight_LineShorterThanDepth",
-            depthM: 86.0,
-            availableActiveLineLengthM: 60.0,
-            minimumRequiredActiveLineLengthM: 86.0,
-            deficitM: 26.0);
-        var changed = CreatePreflight(fixture, changedEvidence);
-        Equal(first.Provenance.InputHash, changed.Provenance.InputHash, "evidence-only InputHash stability");
-        NotEqual(first.Provenance.ResultHash, changed.Provenance.ResultHash, "rejection evidence ResultHash");
+        var fixtureB = CreateFixture(depthM: 86.0, activeLineLengthM: 60.0);
+        var changed = CreatePreflight(fixtureB);
+        AssertPreflightAuthority(changed, expectedDepthM: 86.0, expectedActiveLineLengthM: 60.0, expectedDeficitM: 26.0);
+        Equal(ComputeInputHash(fixtureB), changed.Provenance.InputHash, "Fixture B canonical InputHash binding");
+        NotEqual(first.Provenance.InputHash, changed.Provenance.InputHash, "changed-input InputHash");
+        NotEqual(first.Provenance.ResultHash, changed.Provenance.ResultHash, "changed-input rejection ResultHash");
 
         AssertImpossibleStateGuards();
+        AssertNonShortLineRejected();
+        AssertBcAud004ValidationReused(fixtureA);
+        AssertBcAud007CurrentProfileRequirementReused(fixtureA);
 
         if (CalculationRunFingerprint.InputSchema != "buoycalc-engineering-input/v1" ||
             CalculationRunFingerprint.ResultSchema != "buoycalc-engineering-result/v3")
@@ -64,28 +60,27 @@ internal static class CompletedRunOutcomeSupportsPreflightPhysicalRejectionWitho
         }
 
         Console.WriteLine(
-            $"BC_AUD_009_PREREQUISITE_RUN_OUTCOME|CalculatedKind={calculated.Kind}|PreflightKind={first.Kind}|InputHash={first.Provenance.InputHash}|ResultHash={first.Provenance.ResultHash}|RepeatedResultHashDeterministic=True|RunIdsDistinct=True|CalculationResultAbsent=True|CalculationSnapshotAbsent=True|SelectedAuthorityAbsent=True|Source={first.Provenance.SourceIdentity}");
+            $"BC_AUD_009_PREREQUISITE_RUN_OUTCOME|CalculatedKind={calculated.Kind}|PreflightKind={first.Kind}|InputHashA={first.Provenance.InputHash}|ResultHashA={first.Provenance.ResultHash}|InputHashB={changed.Provenance.InputHash}|ResultHashB={changed.Provenance.ResultHash}|RepeatedResultHashDeterministic=True|ChangedInputsChangeBothHashes=True|RunIdsDistinct=True|EvidenceDerivedFromHashedInputs=True|DisabledLinesExcluded=True|NonLineItemsExcluded=True|BC_AUD_004_Gate=True|BC_AUD_007_Gate=True|MismatchConstructionBlocked=True|CalculationResultAbsent=True|CalculationSnapshotAbsent=True|SelectedAuthorityAbsent=True|Source={first.Provenance.SourceIdentity}");
         Console.WriteLine("BC_AUD_009_PREREQUISITE_RUN_OUTCOME_END");
     }
 
-    private static PreflightPhysicalRejectedApplicationRunOutcome CreatePreflight(
-        Fixture fixture,
-        PreflightPhysicalRejectionState rejection)
+    private static PreflightPhysicalRejectedApplicationRunOutcome CreatePreflight(Fixture fixture)
     {
-        // This factory intentionally does not call ApplicationCalculationRunner.Run or
-        // BuoyCalculator.Calculate. It creates completed authority from input identity
-        // and typed preflight rejection evidence only.
-        return ApplicationRunOutcomeFactory.CreatePreflightPhysicalRejected(
+        // This trusted factory validates and derives rejection evidence from the same
+        // canonical inputs it fingerprints. Callers cannot provide evidence separately.
+        return ApplicationRunOutcomeFactory.CreateLineShorterThanDepthPreflightPhysicalRejected(
             fixture.Environment,
             fixture.Buoy,
             fixture.Assembly,
             fixture.Anchor,
-            fixture.SafetyFactor,
-            rejection);
+            fixture.SafetyFactor);
     }
 
     private static void AssertPreflightAuthority(
-        PreflightPhysicalRejectedApplicationRunOutcome outcome)
+        PreflightPhysicalRejectedApplicationRunOutcome outcome,
+        double expectedDepthM,
+        double expectedActiveLineLengthM,
+        double expectedDeficitM)
     {
         if (outcome.Kind != ApplicationRunOutcomeKind.PreflightPhysicalRejected ||
             outcome.Rejection.Classification != PreflightPhysicalRejectionKind.LineShorterThanDepth ||
@@ -100,13 +95,13 @@ internal static class CompletedRunOutcomeSupportsPreflightPhysicalRejectionWitho
         }
 
         var evidence = outcome.Rejection.Evidence;
-        if (evidence.DepthM != 85.0 ||
-            evidence.AvailableActiveLineLengthM != 60.0 ||
-            evidence.MinimumRequiredActiveLineLengthM != 85.0 ||
-            evidence.DeficitM != 25.0)
+        if (evidence.DepthM != expectedDepthM ||
+            evidence.AvailableActiveLineLengthM != expectedActiveLineLengthM ||
+            evidence.MinimumRequiredActiveLineLengthM != expectedDepthM ||
+            evidence.DeficitM != expectedDeficitM)
         {
             throw new InvalidOperationException(
-                "BC-AUD-009 prerequisite: typed preflight engineering evidence changed.");
+                "BC-AUD-009 prerequisite: rejection evidence was not derived exactly from canonical depth/active-line inputs.");
         }
     }
 
@@ -143,20 +138,81 @@ internal static class CompletedRunOutcomeSupportsPreflightPhysicalRejectionWitho
                 string.Join(", ", exposedForbidden));
         }
 
+        var unsafePublicFactory = typeof(ApplicationRunOutcomeFactory)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(x => x.GetParameters().Any(p => p.ParameterType == typeof(PreflightPhysicalRejectionState)))
+            .Select(x => x.Name)
+            .ToArray();
+        var publicStateFactory = typeof(PreflightPhysicalRejectionState)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(x => x.ReturnType == typeof(PreflightPhysicalRejectionState))
+            .Select(x => x.Name)
+            .ToArray();
+        if (unsafePublicFactory.Length != 0 || publicStateFactory.Length != 0)
+        {
+            throw new InvalidOperationException(
+                "BC-AUD-009 prerequisite: public construction still accepts independent rejection evidence: " +
+                string.Join(", ", unsafePublicFactory.Concat(publicStateFactory)));
+        }
+    }
+
+    private static void AssertNonShortLineRejected()
+    {
+        var taut = CreateFixture(depthM: 85.0, activeLineLengthM: 85.0);
         try
         {
-            _ = PreflightPhysicalRejectionState.CreateLineShorterThanDepth(
-                "Preflight_LineShorterThanDepth",
-                85.0,
-                60.0,
-                85.0,
-                24.0);
+            _ = CreatePreflight(taut);
             throw new InvalidOperationException(
-                "BC-AUD-009 prerequisite: inconsistent rejection evidence bypassed constructor invariants.");
+                "BC-AUD-009 prerequisite: line >= depth incorrectly created short-line authority.");
         }
-        catch (ArgumentException)
+        catch (InvalidOperationException ex) when (
+            ex.Message.Contains("requires the active line to be shorter than depth", StringComparison.Ordinal))
         {
-            // Expected: the canonical evidence must be internally exact, with no epsilon.
+            // Expected: this is not a short-line preflight outcome.
+        }
+    }
+
+    private static void AssertBcAud004ValidationReused(Fixture valid)
+    {
+        var invalid = valid with
+        {
+            Anchor = valid.Anchor with { WeightAirKg = -1.0 }
+        };
+        try
+        {
+            _ = CreatePreflight(invalid);
+            throw new InvalidOperationException(
+                "BC-AUD-009 prerequisite: invalid typed physical input bypassed BC-AUD-004 validation.");
+        }
+        catch (EngineeringInputValidationException ex) when (
+            ex.Code == "NONNEGATIVE_REQUIRED" && ex.Field == "Anchor.WeightAirKg")
+        {
+            // Expected: the same production validation contract blocks authority.
+        }
+    }
+
+    private static void AssertBcAud007CurrentProfileRequirementReused(Fixture valid)
+    {
+        var duplicateProfile = new[]
+        {
+            new CurrentProfilePointInput(0, 0.2, 0, 0, 1025),
+            new CurrentProfilePointInput(0, 0.3, 0, 0, 1025),
+            new CurrentProfilePointInput(valid.Environment.DepthM, 0.2, 0, 0, 1025)
+        };
+        var invalid = valid with
+        {
+            Environment = valid.Environment with { CurrentProfile = duplicateProfile }
+        };
+        try
+        {
+            _ = CreatePreflight(invalid);
+            throw new InvalidOperationException(
+                "BC-AUD-009 prerequisite: duplicate current-profile depth bypassed BC-AUD-007 validation.");
+        }
+        catch (CurrentProfileValidationException ex) when (
+            ex.Code == CurrentProfileRequirement.DuplicateDepthCode && ex.DuplicateDepthM == 0.0)
+        {
+            // Expected: the same production profile requirement blocks authority.
         }
     }
 
@@ -173,6 +229,16 @@ internal static class CompletedRunOutcomeSupportsPreflightPhysicalRejectionWitho
         }
     }
 
+    private static string ComputeInputHash(Fixture fixture)
+    {
+        return CalculationRunFingerprint.ComputeInputHash(
+            fixture.Environment,
+            fixture.Buoy,
+            fixture.Assembly,
+            fixture.Anchor,
+            fixture.SafetyFactor);
+    }
+
     private static void Equal(string expected, string actual, string context)
     {
         if (!string.Equals(expected, actual, StringComparison.Ordinal))
@@ -185,11 +251,11 @@ internal static class CompletedRunOutcomeSupportsPreflightPhysicalRejectionWitho
             throw new InvalidOperationException($"BC-AUD-009 prerequisite: {context} did not change.");
     }
 
-    private static Fixture CreateFixture()
+    private static Fixture CreateFixture(double depthM, double activeLineLengthM)
     {
         var environment = new EnvironmentInput(
             1025,
-            85,
+            depthM,
             0.2,
             0.5,
             6,
@@ -198,7 +264,7 @@ internal static class CompletedRunOutcomeSupportsPreflightPhysicalRejectionWitho
             new[]
             {
                 new CurrentProfilePointInput(0, 0.2, 0, 0, 1025),
-                new CurrentProfilePointInput(85, 0.2, 0, 0, 1025)
+                new CurrentProfilePointInput(depthM, 0.2, 0, 0, 1025)
             });
         var buoy = new BuoyInput("Prerequisite buoy", 1.0, 100, 0.10, 0.8);
         var anchor = new AnchorInput("Prerequisite block", "Deadweight", "Concrete", 3000, 1.2, 1.0);
@@ -215,16 +281,40 @@ internal static class CompletedRunOutcomeSupportsPreflightPhysicalRejectionWitho
         {
             new AssemblyItemInput(
                 AssemblyItemKind.Line,
-                "Prerequisite line",
+                "Active prerequisite line",
                 true,
                 rope,
                 null,
-                60.0,
+                activeLineLengthM,
                 1,
                 0,
                 0,
                 0,
-                0)
+                0),
+            new AssemblyItemInput(
+                AssemblyItemKind.Line,
+                "Disabled line must not contribute",
+                false,
+                rope,
+                null,
+                1000.0,
+                1,
+                0,
+                0,
+                0,
+                0),
+            new AssemblyItemInput(
+                AssemblyItemKind.Payload,
+                "Non-line length must not contribute",
+                true,
+                null,
+                null,
+                500.0,
+                1,
+                10.0,
+                0.01,
+                0.02,
+                0.8)
         };
 
         return new Fixture(environment, buoy, assembly, anchor, 3.0);
