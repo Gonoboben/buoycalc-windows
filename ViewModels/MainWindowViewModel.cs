@@ -533,11 +533,18 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var inputs = CurrentProfilePoints.Select(x => x.ToInput()).ToList();
-        CurrentProfileSummary = MainWindowCurrentProfileSummaryBuilder.Build(
-            true,
-            string.Empty,
-            inputs);
+        try
+        {
+            var inputs = CurrentProfilePoints.Select(x => x.ToInput()).ToList();
+            CurrentProfileSummary = MainWindowCurrentProfileSummaryBuilder.Build(
+                true,
+                string.Empty,
+                inputs);
+        }
+        catch (EngineeringInputValidationException ex)
+        {
+            CurrentProfileSummary = $"Профиль содержит некорректное числовое значение: {ex.Field}.";
+        }
     }
 
     private void NewProject()
@@ -830,8 +837,15 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void UpdateSequenceSummary(CalculationResult? result = null)
     {
-        var enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
-        SequenceSummary = MainWindowSequenceVisualizationDisplayBuilder.BuildSummary(enabledItems);
+        try
+        {
+            var enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
+            SequenceSummary = MainWindowSequenceVisualizationDisplayBuilder.BuildSummary(enabledItems);
+        }
+        catch (EngineeringInputValidationException ex)
+        {
+            SequenceSummary = $"Последовательность содержит некорректное числовое значение: {ex.Field}.";
+        }
         UpdateSequenceDiagram();
         UpdateVisualizationSummary(result);
     }
@@ -859,7 +873,16 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void UpdateVisualizationSummary(CalculationResult? result = null)
     {
         var depthM = Parse(Depth);
-        var enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
+        IReadOnlyList<AssemblyItemInput> enabledItems;
+        try
+        {
+            enabledItems = AssemblyItems.Where(x => x.IsEnabled).Select(x => x.ToInput()).ToList();
+        }
+        catch (EngineeringInputValidationException ex)
+        {
+            VisualizationStatusText = $"Некорректное числовое значение: {ex.Field}.";
+            return;
+        }
         var visualization = MainWindowSequenceVisualizationDisplayBuilder.BuildVisualization(
             depthM,
             enabledItems,
@@ -876,6 +899,18 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     private void Calculate()
+    {
+        try
+        {
+            CalculateValidated();
+        }
+        catch (EngineeringInputValidationException ex)
+        {
+            PublishInputValidationFailure(ex);
+        }
+    }
+
+    private void CalculateValidated()
     {
         var input = MainWindowCalculationInputBuilder.Build(
             new MainWindowCalculationInputSource(
@@ -927,6 +962,15 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         PublishCalculationDisplay(display);
         UpdateCurrentProfileSummary();
+    }
+
+    private void PublishInputValidationFailure(EngineeringInputValidationException failure)
+    {
+        InvalidateCurrentCalculation();
+        SetCalculationCurrent(false);
+        ReportText = string.Empty;
+        ElementRows.Clear();
+        ResultText = $"Расчёт заблокирован. {failure.Message}";
     }
 
     private void PublishCalculationDisplay(MainWindowCalculationDisplay display)

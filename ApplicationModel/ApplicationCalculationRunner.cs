@@ -20,6 +20,7 @@ public static class ApplicationCalculationRunner
         AnchorInput anchor,
         double safetyFactor)
     {
+        EngineeringInputValidator.Validate(environment, buoy, assemblyItems, anchor, safetyFactor);
         CurrentProfileRequirement.EnsureUsable(environment);
 
         var inputHash = CalculationRunFingerprint.ComputeInputHash(

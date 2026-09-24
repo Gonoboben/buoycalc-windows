@@ -5,6 +5,21 @@ internal static class ValidationEntryPoint
 {
     public static int Main(string[] args)
     {
+        if (args.Contains("--bc-aud-004-only", StringComparer.Ordinal))
+        {
+            try
+            {
+                NegativePhysicalInputsBlockBeforeCoreRegression.NegativePhysicalInputs_BlockBeforeCore();
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("BC-AUD-004 targeted regression failure:");
+                Console.Error.WriteLine(ex);
+                return 1;
+            }
+        }
+
         if (args.Contains("--bc-aud-005-only", StringComparer.Ordinal))
         {
             try
@@ -90,6 +105,7 @@ internal static class ValidationEntryPoint
             CalculationRunIdentityRegression.CalculationRunIdentity_PropagatesExactlyAcrossArtifacts();
             ProjectReplayPersistenceRegression.ProjectReplay_UsesEmbeddedResolvedPresetSnapshotOrFails();
             ProjectReplayPersistenceRegression.MissingPresetId_MustNotFallbackSilently();
+            NegativePhysicalInputsBlockBeforeCoreRegression.NegativePhysicalInputs_BlockBeforeCore();
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();
