@@ -15,6 +15,15 @@ internal static class MainWindowCurrentProfileSummaryBuilder
         // They are not calculation authority: the current profile is mandatory.
         if (!CurrentProfileRequirement.IsUsable(points))
         {
+            var duplicateDepth = points
+                .Where(x => double.IsFinite(x.DepthM) && x.DepthM >= 0)
+                .GroupBy(x => x.DepthM)
+                .FirstOrDefault(x => x.Count() > 1);
+            if (duplicateDepth is not null)
+            {
+                return $"Профиль течения содержит несколько точек на глубине {duplicateDepth.Key:R} м. Для каждой глубины допускается одна точка; до исправления расчёт заблокирован.";
+            }
+
             var distinctDepthCount = points
                 .Where(x => double.IsFinite(x.DepthM) && x.DepthM >= 0)
                 .Select(x => x.DepthM)

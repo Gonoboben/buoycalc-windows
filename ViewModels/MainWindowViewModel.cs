@@ -908,6 +908,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             PublishInputValidationFailure(ex);
         }
+        catch (CurrentProfileValidationException ex)
+        {
+            PublishInputValidationFailure(ex.Message);
+        }
     }
 
     private void CalculateValidated()
@@ -966,11 +970,16 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void PublishInputValidationFailure(EngineeringInputValidationException failure)
     {
+        PublishInputValidationFailure(failure.Message);
+    }
+
+    private void PublishInputValidationFailure(string message)
+    {
         InvalidateCurrentCalculation();
         SetCalculationCurrent(false);
         ReportText = string.Empty;
         ElementRows.Clear();
-        ResultText = $"Расчёт заблокирован. {failure.Message}";
+        ResultText = $"Расчёт заблокирован. {message}";
     }
 
     private void PublishCalculationDisplay(MainWindowCalculationDisplay display)
