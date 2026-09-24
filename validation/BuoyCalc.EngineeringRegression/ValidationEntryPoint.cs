@@ -5,6 +5,21 @@ internal static class ValidationEntryPoint
 {
     public static int Main(string[] args)
     {
+        if (args.Contains("--preflight-outcome-only", StringComparer.Ordinal))
+        {
+            try
+            {
+                CompletedRunOutcomeSupportsPreflightPhysicalRejectionWithoutFakeCalculationResultRegression.CompletedRunOutcome_SupportsPreflightPhysicalRejectionWithoutFakeCalculationResult();
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("BC-AUD-009 prerequisite targeted regression failure:");
+                Console.Error.WriteLine(ex);
+                return 1;
+            }
+        }
+
         if (args.Contains("--bc-aud-010-only", StringComparer.Ordinal))
         {
             try
@@ -138,6 +153,7 @@ internal static class ValidationEntryPoint
             NegativePhysicalInputsBlockBeforeCoreRegression.NegativePhysicalInputs_BlockBeforeCore();
             DuplicateCurrentProfileDepthsBlockBeforeCoreRegression.DuplicateCurrentProfileDepths_BlockBeforeCore();
             AcceptedSignedInvalidAnchorPrerequisiteIsTerminalFailureRegression.AcceptedSigned_InvalidAnchorPrerequisite_IsTerminalFailure();
+            CompletedRunOutcomeSupportsPreflightPhysicalRejectionWithoutFakeCalculationResultRegression.CompletedRunOutcome_SupportsPreflightPhysicalRejectionWithoutFakeCalculationResult();
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();
