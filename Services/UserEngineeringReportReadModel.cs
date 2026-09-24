@@ -149,8 +149,9 @@ public sealed record UserEngineeringAssessmentReadModel(
     string MainRisk,
     bool HasHardFailure,
     bool RequiresReview,
+    bool IsDirectHardFailureTerminal,
     IReadOnlyList<UserEngineeringAssessmentCheckReadModel> Checks,
-    MooringAnchorHorizontalCapacityDisposition AnchorHorizontalCapacityDisposition);
+    MooringAnchorHorizontalCapacityDisposition? AnchorHorizontalCapacityDisposition);
 
 public sealed record UserEngineeringPhysicalDispositionReadModel(
     MooringShapeSourceIdentity SourceIdentity,
@@ -396,6 +397,7 @@ public static class UserEngineeringReportReadModelProjector
             state.MainRisk,
             state.HasHardFailure,
             state.RequiresReview,
+            state.IsDirectHardFailureTerminal,
             state.Checks
                 .Select(x => new UserEngineeringAssessmentCheckReadModel(
                     x.Kind,
