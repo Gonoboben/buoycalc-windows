@@ -48,10 +48,27 @@ internal static class AcceptedSignedInvalidAnchorPrerequisiteIsTerminalFailureRe
 
         if (assessment.Verdict != "Не подходит" ||
             !assessment.HasHardFailure ||
+            assessment.RequiresReview ||
+            !assessment.IsDirectHardFailureTerminal ||
             assessment.MainRiskCode != "NonPositiveAnchorSubmergedWeight")
         {
             throw new InvalidOperationException(
                 $"BC-AUD-010 {label}: expected terminal Не подходит/HardFailure/NonPositiveAnchorSubmergedWeight, got {assessment.Verdict}/{assessment.HasHardFailure}/{assessment.MainRiskCode}.");
+        }
+
+        if (assessment.DesignTensionDemandN is not null ||
+            assessment.DesignTensionDemandKn is not null ||
+            assessment.GoverningWeakLinkElementNumber is not null ||
+            assessment.GoverningWeakLinkTitle is not null ||
+            assessment.GoverningWeakLinkPresetName is not null ||
+            assessment.GoverningWeakLinkReserve is not null ||
+            assessment.AnchorContactClassification is not null ||
+            assessment.AnchorHorizontalDemandN is not null ||
+            assessment.AnchorSignedNormalReactionN is not null ||
+            assessment.AnchorHorizontalCapacityDisposition is not null)
+        {
+            throw new InvalidOperationException(
+                $"BC-AUD-010 {label}: terminal direct-hard-failure assessment fabricated F1/F2/F3/contact/capacity evidence.");
         }
 
         var anchorCheck = assessment.Checks.SingleOrDefault(
@@ -72,6 +89,8 @@ internal static class AcceptedSignedInvalidAnchorPrerequisiteIsTerminalFailureRe
             snapshot);
         if (report.Assessment?.Verdict != "Не подходит" ||
             report.Assessment.MainRiskCode != "NonPositiveAnchorSubmergedWeight" ||
+            !report.Assessment.IsDirectHardFailureTerminal ||
+            report.Assessment.AnchorHorizontalCapacityDisposition is not null ||
             report.AnchorReaction is not null)
         {
             throw new InvalidOperationException($"BC-AUD-010 {label}: typed user/PDF read model lost terminal authority or fabricated F2.");
