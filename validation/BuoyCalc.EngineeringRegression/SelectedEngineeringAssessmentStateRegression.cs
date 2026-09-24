@@ -281,10 +281,10 @@ internal static class SelectedEngineeringAssessmentStateRegression
             throw new InvalidOperationException($"F4-A {scenario}: F1/F3 wave increment identity changed.");
         }
 
-        Exact(assessment.DesignTensionDemandN, tension.DemandN, scenario + " selected design demand N");
-        Exact(assessment.DesignTensionDemandKn, tension.DemandKn, scenario + " selected design demand kN");
-        Exact(assessment.AnchorHorizontalDemandN, anchor.HorizontalDemandN, scenario + " selected anchor horizontal demand");
-        Exact(assessment.AnchorSignedNormalReactionN, anchor.SignedNormalReactionN, scenario + " selected anchor normal reaction");
+        Exact(assessment.DesignTensionDemandN ?? double.NaN, tension.DemandN, scenario + " selected design demand N");
+        Exact(assessment.DesignTensionDemandKn ?? double.NaN, tension.DemandKn, scenario + " selected design demand kN");
+        Exact(assessment.AnchorHorizontalDemandN ?? double.NaN, anchor.HorizontalDemandN, scenario + " selected anchor horizontal demand");
+        Exact(assessment.AnchorSignedNormalReactionN ?? double.NaN, anchor.SignedNormalReactionN, scenario + " selected anchor normal reaction");
         if (assessment.AnchorContactClassification != anchor.ContactClassification)
             throw new InvalidOperationException($"F4-A {scenario}: anchor contact classification changed.");
         if (assessment.AnchorHorizontalCapacityDisposition != MooringAnchorHorizontalCapacityDisposition.RequiresAdditionalPhysicalModel)

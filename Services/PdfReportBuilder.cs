@@ -377,7 +377,9 @@ public static class PdfReportBuilder
 
         writer.Space(8);
         writer.Text($"Main risk code: {assessment.MainRiskCode}", 9);
-        writer.Text($"Anchor horizontal capacity disposition: {assessment.AnchorHorizontalCapacityDisposition}", 9);
+        writer.Text(
+            $"Anchor horizontal capacity disposition: {assessment.AnchorHorizontalCapacityDisposition?.ToString() ?? "недоступна — F2 authority отсутствует"}",
+            9);
         writer.Text($"Selected authority source: {assessment.SourceIdentity}", 9);
         writer.EndPage();
     }

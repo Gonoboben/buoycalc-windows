@@ -27,7 +27,7 @@ destinations and export timestamps are excluded.
 The first canonical field is a schema identifier:
 
 - input: `buoycalc-engineering-input/v1`;
-- result: `buoycalc-engineering-result/v1`.
+- result: `buoycalc-engineering-result/v2`.
 
 Changing encoding, member set/order, numeric/null rules or list semantics requires a
 new schema identifier.
@@ -41,6 +41,12 @@ authority and are excluded.
 `ResultHash` covers the retained `CalculationResult`, selected X/Z authority, signed
 candidate/disposition, selected core and retained F1/F2/F3/F4 authority states. It
 does not hash rendered TXT or PDF bytes.
+
+Result schema v2 makes direct hard-precondition terminal assessment evidence explicit:
+when a selected signed geometry exists but a derived hard prerequisite prevents F2/F3
+composition, nullable composed-authority fields remain null and the terminal F4 state
+is still fingerprinted. Schema v1 never represented that state. Input schema and
+`InputHash` are unchanged.
 
 ## Source identity
 

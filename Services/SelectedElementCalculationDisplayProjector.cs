@@ -82,7 +82,11 @@ public static class SelectedElementCalculationDisplayProjector
         ElementCalculationRow row,
         MooringSelectedEngineeringAssessmentState assessment)
     {
-        var status = assessment.AnchorContactClassification switch
+        var anchorWeightCheck = assessment.Checks.Single(
+            x => x.Kind == MooringEngineeringAssessmentCheckKind.AnchorSubmergedWeight);
+        var status = anchorWeightCheck.Status == MooringEngineeringAssessmentCheckStatus.HardFailure
+            ? "не подходит: вес якоря в воде ≤ 0; F2 contact authority отсутствует"
+            : assessment.AnchorContactClassification switch
         {
             MooringAnchorContactClassification.CompressiveContact =>
                 "требует проверки: контакт сжат; horizontal capacity требует модели якорь/грунт",

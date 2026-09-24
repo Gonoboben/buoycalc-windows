@@ -31,7 +31,7 @@ public static class CalculationRunFingerprint
     public const string Algorithm = "SHA-256";
     public const string Encoding = "UTF-8 JSON";
     public const string InputSchema = "buoycalc-engineering-input/v1";
-    public const string ResultSchema = "buoycalc-engineering-result/v1";
+    public const string ResultSchema = "buoycalc-engineering-result/v2";
 
     private static readonly JsonSerializerOptions CanonicalOptions = new()
     {

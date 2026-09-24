@@ -224,7 +224,10 @@ internal static class SelectedTechnicalReportReadModelRegression
         RequireContains(technical, $"Контакт якоря F2: {anchorReaction.ContactClassification}", scenario);
         RequireContains(technical, $"Горизонтальная selected-нагрузка якоря F2: {anchorReaction.HorizontalDemandN:0.####} Н", scenario);
         RequireContains(technical, $"Signed normal reaction якоря F2: {anchorReaction.SignedNormalReactionN:0.####} Н", scenario);
-        RequireContains(technical, assessment.AnchorHorizontalCapacityDisposition.ToString(), scenario);
+        RequireContains(
+            technical,
+            assessment.AnchorHorizontalCapacityDisposition?.ToString() ?? "недоступна",
+            scenario);
         RequireContains(technical, "требуется отдельная валидированная модель якорь/грунт", scenario);
         RequireContains(technical, "legacy AnchorReserve не является selected-authority основанием для прохода", scenario);
         RequireContains(technical, "Selected F4 checks; legacy CalculationResult.Checks не используются для selected verdict.", scenario);

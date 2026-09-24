@@ -32,18 +32,30 @@ public static class UserReportBuilder
         var governingReserve = assessment.GoverningWeakLinkReserve.HasValue
             ? assessment.GoverningWeakLinkReserve.Value.ToString("0.##")
             : "не определён";
+        var designTension = assessment.DesignTensionDemandKn.HasValue
+            ? $"{assessment.DesignTensionDemandKn.Value:0.##} кН"
+            : "недоступна";
+        var anchorContact = assessment.AnchorContactClassification.HasValue
+            ? AnchorContactText(assessment.AnchorContactClassification.Value)
+            : "недоступен — F2 authority не создаётся при неположительном весе якоря в воде";
+        var anchorDemand = assessment.AnchorHorizontalDemandN.HasValue
+            ? $"{assessment.AnchorHorizontalDemandN.Value:0.##} Н"
+            : "недоступна";
+        var anchorCapacity = assessment.AnchorHorizontalCapacityDisposition.HasValue
+            ? "требуется отдельная валидированная модель якорь/грунт"
+            : "недоступна без F2; capacity authority не синтезирована";
 
         return $"Вердикт: {assessment.Verdict}\n" +
                $"Главный риск: {assessment.MainRisk}\n" +
                $"Грунт: {environment.Seabed.DisplayName}\n" +
                $"Течение расчётное: {environment.EffectiveCurrentSpeedMS:0.###} м/с\n" +
                $"Чистая плавучесть: {snapshot.Result.NetBuoyancyKg:0.##} кг\n" +
-               $"Расчётная selected design-нагрузка: {assessment.DesignTensionDemandKn:0.##} кН\n" +
+               $"Расчётная selected design-нагрузка: {designTension}\n" +
                $"Определяющий локальный несущий элемент: {governingElement}\n" +
                $"Локальный запас определяющего элемента: {governingReserve}\n" +
-               $"Контакт якоря: {AnchorContactText(assessment.AnchorContactClassification)}\n" +
-               $"Горизонтальная selected-нагрузка на якорь: {assessment.AnchorHorizontalDemandN:0.##} Н\n" +
-               "Горизонтальная удерживающая способность якоря: требуется отдельная валидированная модель якорь/грунт";
+               $"Контакт якоря: {anchorContact}\n" +
+               $"Горизонтальная selected-нагрузка на якорь: {anchorDemand}\n" +
+               $"Горизонтальная удерживающая способность якоря: {anchorCapacity}";
     }
 
     public static string Build(EnvironmentInput environment, CalculationResult result)

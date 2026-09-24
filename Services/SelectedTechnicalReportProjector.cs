@@ -28,16 +28,24 @@ public static class SelectedTechnicalReportProjector
         if (assessment is null)
             return legacyReport;
 
-        var tension = snapshot.SelectedDesignTensionDemand
-            ?? throw new InvalidOperationException("Selected technical report requires retained F1 design-tension authority.");
-        var anchorReaction = snapshot.SelectedAnchorReaction
-            ?? throw new InvalidOperationException("Selected technical report requires retained F2 anchor-reaction authority.");
-        var capacity = snapshot.SelectedLocalStructuralCapacity
-            ?? throw new InvalidOperationException("Selected technical report requires retained F3 local-capacity authority.");
+        var tension = snapshot.SelectedDesignTensionDemand;
+        var anchorReaction = snapshot.SelectedAnchorReaction;
+        var capacity = snapshot.SelectedLocalStructuralCapacity;
         var selectedShape = snapshot.SelectedShape
             ?? throw new InvalidOperationException("Selected technical report requires retained selected X/Z authority.");
 
-        RequireCommonSource(assessment.SourceIdentity, tension.SourceIdentity, anchorReaction.SourceIdentity, capacity.SourceIdentity);
+        if (!assessment.IsDirectHardFailureTerminal &&
+            (tension is null || anchorReaction is null || capacity is null))
+        {
+            throw new InvalidOperationException(
+                "Non-terminal selected technical report requires retained F1/F2/F3 authorities.");
+        }
+
+        RequireCommonSource(
+            assessment.SourceIdentity,
+            tension?.SourceIdentity,
+            anchorReaction?.SourceIdentity,
+            capacity?.SourceIdentity);
         if (!string.Equals(selectedShape.Source, assessment.SourceIdentity.ToString(), StringComparison.Ordinal))
             throw new InvalidOperationException("Selected technical report requires one retained source across selected X/Z and F1/F2/F3/F4.");
 
@@ -208,38 +216,65 @@ public static class SelectedTechnicalReportProjector
     private static void AppendSelectedAuthoritySection(
         List<string> output,
         MooringSelectedEngineeringAssessmentState assessment,
-        MooringSelectedDesignTensionDemandState tension,
-        MooringSelectedAnchorReactionState anchorReaction,
-        MooringSelectedLocalStructuralCapacityState capacity)
+        MooringSelectedDesignTensionDemandState? tension,
+        MooringSelectedAnchorReactionState? anchorReaction,
+        MooringSelectedLocalStructuralCapacityState? capacity)
     {
         output.Add("## Выбранная инженерная оценка");
         output.Add("Эта секция является authoritative selected-оценкой. Значения legacy-моделей ниже сохранены только для трассируемости и явно помечены compatibility-only там, где могли бы выглядеть как расчётная capacity/резерв.");
         output.Add($"- Источник selected authority: {assessment.SourceIdentity}");
         output.Add($"- Вердикт F4: {assessment.Verdict}");
         output.Add($"- Главный риск F4: {assessment.MainRisk} ({assessment.MainRiskCode})");
-        output.Add($"- Расчётная selected design-нагрузка F1: {tension.DemandKn:0.####} кН ({tension.DemandN:0.####} Н)");
-        output.Add($"- Положение governing design demand F1: {tension.LocationKind}; s={tension.AlongLineM:0.####} м; segment={tension.SegmentNumber?.ToString() ?? "n/a"}");
-        output.Add($"- F3 structural coverage: expected={capacity.ExpectedStructuralElementCount}; rated={capacity.RatedStructuralElementCount}; incomplete={capacity.IncompleteStructuralElementCount}; insufficient={capacity.InsufficientElementCount}; complete={capacity.StructuralCapacityCoverageComplete}");
 
-        if (capacity.GoverningElementNumber.HasValue)
+        if (tension is null)
         {
-            output.Add($"- Определяющий локальный несущий элемент F3: #{capacity.GoverningElementNumber.Value} {capacity.GoverningTitle} / {capacity.GoverningPresetName}");
-            output.Add($"- Локальная design-нагрузка governing элемента F3: {Format(capacity.GoverningDemandN)} Н");
-            output.Add($"- WLL governing элемента F3: {Format(capacity.GoverningWorkingLoadKn)} кН");
-            output.Add($"- Локальный запас governing элемента F3: {Format(capacity.GoverningReserve)}");
-            output.Add($"- Статус governing элемента F3: {capacity.GoverningStatus?.ToString() ?? "n/a"}");
+            output.Add("- Расчётная selected design-нагрузка F1: недоступна; terminal direct hard failure не синтезирует F1 authority");
         }
         else
         {
-            output.Add("- Определяющий локальный несущий элемент F3: не определён среди элементов с доступной capacity-моделью");
+            output.Add($"- Расчётная selected design-нагрузка F1: {tension.DemandKn:0.####} кН ({tension.DemandN:0.####} Н)");
+            output.Add($"- Положение governing design demand F1: {tension.LocationKind}; s={tension.AlongLineM:0.####} м; segment={tension.SegmentNumber?.ToString() ?? "n/a"}");
         }
 
-        output.Add($"- Контакт якоря F2: {anchorReaction.ContactClassification}");
-        output.Add($"- Горизонтальная selected-нагрузка якоря F2: {anchorReaction.HorizontalDemandN:0.####} Н");
-        output.Add($"- Signed normal reaction якоря F2: {anchorReaction.SignedNormalReactionN:0.####} Н");
-        output.Add($"- Compressive normal reaction якоря F2: {anchorReaction.CompressiveNormalReactionN:0.####} Н");
-        output.Add($"- Uplift excess якоря F2: {anchorReaction.UpliftExcessN:0.####} Н");
-        output.Add($"- Горизонтальная capacity якоря F4: {assessment.AnchorHorizontalCapacityDisposition} — требуется отдельная валидированная модель якорь/грунт; legacy AnchorReserve не является selected-authority основанием для прохода.");
+        if (capacity is null)
+        {
+            output.Add("- F3 structural coverage: недоступна; terminal direct hard failure не синтезирует F3 authority");
+        }
+        else
+        {
+            output.Add($"- F3 structural coverage: expected={capacity.ExpectedStructuralElementCount}; rated={capacity.RatedStructuralElementCount}; incomplete={capacity.IncompleteStructuralElementCount}; insufficient={capacity.InsufficientElementCount}; complete={capacity.StructuralCapacityCoverageComplete}");
+            if (capacity.GoverningElementNumber.HasValue)
+            {
+                output.Add($"- Определяющий локальный несущий элемент F3: #{capacity.GoverningElementNumber.Value} {capacity.GoverningTitle} / {capacity.GoverningPresetName}");
+                output.Add($"- Локальная design-нагрузка governing элемента F3: {Format(capacity.GoverningDemandN)} Н");
+                output.Add($"- WLL governing элемента F3: {Format(capacity.GoverningWorkingLoadKn)} кН");
+                output.Add($"- Локальный запас governing элемента F3: {Format(capacity.GoverningReserve)}");
+                output.Add($"- Статус governing элемента F3: {capacity.GoverningStatus?.ToString() ?? "n/a"}");
+            }
+            else
+            {
+                output.Add("- Определяющий локальный несущий элемент F3: не определён среди элементов с доступной capacity-моделью");
+            }
+        }
+
+        if (anchorReaction is null)
+        {
+            output.Add("- Контакт якоря F2: недоступен; authority не создаётся при неположительном весе якоря в воде");
+            output.Add("- Горизонтальная selected-нагрузка якоря F2: недоступна");
+            output.Add("- Signed normal reaction якоря F2: недоступна");
+            output.Add("- Compressive normal reaction якоря F2: недоступна");
+            output.Add("- Uplift excess якоря F2: недоступен");
+            output.Add("- Горизонтальная capacity якоря F4: недоступна без F2; никакая contact/capacity authority не синтезирована");
+        }
+        else
+        {
+            output.Add($"- Контакт якоря F2: {anchorReaction.ContactClassification}");
+            output.Add($"- Горизонтальная selected-нагрузка якоря F2: {anchorReaction.HorizontalDemandN:0.####} Н");
+            output.Add($"- Signed normal reaction якоря F2: {anchorReaction.SignedNormalReactionN:0.####} Н");
+            output.Add($"- Compressive normal reaction якоря F2: {anchorReaction.CompressiveNormalReactionN:0.####} Н");
+            output.Add($"- Uplift excess якоря F2: {anchorReaction.UpliftExcessN:0.####} Н");
+            output.Add($"- Горизонтальная capacity якоря F4: {assessment.AnchorHorizontalCapacityDisposition} — требуется отдельная валидированная модель якорь/грунт; legacy AnchorReserve не является selected-authority основанием для прохода.");
+        }
         output.Add(string.Empty);
     }
 
@@ -348,9 +383,12 @@ public static class SelectedTechnicalReportProjector
         return line;
     }
 
-    private static void RequireCommonSource(params MooringShapeSourceIdentity[] sources)
+    private static void RequireCommonSource(
+        MooringShapeSourceIdentity assessment,
+        params MooringShapeSourceIdentity?[] consumers)
     {
-        if (sources.Length == 0 || sources.Any(x => x != MooringShapeSourceIdentity.SignedBoundaryFeedback) || sources.Any(x => x != sources[0]))
+        if (assessment != MooringShapeSourceIdentity.SignedBoundaryFeedback ||
+            consumers.Any(x => x.HasValue && x.Value != assessment))
             throw new InvalidOperationException("Selected technical report requires one retained SignedBoundaryFeedback authority chain across F1/F2/F3/F4.");
     }
 
