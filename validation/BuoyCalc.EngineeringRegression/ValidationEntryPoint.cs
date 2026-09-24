@@ -169,6 +169,7 @@ internal static class ValidationEntryPoint
             DuplicateCurrentProfileDepthsBlockBeforeCoreRegression.DuplicateCurrentProfileDepths_BlockBeforeCore();
             AcceptedSignedInvalidAnchorPrerequisiteIsTerminalFailureRegression.AcceptedSigned_InvalidAnchorPrerequisite_IsTerminalFailure();
             CompletedRunOutcomeSupportsPreflightPhysicalRejectionWithoutFakeCalculationResultRegression.CompletedRunOutcome_SupportsPreflightPhysicalRejectionWithoutFakeCalculationResult();
+            RejectedShortLineReportIsLocalizedActionableAndLoadSafeRegression.RejectedShortLine_ReportIsLocalizedActionableAndLoadSafe();
             HistoricalGoldenImpactRegression.Validate();
             SignedCandidateConvergenceTrajectoryRegression.Validate();
             SignedCandidateDiscreteLoadSemanticsRegression.Validate();
