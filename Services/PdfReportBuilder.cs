@@ -119,21 +119,39 @@ public static class PdfReportBuilder
             "Идентификаторы ниже принадлежат завершённому PreflightPhysicalRejected outcome. Время экспорта PDF не входит в инженерный ResultHash.",
             9.5f);
         writer.Space(10);
-        writer.KeyValueTable(new[]
+        var provenanceRows = new List<(string Label, string Value)>
         {
             ("Outcome kind", "PreflightPhysicalRejected"),
             ("Классификация", report.Classification.ToString()),
             ("Run ID", provenance.RunId),
-            ("Время расчёта, UTC", provenance.CalculationTimestampUtc.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture)),
-            ("Input hash (SHA-256)", provenance.InputHash),
-            ("Result hash (SHA-256)", provenance.ResultHash),
-            ("Source identity", provenance.SourceIdentity),
-            ("Время экспорта PDF, UTC", provenance.ExportTimestampUtc.ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture)),
-            ("Typed source", nameof(PreflightPhysicalRejectionReportReadModel))
-        });
+            ("Время расчёта, UTC", provenance.CalculationTimestampUtc.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture))
+        };
+        AppendChunkedRows(provenanceRows, "Input hash (SHA-256)", provenance.InputHash, 32);
+        AppendChunkedRows(provenanceRows, "Result hash (SHA-256)", provenance.ResultHash, 32);
+        AppendChunkedRows(provenanceRows, "Source identity", provenance.SourceIdentity, 48);
+        provenanceRows.Add(("Время экспорта PDF, UTC", provenance.ExportTimestampUtc.ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture)));
+        provenanceRows.Add(("Typed source", nameof(PreflightPhysicalRejectionReportReadModel)));
+        writer.KeyValueTable(provenanceRows);
         writer.EndPage();
 
         document.Close();
+    }
+
+    private static void AppendChunkedRows(
+        ICollection<(string Label, string Value)> rows,
+        string label,
+        string value,
+        int chunkLength)
+    {
+        var chunks = Enumerable.Range(0, (value.Length + chunkLength - 1) / chunkLength)
+            .Select(index => value.Substring(
+                index * chunkLength,
+                Math.Min(chunkLength, value.Length - index * chunkLength)))
+            .ToArray();
+        for (var index = 0; index < chunks.Length; index++)
+        {
+            rows.Add(($"{label} [{index + 1}/{chunks.Length}]", chunks[index]));
+        }
     }
 
     private static void WriteExecutivePage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)
