@@ -1,5 +1,6 @@
 using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
+using BuoyCalc.Windows.Services;
 
 internal static class RejectedShortLineReportIsLocalizedActionableAndLoadSafeRegression
 {
