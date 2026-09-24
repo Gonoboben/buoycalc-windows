@@ -11,7 +11,7 @@ This package does **not** migrate PDF, 2D, UI, user-report or technical-report p
 
 ## Availability
 
-The assessment is available only when the selected calculation chain exposes all of:
+Normal composed assessment is available when the selected calculation chain exposes all of:
 
 ```text
 SignedBoundaryFeedback selected source
@@ -21,6 +21,13 @@ F3 selected local structural capacity
 ```
 
 The three non-Accepted canonical scenarios retain no fabricated F1-F4 selected assessment state.
+
+BC-AUD-010 adds one terminal path for an Accepted selected signed geometry. Direct hard
+preconditions are evaluated from the selected source and typed calculation result before
+F1/F2/F3 availability is required. If any direct condition fails, the retained assessment
+has `IsDirectHardFailureTerminal=true`, verdict `Не подходит`, and the deterministic direct
+risk code. Composed F1/F2/F3 evidence fields remain null in that terminal assessment; no
+contact, normal reaction, horizontal demand, local capacity or anchor capacity is fabricated.
 
 ## Direct hard preconditions
 
@@ -33,6 +40,9 @@ AnchorWeightWaterKg <= 0                -> HardFailure
 ```
 
 They are evaluated from typed calculation inputs/results. F4-A does not parse report/check strings to recover engineering state.
+For `AnchorWeightWaterKg <= 0`, F2 remains unavailable by design because a compressive
+anchor/contact authority cannot be established. That absence no longer suppresses the
+terminal selected verdict.
 
 Selected verdict policy:
 
