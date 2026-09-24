@@ -35,9 +35,9 @@ public sealed record MooringSelectedEngineeringAssessmentCheck(
     string Detail);
 
 /// <summary>
-/// Selected engineering assessment built only from validated F1/F2/F3 selected authorities
-/// plus direct calculation-core hard preconditions. It is deliberately separate from legacy
-/// CalculationResult.Checks/Verdict/MainRisk until F4-B migrates presentation consumers.
+/// Selected engineering assessment built from direct calculation-core hard preconditions
+/// before optional composition of validated F1/F2/F3 selected authorities. A terminal direct
+/// hard failure deliberately retains no fabricated downstream authority.
 /// </summary>
 public sealed record MooringSelectedEngineeringAssessmentState(
     MooringShapeSourceIdentity SourceIdentity,
@@ -47,16 +47,17 @@ public sealed record MooringSelectedEngineeringAssessmentState(
     string MainRisk,
     bool HasHardFailure,
     bool RequiresReview,
-    double DesignTensionDemandN,
-    double DesignTensionDemandKn,
+    bool IsDirectHardFailureTerminal,
+    double? DesignTensionDemandN,
+    double? DesignTensionDemandKn,
     int? GoverningWeakLinkElementNumber,
     string? GoverningWeakLinkTitle,
     string? GoverningWeakLinkPresetName,
     double? GoverningWeakLinkReserve,
-    MooringAnchorContactClassification AnchorContactClassification,
-    double AnchorHorizontalDemandN,
-    double AnchorSignedNormalReactionN,
-    MooringAnchorHorizontalCapacityDisposition AnchorHorizontalCapacityDisposition,
+    MooringAnchorContactClassification? AnchorContactClassification,
+    double? AnchorHorizontalDemandN,
+    double? AnchorSignedNormalReactionN,
+    MooringAnchorHorizontalCapacityDisposition? AnchorHorizontalCapacityDisposition,
     string MethodNote);
 
 public static class MooringSelectedEngineeringAssessmentStateProjector
@@ -68,8 +69,73 @@ public static class MooringSelectedEngineeringAssessmentStateProjector
         MooringSelectedAnchorReactionState? anchorReaction,
         MooringSelectedLocalStructuralCapacityState? localCapacity)
     {
+        var sourceIdentity = designTension?.SourceIdentity ??
+                             anchorReaction?.SourceIdentity ??
+                             localCapacity?.SourceIdentity;
+        return Project(
+            environment,
+            result,
+            sourceIdentity,
+            designTension,
+            anchorReaction,
+            localCapacity);
+    }
+
+    public static MooringSelectedEngineeringAssessmentState? Project(
+        EnvironmentInput environment,
+        CalculationResult result,
+        MooringShapeSourceIdentity? selectedSourceIdentity,
+        MooringSelectedDesignTensionDemandState? designTension,
+        MooringSelectedAnchorReactionState? anchorReaction,
+        MooringSelectedLocalStructuralCapacityState? localCapacity)
+    {
         ArgumentNullException.ThrowIfNull(environment);
         ArgumentNullException.ThrowIfNull(result);
+
+        if (selectedSourceIdentity is null)
+            return null;
+
+        RequireSelectedSource(selectedSourceIdentity.Value, nameof(selectedSourceIdentity));
+
+        if (!double.IsFinite(result.NetBuoyancyKg) ||
+            !double.IsFinite(result.LineLengthM) ||
+            !double.IsFinite(environment.DepthM) ||
+            !double.IsFinite(result.AnchorWeightWaterKg))
+        {
+            throw new InvalidOperationException(
+                "Selected engineering assessment requires finite direct hard-precondition inputs.");
+        }
+
+        var directChecks = new List<MooringSelectedEngineeringAssessmentCheck>(3)
+        {
+            BuildPositiveBuoyancyCheck(result),
+            BuildLineLengthCheck(environment, result),
+            BuildAnchorSubmergedWeightCheck(result)
+        };
+        var directHardFailure = SelectDirectHardFailure(directChecks);
+        if (directHardFailure is not null)
+        {
+            return new MooringSelectedEngineeringAssessmentState(
+                selectedSourceIdentity.Value,
+                directChecks,
+                "Не подходит",
+                directHardFailure.Code,
+                directHardFailure.Summary,
+                true,
+                false,
+                true,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "Terminal selected engineering assessment: direct hard preconditions are authoritative before F1/F2/F3 composition. No anchor contact, reaction or horizontal-capacity authority is fabricated when the derived submerged anchor weight is non-positive.");
+        }
 
         if (designTension is null || anchorReaction is null || localCapacity is null)
             return null;
@@ -93,15 +159,6 @@ public static class MooringSelectedEngineeringAssessmentStateProjector
                 "Selected engineering assessment requires internally consistent finite positive F1 design tension demand.");
         }
 
-        if (!double.IsFinite(result.NetBuoyancyKg) ||
-            !double.IsFinite(result.LineLengthM) ||
-            !double.IsFinite(environment.DepthM) ||
-            !double.IsFinite(result.AnchorWeightWaterKg))
-        {
-            throw new InvalidOperationException(
-                "Selected engineering assessment requires finite direct hard-precondition inputs.");
-        }
-
         if (anchorReaction.AnchorWeightWaterKg != result.AnchorWeightWaterKg)
         {
             throw new InvalidOperationException(
@@ -114,11 +171,8 @@ public static class MooringSelectedEngineeringAssessmentStateProjector
                 "Selected engineering assessment requires exact F1/F3 wave-increment identity.");
         }
 
-        var checks = new List<MooringSelectedEngineeringAssessmentCheck>(6)
+        var checks = new List<MooringSelectedEngineeringAssessmentCheck>(directChecks)
         {
-            BuildPositiveBuoyancyCheck(result),
-            BuildLineLengthCheck(environment, result),
-            BuildAnchorSubmergedWeightCheck(result),
             BuildAnchorContactCheck(anchorReaction),
             BuildLocalStructuralCapacityCheck(localCapacity),
             BuildAnchorHorizontalCapacityCheck(anchorReaction)
@@ -142,6 +196,7 @@ public static class MooringSelectedEngineeringAssessmentStateProjector
             mainRisk.Summary,
             hasHardFailure,
             requiresReview,
+            false,
             designTension.DemandN,
             designTension.DemandKn,
             localCapacity.GoverningElementNumber,
@@ -153,6 +208,26 @@ public static class MooringSelectedEngineeringAssessmentStateProjector
             anchorReaction.SignedNormalReactionN,
             MooringAnchorHorizontalCapacityDisposition.RequiresAdditionalPhysicalModel,
             "Selected pre-v1 engineering assessment: direct buoyancy/line-length/anchor-weight hard preconditions plus validated F2 anchor contact and F3 local structural capacity. F2-C did not validate a horizontal soil/anchor capacity model, so legacy AnchorReserve cannot authorize a selected pass; horizontal anchor capacity remains RequiresAdditionalPhysicalModel. Legacy CalculationResult checks/verdict remain unchanged until F4-B presentation migration.");
+    }
+
+    private static MooringSelectedEngineeringAssessmentCheck? SelectDirectHardFailure(
+        IReadOnlyList<MooringSelectedEngineeringAssessmentCheck> checks)
+    {
+        var hardPriority = new[]
+        {
+            MooringEngineeringAssessmentCheckKind.PositiveBuoyancy,
+            MooringEngineeringAssessmentCheckKind.LineLength,
+            MooringEngineeringAssessmentCheckKind.AnchorSubmergedWeight
+        };
+
+        foreach (var kind in hardPriority)
+        {
+            var hard = checks.First(x => x.Kind == kind);
+            if (hard.Status == MooringEngineeringAssessmentCheckStatus.HardFailure)
+                return hard;
+        }
+
+        return null;
     }
 
     private static MooringSelectedEngineeringAssessmentCheck BuildPositiveBuoyancyCheck(CalculationResult result)
