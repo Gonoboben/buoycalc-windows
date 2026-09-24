@@ -5,6 +5,21 @@ internal static class ValidationEntryPoint
 {
     public static int Main(string[] args)
     {
+        if (args.Contains("--bc-aud-009-only", StringComparer.Ordinal))
+        {
+            try
+            {
+                RejectedShortLineReportIsLocalizedActionableAndLoadSafeRegression.RejectedShortLine_ReportIsLocalizedActionableAndLoadSafe();
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("BC-AUD-009 targeted regression failure:");
+                Console.Error.WriteLine(ex);
+                return 1;
+            }
+        }
+
         if (args.Contains("--preflight-outcome-only", StringComparer.Ordinal))
         {
             try
