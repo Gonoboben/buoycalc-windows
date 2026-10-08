@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Reflection;
+using UglyToad.PdfPig;
 using System.Text;
 using System.Text.Json;
 using BuoyCalc.Windows.ApplicationModel;
@@ -149,11 +151,97 @@ internal static class RejectedShortLineReportIsLocalizedActionableAndLoadSafeReg
             File.WriteAllText(textPath, fullText, new UTF8Encoding(false));
             if (!File.Exists(pdfPath) || new FileInfo(pdfPath).Length == 0 || !File.Exists(textPath) || new FileInfo(textPath).Length == 0)
                 throw new InvalidOperationException("BC-AUD-009: dedicated PDF/Full TXT artifacts were not generated.");
+            VerifyRenderedPdf(pdfPath, report);
         }
         finally
         {
             if (!retainArtifact && Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
+    }
+
+
+    // Independent PDF-byte inspection: verify that the file is not merely non-empty
+    // but actually publishes the typed preflight decision and immutable provenance.
+    private static void VerifyRenderedPdf(string pdfPath, ApplicationRunReportReadModel report)
+    {
+        if (report is not PreflightPhysicalRejectionReportReadModel rejected)
+            throw new InvalidOperationException("BC-AUD-009 PDF: expected typed preflight report.");
+
+        using var document = PdfDocument.Open(pdfPath);
+        var pages = document.GetPages().ToArray();
+        if (pages.Length != 2)
+            throw new InvalidOperationException($"BC-AUD-009 PDF: expected two dedicated pages, got {pages.Length}.");
+
+        for (var index = 0; index < pages.Length; index++)
+        {
+            var page = pages[index];
+            if (Math.Abs(page.Width - 595) > 2 || Math.Abs(page.Height - 842) > 2)
+                throw new InvalidOperationException($"BC-AUD-009 PDF page {index + 1}: expected A4, got {page.Width}x{page.Height}.");
+            foreach (var letter in page.Letters)
+            {
+                var bounds = letter.GlyphRectangle;
+                if (bounds.Left < -2 || bounds.Right > page.Width + 2 ||
+                    bounds.Bottom < -2 || bounds.Top > page.Height + 2)
+                {
+                    throw new InvalidOperationException(
+                        $"BC-AUD-009 PDF page {index + 1}: extracted glyph is outside the A4 page.");
+                }
+            }
+        }
+
+        static string Normalized(string value) =>
+            string.Concat(value.Where(character => !char.IsWhiteSpace(character)));
+        static void Require(string actual, string expected, string context)
+        {
+            if (!Normalized(actual).Contains(Normalized(expected), StringComparison.Ordinal))
+                throw new InvalidOperationException($"BC-AUD-009 PDF {context}: missing rendered content '{expected}'.");
+        }
+
+        var decisionPage = string.Concat(pages[0].Letters.Select(letter => letter.Value));
+        var identityPage = string.Concat(pages[1].Letters.Select(letter => letter.Value));
+        var evidence = rejected.Evidence;
+        static string M(double value) => value.ToString("0.####", CultureInfo.InvariantCulture);
+
+        Require(decisionPage, "preflight-отчёт постановки", "title");
+        Require(decisionPage, rejected.ProjectName, "project");
+        Require(decisionPage, rejected.Verdict, "verdict");
+        Require(decisionPage, $"Активная длина линии {M(evidence.AvailableActiveLineLengthM)} м меньше глубины постановки {M(evidence.DepthM)} м", "reason");
+        Require(decisionPage, $"Глубина постановки{M(evidence.DepthM)} м", "depth");
+        Require(decisionPage, $"Активная длина линии{M(evidence.AvailableActiveLineLengthM)} м", "active line");
+        Require(decisionPage, $"Минимальная активная длина{M(evidence.MinimumRequiredActiveLineLengthM)} м", "minimum");
+        Require(decisionPage, $"Дефицит длины{M(evidence.DeficitM)} м", "deficit");
+        Require(decisionPage, rejected.DiagnosticCode, "diagnostic code");
+        Require(decisionPage, $"увеличьте суммарную активную длину линии как минимум на {M(evidence.DeficitM)} м", "action");
+        Require(decisionPage, "CalculationResult и CalculationSnapshot отсутствуют", "no calculation authority");
+        Require(decisionPage, "Selected X/Z и проверки F1/F2/F3/F4 отсутствуют", "no selected authority");
+        Require(decisionPage, "Расчётные нагрузки, таблица элементов и сегменты не вычислялись", "no published loads");
+
+        foreach (var forbidden in new[] {
+            "Суммарная сила течения", "Волновой horizontal proxy",
+            "Legacy horizontal sum", "Чистая плавучесть", "Макс. натяжение",
+            "Плавучесть и расчётные нагрузки"
+        })
+        {
+            if (Normalized(decisionPage).Contains(Normalized(forbidden), StringComparison.Ordinal) ||
+                Normalized(identityPage).Contains(Normalized(forbidden), StringComparison.Ordinal))
+                throw new InvalidOperationException($"BC-AUD-009 PDF: calculated/load section was rendered: '{forbidden}'.");
+        }
+
+        var provenance = rejected.Provenance;
+        Require(identityPage, "PreflightPhysicalRejected", "outcome kind");
+        Require(identityPage, rejected.Classification.ToString(), "classification");
+        Require(identityPage, provenance.RunId, "run id");
+        Require(identityPage, provenance.CalculationTimestampUtc.ToUniversalTime().ToString(
+            "yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture), "calculation timestamp");
+        for (var start = 0; start < provenance.InputHash.Length; start += 32)
+            Require(identityPage, provenance.InputHash.Substring(start, Math.Min(32, provenance.InputHash.Length - start)), "input hash segment");
+        for (var start = 0; start < provenance.ResultHash.Length; start += 32)
+            Require(identityPage, provenance.ResultHash.Substring(start, Math.Min(32, provenance.ResultHash.Length - start)), "result hash segment");
+        for (var start = 0; start < provenance.SourceIdentity.Length; start += 48)
+            Require(identityPage, provenance.SourceIdentity.Substring(start, Math.Min(48, provenance.SourceIdentity.Length - start)), "source identity segment");
+        Require(identityPage, "Время экспорта PDF, UTC", "separate export timestamp");
+
+        Console.WriteLine("BC_AUD_009_RENDERED_PDF_CONTENT|Pages=2|A4=True|GlyphsInsidePage=True|Actionable=True|NoCalculatedLoads=True|RunId=True|InputHash=True|ResultHash=True|SourceIdentity=True|CalculationTime=True");
     }
 
     private static void ValidateProjectReplay()
