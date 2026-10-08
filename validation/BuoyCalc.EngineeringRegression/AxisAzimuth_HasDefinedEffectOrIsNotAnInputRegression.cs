@@ -115,6 +115,25 @@ internal static class AxisAzimuth_HasDefinedEffectOrIsNotAnInputRegression
     private static void ValidatePassiveAzimuthUiPath()
     {
         var vm = new MainWindowViewModel();
+        // A fresh UI project need not have a validated profile yet; supplying explicit
+        // depth points is a prerequisite, not an optional scalar-current fallback.
+        vm.CurrentProfilePoints.Clear();
+        vm.CurrentProfilePoints.Add(new CurrentProfilePointViewModel
+        {
+            DepthM = "0",
+            EastCurrentMS = "0.2",
+            NorthCurrentMS = "0",
+            VerticalCurrentMS = "0",
+            WaterDensityKgM3 = "1025"
+        });
+        vm.CurrentProfilePoints.Add(new CurrentProfilePointViewModel
+        {
+            DepthM = "50",
+            EastCurrentMS = "0.2",
+            NorthCurrentMS = "0",
+            VerticalCurrentMS = "0",
+            WaterDensityKgM3 = "1025"
+        });
         vm.PlanarXAxisAzimuthDeg = "0";
         vm.CalculateCommand.Execute(null);
         if (!vm.IsCalculationCurrent || vm.UserEngineeringReport is null)
