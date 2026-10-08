@@ -87,6 +87,8 @@ public static class PdfReportBuilder
         });
         writer.Space(12);
         writer.Section("Граница применимости решения");
+        writer.Text(CurrentDirectionModelDisclosure.Notice, 9.5f);
+        writer.Space(5);
         writer.Text(
             "PDF отображает только уже рассчитанное состояние. Горизонтальная удерживающая способность системы якорь/грунт в v1 не является валидированной selected-capacity моделью и не может подтверждать итоговый проход по якорю; требуется отдельная физическая проверка якоря и грунта.",
             9.5f);
@@ -113,6 +115,7 @@ public static class PdfReportBuilder
         writer.Space(10);
         writer.Section("Течение");
         writer.Text("Профиль течения по глубине обязателен для расчёта; таблица ниже содержит профиль, использованный выполненным расчётом.", 9.5f);
+        writer.Text(CurrentDirectionModelDisclosure.Detail, 9.0f);
         writer.CurrentProfileTable(env.CurrentProfile);
 
         writer.Space(10);

@@ -151,3 +151,11 @@ jobs:
             Set-BuoyCalcStatus "failure" "Build failed"
             throw
           }
+
+      - name: Upload BC-AUD-008 user PDF evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bc-aud-008-user-pdf-${{ github.sha }}
+          path: artifacts/bc-aud-008
+          if-no-files-found: error

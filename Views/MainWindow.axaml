@@ -102,7 +102,11 @@
                   <ComboBox ItemsSource="{Binding SeabedPresets}" SelectedItem="{Binding SelectedSeabedPreset}" HorizontalAlignment="Stretch" />
                 </StackPanel>
                 <Border Grid.Row="3" Grid.ColumnSpan="2" Background="#F7F9FC" CornerRadius="10" Padding="10">
-                  <TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding CurrentProfileSummary}" FontSize="12" Foreground="#697386" TextWrapping="Wrap" />
+                    <TextBlock Text="{x:Static services:CurrentDirectionModelDisclosure.Notice}"
+                               FontSize="12" Foreground="#7A4B12" TextWrapping="Wrap" />
+                  </StackPanel>
                 </Border>
                 <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Профиль течения по глубине — обязателен..." Click="OpenCurrentProfileButton_Click" HorizontalAlignment="Stretch" ToolTip.Tip="Расчёт выполняется только по профилю течения минимум из двух точек на разных глубинах." />
               </Grid>

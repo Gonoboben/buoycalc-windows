@@ -8,6 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- PDF extraction is regression-only; no new dependency enters the application project. -->
+    <PackageReference Include="PdfPig" Version="0.1.14-alpha-20260315-fb715" />
     <ProjectReference Include="../../BuoyCalc.Windows.csproj" />
   </ItemGroup>
 </Project>

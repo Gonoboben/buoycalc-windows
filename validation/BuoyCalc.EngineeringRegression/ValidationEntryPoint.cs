@@ -115,6 +115,7 @@ internal static class ValidationEntryPoint
             ProfilePlanarProjectionReadModelRegression.Validate();
             SegmentPlanarProjectionRegression.Validate();
             ProfilePlanarProjectionLossRegression.Validate();
+            AxisAzimuth_HasDefinedEffectOrIsNotAnInputRegression.Validate();
             SurfaceBoundaryInfoAnalyzerRegression.Validate();
             SurfaceBoundaryInfoDataWiringRegression.Validate();
             SurfaceBoundaryInfoReportRegression.Validate();
