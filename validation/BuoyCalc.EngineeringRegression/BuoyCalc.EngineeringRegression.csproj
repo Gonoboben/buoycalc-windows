@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Test-only PDF extraction for cross-artifact BC-AUD-008 assertions. -->
+    <!-- PDF extraction is regression-only; no new dependency enters the application project. -->
     <PackageReference Include="PdfPig" Version="0.1.14-alpha-20260315-fb715" />
     <ProjectReference Include="../../BuoyCalc.Windows.csproj" />
   </ItemGroup>
