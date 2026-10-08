@@ -44,7 +44,9 @@ Assert-FileMissing "Services/TechnicalReportStorePublisher.cs"
 
 Assert-FileExists "ApplicationModel/ApplicationCalculationRunner.cs"
 $applicationRunner = Read-RepoText "ApplicationModel/ApplicationCalculationRunner.cs"
-Assert-Contains $applicationRunner "var result = BuoyCalculator.Calculate(" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "public static ApplicationRunOutcome RunOutcome(" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "BuoyCalculator.Calculate" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "var result = calculate(" "ApplicationCalculationRunner"
 Assert-Contains $applicationRunner "var snapshot = CalculationSnapshotBuilder.Build(environment, buoy, result);" "ApplicationCalculationRunner"
 
 Assert-FileExists "ViewModels/MainWindowCalculationDisplayBuilder.cs"

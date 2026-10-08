@@ -17,6 +17,23 @@ public static class PdfReportBuilder
     private const float Margin = 36;
     private const float LineGap = 5;
 
+    public static void Build(string filePath, ApplicationRunReportReadModel report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        switch (report)
+        {
+            case CalculatedApplicationRunReportReadModel calculated:
+                Build(filePath, calculated.Report);
+                return;
+            case PreflightPhysicalRejectionReportReadModel rejected:
+                BuildPreflightPhysicalRejection(filePath, rejected);
+                return;
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported application report type: {report.GetType().Name}.");
+        }
+    }
+
     public static void Build(string filePath, UserEngineeringReportReadModel report)
     {
         ArgumentNullException.ThrowIfNull(report);
@@ -47,6 +64,94 @@ public static class PdfReportBuilder
         WriteReproducibilityPage(writer, report, provenance);
 
         document.Close();
+    }
+
+    private static void BuildPreflightPhysicalRejection(
+        string filePath,
+        PreflightPhysicalRejectionReportReadModel report)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? ".");
+
+        using var stream = File.Open(filePath, FileMode.Create, FileAccess.Write);
+        using var document = SKDocument.CreatePdf(stream);
+        using var regularTypeface = SKTypeface.FromFamilyName("Arial") ?? SKTypeface.Default;
+        using var boldTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? regularTypeface;
+
+        var writer = new PdfCanvasWriter(document, regularTypeface, boldTypeface);
+        var evidence = report.Evidence;
+        var provenance = PdfReportProvenanceReadModelProjector.Project(
+            report.Provenance,
+            DateTimeOffset.UtcNow);
+
+        writer.BeginPage();
+        writer.Title("BuoyCalc Windows — preflight-отчёт постановки");
+        writer.Text($"Проект: {report.ProjectName}", 11);
+        writer.Text($"Версия приложения и расчётной модели: {AppInfo.DisplayVersion}", 9.5f);
+        writer.Space(10);
+        writer.VerdictBanner(
+            report.Verdict,
+            $"Активная длина линии {Format(evidence.AvailableActiveLineLengthM)} м меньше глубины постановки {Format(evidence.DepthM)} м.");
+        writer.Space(12);
+        writer.Section("Причина и точная коррекция");
+        writer.KeyValueTable(new[]
+        {
+            ("Глубина постановки", $"{Format(evidence.DepthM)} м"),
+            ("Активная длина линии", $"{Format(evidence.AvailableActiveLineLengthM)} м"),
+            ("Минимальная активная длина", $"{Format(evidence.MinimumRequiredActiveLineLengthM)} м"),
+            ("Дефицит длины", $"{Format(evidence.DeficitM)} м"),
+            ("Код диагностики", report.DiagnosticCode)
+        });
+        writer.Space(10);
+        writer.Text(
+            $"Что исправить: увеличьте суммарную активную длину линии как минимум на {Format(evidence.DeficitM)} м — до не менее {Format(evidence.MinimumRequiredActiveLineLengthM)} м.",
+            11);
+        writer.Space(12);
+        writer.Section("Граница инженерной authority");
+        writer.Text("CalculationResult и CalculationSnapshot отсутствуют; calculation core не запускался.", 9.5f);
+        writer.Text("Selected X/Z и проверки F1/F2/F3/F4 отсутствуют.", 9.5f);
+        writer.Text("Расчётные нагрузки, таблица элементов и сегменты не вычислялись и не публикуются.", 9.5f);
+        writer.Text("Этот PDF отображает только typed preflight physical-rejection evidence и provenance.", 9.5f);
+        writer.EndPage();
+
+        writer.BeginPage();
+        writer.Title("Воспроизводимость и provenance");
+        writer.Text(
+            "Идентификаторы ниже принадлежат завершённому PreflightPhysicalRejected outcome. Время экспорта PDF не входит в инженерный ResultHash.",
+            9.5f);
+        writer.Space(10);
+        var provenanceRows = new List<(string Label, string Value)>
+        {
+            ("Outcome kind", "PreflightPhysicalRejected"),
+            ("Классификация", report.Classification.ToString()),
+            ("Run ID", provenance.RunId),
+            ("Время расчёта, UTC", provenance.CalculationTimestampUtc.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture))
+        };
+        AppendChunkedRows(provenanceRows, "Input hash (SHA-256)", provenance.InputHash, 32);
+        AppendChunkedRows(provenanceRows, "Result hash (SHA-256)", provenance.ResultHash, 32);
+        AppendChunkedRows(provenanceRows, "Source identity", provenance.SourceIdentity, 48);
+        provenanceRows.Add(("Время экспорта PDF, UTC", provenance.ExportTimestampUtc.ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture)));
+        provenanceRows.Add(("Typed source", nameof(PreflightPhysicalRejectionReportReadModel)));
+        writer.KeyValueTable(provenanceRows);
+        writer.EndPage();
+
+        document.Close();
+    }
+
+    private static void AppendChunkedRows(
+        ICollection<(string Label, string Value)> rows,
+        string label,
+        string value,
+        int chunkLength)
+    {
+        var chunks = Enumerable.Range(0, (value.Length + chunkLength - 1) / chunkLength)
+            .Select(index => value.Substring(
+                index * chunkLength,
+                Math.Min(chunkLength, value.Length - index * chunkLength)))
+            .ToArray();
+        for (var index = 0; index < chunks.Length; index++)
+        {
+            rows.Add(($"{label} [{index + 1}/{chunks.Length}]", chunks[index]));
+        }
     }
 
     private static void WriteExecutivePage(PdfCanvasWriter writer, UserEngineeringReportReadModel report)

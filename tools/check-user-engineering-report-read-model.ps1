@@ -23,6 +23,7 @@ function Require-Count([string]$Path, [string]$Needle, [int]$Expected) {
 }
 
 $readModel = "Services/UserEngineeringReportReadModel.cs"
+$outcomeReadModel = "Services/ApplicationRunReportReadModel.cs"
 $display = "ViewModels/MainWindowCalculationDisplayBuilder.cs"
 $mainVm = "ViewModels/MainWindowViewModel.cs"
 
@@ -51,13 +52,18 @@ Require-NotContains $readModel ".TechnicalReportText"
 Require-NotContains $readModel "TechnicalReportMarkdownBuilder"
 Require-NotContains $readModel "PdfReportBuilder"
 
-Require-Contains $display "UserEngineeringReportReadModel UserEngineeringReport"
+Require-Contains $outcomeReadModel "abstract record ApplicationRunReportReadModel"
+Require-Contains $outcomeReadModel "CalculatedApplicationRunReportReadModel"
+Require-Contains $outcomeReadModel "PreflightPhysicalRejectionReportReadModel"
+Require-Contains $display "ApplicationRunReportReadModel ApplicationRunReport"
 Require-Contains $display "UserEngineeringReportReadModelProjector.Project"
 Require-Contains $display "userEngineeringReport"
+Require-Contains $display "ProjectPreflightPhysicalRejected"
 
-Require-Contains $mainVm "UserEngineeringReportReadModel? _userEngineeringReport"
+Require-Contains $mainVm "ApplicationRunReportReadModel? _applicationRunReport"
 Require-Contains $mainVm "UserEngineeringReportReadModel? UserEngineeringReport"
-Require-Contains $mainVm "UserEngineeringReport = display.UserEngineeringReport;"
-Require-Count $mainVm "UserEngineeringReport = null;" 2
+Require-Contains $mainVm "PreflightPhysicalRejectionReportReadModel? PreflightPhysicalRejectionReport"
+Require-Contains $mainVm "ApplicationRunReport = display.ApplicationRunReport;"
+Require-Count $mainVm "ApplicationRunReport = null;" 2
 
 Write-Host "Typed user engineering report read-model boundary guard passed."

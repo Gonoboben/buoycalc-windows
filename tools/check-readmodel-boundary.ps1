@@ -79,7 +79,7 @@ Assert-FileExists "ApplicationModel/SelectedMooringShapeProvider.cs"
 
 $viewModel = Read-RepoText "ViewModels/MainWindowViewModel.cs"
 Assert-Contains $viewModel "using BuoyCalc.Windows.ApplicationModel;" "MainWindowViewModel"
-Assert-Contains $viewModel "ApplicationCalculationRunner.Run(" "MainWindowViewModel"
+Assert-Contains $viewModel "ApplicationCalculationRunner.RunOutcome(" "MainWindowViewModel"
 Assert-NotContains $viewModel "BuoyCalculator.Calculate(" "MainWindowViewModel"
 Assert-NotContains $viewModel "CalculationSnapshotBuilder.Build(" "MainWindowViewModel"
 
@@ -93,7 +93,9 @@ Assert-NotContains $displayBuilder "CalculationSnapshotBuilder.Build(" "MainWind
 
 $applicationRunner = Read-RepoText "ApplicationModel/ApplicationCalculationRunner.cs"
 Assert-Contains $applicationRunner "public static ApplicationCalculationRun Run(" "ApplicationCalculationRunner"
-Assert-Contains $applicationRunner "var result = BuoyCalculator.Calculate(" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "public static ApplicationRunOutcome RunOutcome(" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "BuoyCalculator.Calculate" "ApplicationCalculationRunner"
+Assert-Contains $applicationRunner "var result = calculate(" "ApplicationCalculationRunner"
 Assert-Contains $applicationRunner "var snapshot = CalculationSnapshotBuilder.Build(environment, buoy, result);" "ApplicationCalculationRunner"
 Assert-Contains $applicationRunner "return new ApplicationCalculationRun(result, snapshot);" "ApplicationCalculationRunner"
 
