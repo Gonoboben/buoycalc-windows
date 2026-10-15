@@ -145,6 +145,16 @@ jobs:
               throw "Engineering regression verification failed with exit code $LASTEXITCODE"
             }
 
+            dotnet restore validation/BuoyCalc.ValidationFeedbackDiagnostics/BuoyCalc.ValidationFeedbackDiagnostics.csproj
+            if ($LASTEXITCODE -ne 0) {
+              throw "BC-AUD-006 diagnostics restore failed with exit code $LASTEXITCODE"
+            }
+
+            dotnet run --project validation/BuoyCalc.ValidationFeedbackDiagnostics/BuoyCalc.ValidationFeedbackDiagnostics.csproj --configuration Release --no-restore -- --output artifacts/bc-aud-006
+            if ($LASTEXITCODE -ne 0) {
+              throw "BC-AUD-006 exact-cycle validation failed with exit code $LASTEXITCODE"
+            }
+
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
@@ -165,4 +175,12 @@ jobs:
         with:
           name: bc-aud-008-user-pdf-${{ github.sha }}
           path: artifacts/bc-aud-008
+          if-no-files-found: error
+
+      - name: Upload BC-AUD-006 exact-cycle research evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bc-aud-006-cycle-${{ github.sha }}
+          path: artifacts/bc-aud-006
           if-no-files-found: error
