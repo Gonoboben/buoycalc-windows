@@ -60,6 +60,7 @@ internal static class FixedProgram
 
         var allRows = new List<FixedIterationRow>();
         var summaries = new List<string>();
+        var cycleResearch = new ExactCycleResearchReport();
 
         foreach (var scenario in Scenarios())
         {
@@ -74,12 +75,30 @@ internal static class FixedProgram
                     $"{scenario.Id}: expected production BudgetExhausted, got {candidate.Status} ({candidate.DiagnosticCode}).");
             }
 
+            var productionSnapshot = run.Snapshot;
+            if (productionSnapshot.SelectedDesignTensionDemand is not null ||
+                productionSnapshot.SelectedAnchorReaction is not null ||
+                productionSnapshot.SelectedLocalStructuralCapacity is not null ||
+                productionSnapshot.SelectedEngineeringAssessment is not null)
+                throw new InvalidOperationException($"{scenario.Id}: non-Accepted candidate unexpectedly owns selected F1-F4.");
+
+            var firstPass = new List<ExactCycleSample>();
+            var secondPass = new List<ExactCycleSample>();
             var rows = Diagnose(
                 scenario,
                 environment,
                 buoy,
                 run.Result,
-                run.Snapshot.TechnicalReportData.SequencePositions);
+                run.Snapshot.TechnicalReportData.SequencePositions,
+                (iteration, state) => firstPass.Add(ExactCycleResearchReport.Capture(scenario.Id, iteration, state)));
+            _ = Diagnose(
+                scenario,
+                environment,
+                buoy,
+                run.Result,
+                run.Snapshot.TechnicalReportData.SequencePositions,
+                (iteration, state) => secondPass.Add(ExactCycleResearchReport.Capture(scenario.Id, iteration, state)));
+            cycleResearch.Analyze(scenario.Id, firstPass, secondPass);
             allRows.AddRange(rows);
 
             var last = rows[^1];
@@ -99,6 +118,8 @@ internal static class FixedProgram
                     : $"cycle=length {firstRepeated.CycleLength} at iteration {firstRepeated.Iteration}, repeats state {firstRepeated.RepeatedFromStateIteration}"));
         }
 
+        cycleResearch.VerifyProductionControls();
+        cycleResearch.Write(output);
         WriteCsv(Path.Combine(output, "feedback-budget-diagnostics.csv"), allRows);
         WriteMarkdown(Path.Combine(output, "feedback-budget-diagnostics.md"), allRows, summaries);
 
@@ -191,7 +212,8 @@ internal static class FixedProgram
         EnvironmentInput environment,
         BuoyInput buoy,
         CalculationResult baseResult,
-        MooringSequencePositionResult sequence)
+        MooringSequencePositionResult sequence,
+        Action<int, FixedFeedbackState>? observe = null)
     {
         var boundary = MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, baseResult, sequence);
         if (!boundary.Solved || boundary.SolutionState is null || !boundary.BuoySteadyDragN.HasValue)
@@ -209,6 +231,7 @@ internal static class FixedProgram
             baseResult.SegmentRows.Sum(x => x.CurrentForceN));
         var buoySteadyDragN = boundary.BuoySteadyDragN.Value;
         var seen = new Dictionary<string, int>(StringComparer.Ordinal) { [state.Fingerprint] = 0 };
+        observe?.Invoke(0, state);
         var rows = new List<FixedIterationRow>(Budget);
 
         for (var iteration = 1; iteration <= Budget; iteration++)
@@ -264,6 +287,7 @@ internal static class FixedProgram
                 cycleLength));
 
             state = next;
+            observe?.Invoke(iteration, state);
         }
 
         return rows;
