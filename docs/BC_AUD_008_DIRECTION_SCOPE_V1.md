@@ -11,12 +11,12 @@ Decision: **Option A**, approved 2026-10-08. Scope: magnitude-based v1 disclosur
 
 Frozen: production solver formulas and constitutive laws, 0.20 m segmentation, no cap, budget 64, exact deterministic fixed point, signed water-weight line semantics, selected authority, golden baseline, project JSON, input v1/result v3 schemas.
 
-Excluded: directional physical solver implementation, calibration of out-of-plane loss or universal thresholds, 3D, and BC-AUD-009 (PR #628). General v1.0 release still **NOT READY FOR v1.0** pending independent findings/validation/Windows smoke.
+Excluded: directional physical solver implementation, calibration of out-of-plane loss or universal thresholds, and 3D. BC-AUD-009 was integrated independently via PR #628 at main `764982d48bdcc68b0bc89d2ccd7f56769b625308`. General v1.0 release still **NOT READY FOR v1.0** pending independent findings/validation/Windows smoke.
 
 Independent review remediation on this branch: positive Accepted signed-candidate fixture from BC-AUD-001 must supply selected X/Z with 2+ nodes and all four F1–F4 authorities. Equality is checked across the three signed current directions including F1 design tension, F2 anchor reaction, F3 local capacity rows, and F4 verdict/check statuses. No missing-authority tests are silently skipped.
 
 The same typed-PDF regression generates `artifacts/bc-aud-008/bc-aud-008-typed-user-report.pdf` during .NET Build, validates A4 page size and glyph bounding boxes, and preserves it via a required CI artifact upload (missing artifact = workflow failure). Layout must be visually reviewed separately; glyph bound checking is not a substitute for human visual QA.
 
-PR #628 overlaps `.github/workflows/dotnet-build.yml`, validation entrypoint, and `BuoyCalc.EngineeringRegression.csproj`. The PdfPig version **and exact package/comment lines** here match PR #628. Integrate PR #628 first and reverify PR #630 against updated `main`; GitHub automatic mergeability is not proof of conflict-free semantic integration. No duplicate PdfPig PackageReference may remain after the merge. Preserve both PDF evidence upload steps. Do not modify PR #628 here.
+Integration with merged PR #628 (`main` `764982d48bdcc68b0bc89d2ccd7f56769b625308`): preserve BC-AUD-009 typed short-line PDF branch and targeted/full regression; preserve BC-AUD-008 user PDF warnings and direction regression. `.github/workflows/dotnet-build.yml` must retain **both** upload steps and their `if-no-files-found: error`; PdfPig PackageReference stays single and unchanged. Merge commit retains existing PR #630 head as first parent and updated main as second parent; no rebase/force-push. Independently verify new CI and both generated report artifacts.
 
-CI evidence and exact PR head must be added after workflow execution. Do not merge or mark Ready for Review without explicit approval.
+Historical PR #630 CI passed at old main baseline only; re-run CI is required on the integrated head. PR remains Draft. Do not squash-merge or mark Ready for Review without separate explicit approval.

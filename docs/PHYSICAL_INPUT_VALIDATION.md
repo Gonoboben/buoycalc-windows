@@ -2,7 +2,7 @@
 
 BC-AUD-004 defines one authoritative application-level validation gate:
 
-`typed engineering input -> EngineeringInputValidator -> CurrentProfileRequirement -> InputHash -> BuoyCalculator.Calculate -> snapshot/provenance`
+`typed engineering input -> EngineeringInputValidator -> CurrentProfileRequirement -> short-line preflight -> BuoyCalculator.Calculate only when allowed -> snapshot/provenance`
 
 `ApplicationCalculationRunner.Run(...)` invokes the gate before input hashing and before the calculation core. A validation failure throws `EngineeringInputValidationException` with a stable code, field path, supplied value, and user-readable diagnostic. No `ApplicationCalculationRun`, `CalculationSnapshot`, or `CalculationRunProvenance` is created.
 
@@ -40,4 +40,9 @@ BC-AUD-007 extends the shared production profile requirement: a profile must con
 
 An exact duplicate throws `CurrentProfileValidationException` with code `CURRENT_PROFILE_DUPLICATE_DEPTH` before `CalculationRunFingerprint.ComputeInputHash(...)` and before `BuoyCalculator.Calculate(...)`. No first/last selection, averaging, merging, or other correction is performed. The UI retains the entered rows and identifies the duplicate depth; project persistence remains an exact input replay boundary.
 
-Short-line rejection, fixed-point convergence, selected-shape arbitration, derived anchor submerged-weight prerequisites, and all engineering formulas are unchanged.
+The BC-AUD-009 short-line preflight reuses these two gates and the existing signed
+length-tolerance contract. Valid input with insufficient enabled active-line length
+completes as typed `PreflightPhysicalRejected` authority before the calculation core;
+invalid raw input or a duplicate profile depth remains a blocking validation failure.
+Fixed-point convergence, selected-shape arbitration, derived anchor submerged-weight
+prerequisites, and all engineering formulas are unchanged.

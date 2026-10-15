@@ -24,8 +24,13 @@ enabled `AssemblyItemKind.Line` inputs with resolved rope presets; item `Count`,
 disabled lines and non-line items do not add line length. The short-line decision uses
 the existing signed-boundary `LengthToleranceM`; no new tolerance is introduced.
 
-The prerequisite architecture does not yet route production short-line input through
-the preflight branch. That decision remains in the separate BC-AUD-009 remediation.
+BC-AUD-009 now routes production short-line input through this preflight branch after
+the shared physical-input and current-profile gates and before the calculation core.
+The same retained `LengthToleranceM` contract controls the decision. A completed
+short-line rejection therefore owns full provenance without creating a
+`CalculationResult`, calculation-result snapshot, segment rows, loads, selected X/Z,
+or F1/F2/F3/F4 authority. Its localized UI, Full TXT and dedicated short PDF are
+projections of the typed rejection evidence and are not hash authority.
 
 ## Identity semantics
 
