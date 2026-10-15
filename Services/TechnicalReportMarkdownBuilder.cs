@@ -129,6 +129,8 @@ public static class TechnicalReportMarkdownBuilder
         sb.AppendLine($"- Глубина: {environment.DepthM:0.####} м");
         sb.AppendLine($"- Профиль течения: обязателен; точек: {environment.EffectiveCurrentProfile.Count}");
         sb.AppendLine($"- Максимальная горизонтальная скорость профиля: {environment.EffectiveCurrentSpeedMS:0.####} м/с");
+        sb.AppendLine($"- {CurrentDirectionModelDisclosure.Notice}");
+        sb.AppendLine($"- {CurrentDirectionModelDisclosure.Detail}");
         sb.AppendLine($"- Волна: {environment.WaveHeightM:0.####} м / {environment.WavePeriodS:0.####} с");
         sb.AppendLine($"- Грунт: {environment.Seabed.Name}");
         sb.AppendLine($"- Множитель грунта: {environment.Seabed.HoldingMultiplier:0.####}");
