@@ -45,7 +45,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string _resultText = "Нажмите «Рассчитать».";
     private string _reportText = "";
     private SelectedShapeReadModel? _selectedShape;
-    private UserEngineeringReportReadModel? _userEngineeringReport;
+    private ApplicationRunReportReadModel? _applicationRunReport;
     private bool _isCalculationCurrent;
     private string _sequenceSummary = "";
     private string _projectStatusText = "Проект ещё не сохранён.";
@@ -183,9 +183,23 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ResultText { get => _resultText; set => SetProperty(ref _resultText, value); }
     public string ReportText { get => _reportText; set { if (SetProperty(ref _reportText, value)) OnPropertyChanged(nameof(CanExportFullReport)); } }
     public SelectedShapeReadModel? SelectedShape { get => _selectedShape; private set => SetProperty(ref _selectedShape, value); }
-    public UserEngineeringReportReadModel? UserEngineeringReport { get => _userEngineeringReport; private set { if (SetProperty(ref _userEngineeringReport, value)) OnPropertyChanged(nameof(CanExportPdf)); } }
+    public ApplicationRunReportReadModel? ApplicationRunReport
+    {
+        get => _applicationRunReport;
+        private set
+        {
+            if (!SetProperty(ref _applicationRunReport, value)) return;
+            OnPropertyChanged(nameof(UserEngineeringReport));
+            OnPropertyChanged(nameof(PreflightPhysicalRejectionReport));
+            OnPropertyChanged(nameof(CanExportPdf));
+        }
+    }
+    public UserEngineeringReportReadModel? UserEngineeringReport =>
+        (ApplicationRunReport as CalculatedApplicationRunReportReadModel)?.Report;
+    public PreflightPhysicalRejectionReportReadModel? PreflightPhysicalRejectionReport =>
+        ApplicationRunReport as PreflightPhysicalRejectionReportReadModel;
     public bool IsCalculationCurrent => _isCalculationCurrent;
-    public bool CanExportPdf => IsCalculationCurrent && UserEngineeringReport is not null;
+    public bool CanExportPdf => IsCalculationCurrent && ApplicationRunReport is not null;
     public bool CanExportFullReport => IsCalculationCurrent && !string.IsNullOrWhiteSpace(ReportText);
     public string SequenceSummary { get => _sequenceSummary; set => SetProperty(ref _sequenceSummary, value); }
     public string ProjectStatusText { get => _projectStatusText; set => SetProperty(ref _projectStatusText, value); }
@@ -233,7 +247,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         SetCalculationCurrent(false);
         SelectedShape = null;
-        UserEngineeringReport = null;
+        ApplicationRunReport = null;
         ReportText = string.Empty;
         ResultText = "Входные данные изменены. Выполните расчёт повторно.";
         ElementRows.Clear();
@@ -773,7 +787,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ResultText = "Проект загружен. Нажмите «Рассчитать».";
         ReportText = "";
         SelectedShape = null;
-        UserEngineeringReport = null;
+        ApplicationRunReport = null;
         ElementRows.Clear();
         SequenceDiagramLines.Clear();
 
@@ -943,7 +957,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 AssemblyItems.ToList(),
                 SafetyFactor));
 
-        var run = ApplicationCalculationRunner.Run(
+        var outcome = ApplicationCalculationRunner.RunOutcome(
             input.Environment,
             input.Buoy,
             input.AssemblyItems,
@@ -952,17 +966,30 @@ public sealed class MainWindowViewModel : ViewModelBase
         var sequenceItems = AssemblyItems
             .Select(x => new MainWindowSequenceDisplayItem(x.IsEnabled, x.KindDisplayName, x.Title, x.Summary))
             .ToList();
-        var display = MainWindowCalculationDisplayBuilder.Build(
-            ProjectName,
-            input.Environment,
-            input.Buoy,
-            input.Anchor,
-            input.AssemblyItems,
-            sequenceItems,
-            BuoyName,
-            AnchorName,
-            AnchorType,
-            run);
+        var display = outcome switch
+        {
+            CalculatedApplicationRunOutcome calculated => MainWindowCalculationDisplayBuilder.Build(
+                ProjectName,
+                input.Environment,
+                input.Buoy,
+                input.Anchor,
+                input.AssemblyItems,
+                sequenceItems,
+                BuoyName,
+                AnchorName,
+                AnchorType,
+                calculated.Calculation),
+            PreflightPhysicalRejectedApplicationRunOutcome rejected => MainWindowCalculationDisplayBuilder.Build(
+                ProjectName,
+                input.Environment,
+                input.AssemblyItems,
+                sequenceItems,
+                BuoyName,
+                AnchorName,
+                AnchorType,
+                rejected),
+            _ => throw new InvalidOperationException($"Unsupported application-run outcome: {outcome.GetType().Name}.")
+        };
 
         PublishCalculationDisplay(display);
         UpdateCurrentProfileSummary();
@@ -991,7 +1018,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         SelectedShape = display.SelectedShape;
-        UserEngineeringReport = display.UserEngineeringReport;
+        ApplicationRunReport = display.ApplicationRunReport;
         ResultText = display.UserResultText;
         ReportText = display.TechnicalReportText;
         SequenceSummary = display.SequenceSummary;

@@ -131,7 +131,7 @@ public partial class MainWindow : Window
         }
 
         if (!viewModel.IsCalculationCurrent ||
-            !MainWindowPdfExportWorkflowBuilder.CanExport(viewModel.UserEngineeringReport))
+            !MainWindowPdfExportWorkflowBuilder.CanExport(viewModel.ApplicationRunReport))
         {
             viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildPreconditionStatus();
             return;
@@ -148,7 +148,7 @@ public partial class MainWindow : Window
 
         try
         {
-            PdfReportBuilder.Build(path, viewModel.UserEngineeringReport!);
+            PdfReportBuilder.Build(path, viewModel.ApplicationRunReport!);
             viewModel.ProjectStatusText = MainWindowPdfExportWorkflowBuilder.BuildSuccessStatus(path);
         }
         catch (System.Exception ex)

@@ -14,7 +14,7 @@ internal sealed record MainWindowSequenceDisplayItem(
 internal sealed record MainWindowCalculationDisplay(
     IReadOnlyList<ElementCalculationDisplayRow> ElementRows,
     SelectedShapeReadModel? SelectedShape,
-    UserEngineeringReportReadModel UserEngineeringReport,
+    ApplicationRunReportReadModel ApplicationRunReport,
     string UserResultText,
     string TechnicalReportText,
     string SequenceSummary,
@@ -64,7 +64,7 @@ internal static class MainWindowCalculationDisplayBuilder
         return new MainWindowCalculationDisplay(
             elementRows,
             snapshot.SelectedShape,
-            userEngineeringReport,
+            ApplicationRunReportReadModelProjector.ProjectCalculated(userEngineeringReport),
             reports.UserResultText,
             reports.TechnicalReportText,
             sequenceVisualization.SequenceSummary,
@@ -77,5 +77,45 @@ internal static class MainWindowCalculationDisplayBuilder
             sequenceVisualization.VisualizationOffsetText,
             sequenceVisualization.VisualizationSlackRatioText,
             sequenceVisualization.VisualizationStatusText);
+    }
+
+    internal static MainWindowCalculationDisplay Build(
+        string projectName,
+        EnvironmentInput environment,
+        IReadOnlyList<AssemblyItemInput> assemblyItems,
+        IReadOnlyList<MainWindowSequenceDisplayItem> sequenceItems,
+        string buoyName,
+        string anchorName,
+        string anchorType,
+        PreflightPhysicalRejectedApplicationRunOutcome outcome)
+    {
+        var report = ApplicationRunReportReadModelProjector.ProjectPreflightPhysicalRejected(
+            projectName,
+            outcome);
+        var sequenceVisualization = MainWindowSequenceVisualizationDisplayBuilder.Build(
+            environment.DepthM,
+            assemblyItems,
+            sequenceItems,
+            buoyName,
+            anchorName,
+            anchorType,
+            offsetM: null);
+
+        return new MainWindowCalculationDisplay(
+            Array.Empty<ElementCalculationDisplayRow>(),
+            null,
+            report,
+            PreflightPhysicalRejectionReportBuilder.BuildUserResult(report),
+            PreflightPhysicalRejectionReportBuilder.BuildTechnicalReport(report),
+            sequenceVisualization.SequenceSummary,
+            sequenceVisualization.SequenceDiagramLines,
+            sequenceVisualization.VisualizationDepthM,
+            sequenceVisualization.VisualizationLineLengthM,
+            0,
+            sequenceVisualization.VisualizationDepthText,
+            sequenceVisualization.VisualizationLineLengthText,
+            "Расчётный снос: не вычислялся (preflight rejection)",
+            sequenceVisualization.VisualizationSlackRatioText,
+            "Не подходит: активная линия короче глубины; расчётная геометрия не вычислялась.");
     }
 }
