@@ -21,3 +21,15 @@ No solver/physics/formulas, 0.20 m segmentation, signed WeightWaterKgM, 64 budge
 ## Review
 Require all five existing CI/status checks and inspect the actual uploaded research artifacts.
 PR stays Draft. Merge and changes of physics/convergence policy require distinct authorization.
+
+## Independent review follow-up F-01 / F-02
+- Historical CSV CycleLength retains its original first-truncated-fingerprint-hit distance. New
+  DistanceFromFirstSeen makes that semantic explicit, while StrictPeriod is determined directly
+  from all fields of adjacent states i, i-1 and i-2; a fingerprint collision cannot prove a cycle.
+- exact-cycle-full-states.csv contains each ordered Field / RawBits for states 0..64 for all three scenarios.
+- exact-cycle-state-sha256.csv contains 195 per-state digests and field counts.
+- Hash canonical serialization: UTF-8 bytes of each line FieldName=RawBits followed by LF (U+000A),
+  in CSV order within one scenario/iteration; no BOM, headers, or record delimiters.
+- Independently recompute each digest from full-state CSV; verify every state[i]=state[i-2]
+  and state[i]!=state[i-1] after the first strict repeat. No production Accepted inference.
+- Historical diagnostic summary remains evidence only; production solver stays unchanged.

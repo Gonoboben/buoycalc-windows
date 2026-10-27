@@ -44,7 +44,8 @@ internal sealed record FixedIterationRow(
     string CurrentFingerprint,
     string NextFingerprint,
     int? RepeatedFromStateIteration,
-    int? CycleLength);
+    int? CycleLength,
+    int? StrictPeriod);
 
 internal static class FixedProgram
 {
@@ -103,6 +104,7 @@ internal static class FixedProgram
 
             var last = rows[^1];
             var firstRepeated = rows.FirstOrDefault(x => x.CycleLength.HasValue);
+            var firstStrict = rows.FirstOrDefault(x => x.StrictPeriod == 2);
             summaries.Add(string.Join(" | ",
                 scenario.Id,
                 $"last dQ0={F(last.DeltaQ0N)} N",
@@ -115,7 +117,8 @@ internal static class FixedProgram
                 $"differentFields={last.ExactDifferentFieldCount}",
                 firstRepeated is null
                     ? "cycle=none"
-                    : $"cycle=length {firstRepeated.CycleLength} at iteration {firstRepeated.Iteration}, repeats state {firstRepeated.RepeatedFromStateIteration}"));
+                    : $"fingerprintFirstSeenDistance={firstRepeated.CycleLength} at iteration {firstRepeated.Iteration}, repeats state {firstRepeated.RepeatedFromStateIteration}",
+                firstStrict is null ? "strictBitPeriod=none" : $"strictBitPeriod=2 starting at iteration {firstStrict.Iteration}"));
         }
 
         cycleResearch.VerifyProductionControls();
@@ -231,6 +234,8 @@ internal static class FixedProgram
             baseResult.SegmentRows.Sum(x => x.CurrentForceN));
         var buoySteadyDragN = boundary.BuoySteadyDragN.Value;
         var seen = new Dictionary<string, int>(StringComparer.Ordinal) { [state.Fingerprint] = 0 };
+        var twoBack = ExactCycleResearchReport.Capture(scenario.Id, 0, state);
+        ExactCycleSample? oneBack = null;
         observe?.Invoke(0, state);
         var rows = new List<FixedIterationRow>(Budget);
 
@@ -256,6 +261,10 @@ internal static class FixedProgram
 
             var next = State(nextResult, nextBoundary, nextTrace, Geometry(nextTrace), nextLineForceN);
             var differentFields = ExactDifferentFieldCount(state, next);
+            var nextBits = ExactCycleResearchReport.Capture(scenario.Id, iteration, next);
+            int? strictPeriod = oneBack is not null &&
+                ExactCycleResearchReport.Same(nextBits, twoBack) &&
+                !ExactCycleResearchReport.Same(nextBits, oneBack) ? 2 : null;
 
             int? repeatedFrom = null;
             int? cycleLength = null;
@@ -284,11 +293,17 @@ internal static class FixedProgram
                 state.Fingerprint,
                 next.Fingerprint,
                 repeatedFrom,
-                cycleLength));
+                cycleLength,
+                strictPeriod));
 
             state = next;
+            twoBack = oneBack ?? twoBack;
+            oneBack = nextBits;
             observe?.Invoke(iteration, state);
         }
+
+        if (rows.Count != Budget || rows[^1].StrictPeriod != 2)
+            throw new InvalidOperationException($"{scenario.Id}: strict bitwise period-two evidence missing at budget {Budget}.");
 
         return rows;
     }
@@ -574,7 +589,7 @@ internal static class FixedProgram
     private static void WriteCsv(string path, IReadOnlyList<FixedIterationRow> rows)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("Scenario,Iteration,DeltaQ0N,DeltaX,DeltaZ,DeltaLineForceN,MaxSegmentForceDeltaN,MaxNodeDeltaM,MaxTraceScalarDelta,ExactDifferentFieldCount,ExactFixedPoint,CurrentFingerprint,NextFingerprint,RepeatedFromStateIteration,CycleLength");
+        sb.AppendLine("Scenario,Iteration,DeltaQ0N,DeltaX,DeltaZ,DeltaLineForceN,MaxSegmentForceDeltaN,MaxNodeDeltaM,MaxTraceScalarDelta,ExactDifferentFieldCount,ExactFixedPoint,CurrentFingerprint,NextFingerprint,RepeatedFromStateIteration,CycleLength,DistanceFromFirstSeen,StrictPeriod");
         foreach (var r in rows)
         {
             sb.AppendLine(string.Join(",", new[]
@@ -593,7 +608,9 @@ internal static class FixedProgram
                 r.CurrentFingerprint,
                 r.NextFingerprint,
                 r.RepeatedFromStateIteration?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
-                r.CycleLength?.ToString(CultureInfo.InvariantCulture) ?? string.Empty
+                r.CycleLength?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                r.CycleLength?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                r.StrictPeriod?.ToString(CultureInfo.InvariantCulture) ?? string.Empty
             }));
         }
         File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
@@ -617,19 +634,20 @@ internal static class FixedProgram
             sb.AppendLine();
             sb.AppendLine($"## {group.Key} — last 12 iterations");
             sb.AppendLine();
-            sb.AppendLine("| i | dQ0 N | dX m | dZ m | dLine N | max seg dN | max node dm | max trace delta | diff fields | repeated state |");
-            sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+            sb.AppendLine("| i | dQ0 N | dX m | dZ m | dLine N | max seg dN | max node dm | max trace delta | diff fields | fingerprint first-seen distance | strict bit period |");
+            sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|");
             foreach (var r in group.TakeLast(12))
             {
                 var repeated = r.CycleLength.HasValue
-                    ? $"state {r.RepeatedFromStateIteration}, len {r.CycleLength}"
+                    ? $"first state {r.RepeatedFromStateIteration}; distance {r.CycleLength} (fingerprint)"
                     : "—";
-                sb.AppendLine($"| {r.Iteration} | {F(r.DeltaQ0N)} | {F(r.DeltaEndpointXM)} | {F(r.DeltaEndpointZM)} | {F(r.DeltaLineForceN)} | {F(r.MaxSegmentForceDeltaN)} | {F(r.MaxNodeDeltaM)} | {F(r.MaxTraceScalarDelta)} | {r.ExactDifferentFieldCount} | {repeated} |");
+                var exact = r.StrictPeriod?.ToString(CultureInfo.InvariantCulture) ?? "—";
+                sb.AppendLine($"| {r.Iteration} | {F(r.DeltaQ0N)} | {F(r.DeltaEndpointXM)} | {F(r.DeltaEndpointZM)} | {F(r.DeltaLineForceN)} | {F(r.MaxSegmentForceDeltaN)} | {F(r.MaxNodeDeltaM)} | {F(r.MaxTraceScalarDelta)} | {r.ExactDifferentFieldCount} | {repeated} | {exact} |");
             }
         }
 
         sb.AppendLine();
-        sb.AppendLine("A repeated exact-bit fingerprint proves a discrete state cycle. Small non-zero deltas without repetition prove continued floating-state evolution only; they do not authorize an epsilon-based production acceptance rule.");
+        sb.AppendLine("Historical CycleLength is first-seen truncated-fingerprint distance, NOT physical cycle period. New DistanceFromFirstSeen preserves its meaning. StrictPeriod=2 comes only from full field-by-field bit comparison of three consecutive states. None of these metrics authorize epsilon-based acceptance.");
         File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
     }
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
@@ -12,6 +13,7 @@ internal sealed class ExactCycleResearchReport
 {
     private const int ExpectedBudget = MooringSignedCandidateResult.ProductionFeedbackBudget;
     private readonly List<string> _summaries = new();
+    private readonly List<ExactCycleSample> _fullStates = new();
     private readonly List<string> _differences = new()
     {
         "Scenario,FirstStateIteration,SecondStateIteration,Field,FirstBits,SecondBits"
@@ -91,6 +93,7 @@ internal sealed class ExactCycleResearchReport
                 throw new InvalidOperationException($"{scenario}: exact-bit replay mismatch at iteration {i}.");
         }
 
+        _fullStates.AddRange(first);
         var firstCycleRepeat = FindFirstPeriodTwo(first);
         if (firstCycleRepeat < 2)
             throw new InvalidOperationException($"{scenario}: expected exact field-by-field period-2 repetition, none found.");
@@ -202,6 +205,7 @@ internal sealed class ExactCycleResearchReport
         if (_summaries.Count != 3 || _differences.Count <= 1)
             throw new InvalidOperationException("BC-AUD-006: incomplete scenario evidence.");
         File.WriteAllLines(Path.Combine(output, "exact-cycle-bit-differences.csv"), _differences, Encoding.UTF8);
+        WriteFullTrajectory(output);
         var report = new StringBuilder();
         report.AppendLine("# BC-AUD-006 exact-bit cycle validation (research only)");
         report.AppendLine();
@@ -209,6 +213,8 @@ internal sealed class ExactCycleResearchReport
         report.AppendLine("A separate production run confirms BudgetExhausted; this mirror is not an independent physical solver.");
         report.AppendLine("Cycle identity is evaluated by direct ordered field-by-field bit comparison, not hash equality or epsilon.");
         report.AppendLine("All states (0..64) were compared against a second fresh deterministic replay.");
+        report.AppendLine("Full named bit states: exact-cycle-full-states.csv. Per-state SHA-256: exact-cycle-state-sha256.csv.");
+        report.AppendLine("Digest canonical bytes: UTF-8 of each ordered Field=RawBits followed by LF (U+000A), without BOM or other separators. Split full-state CSV by Scenario and Iteration and recompute independently.");
         report.AppendLine();
         foreach (var line in _summaries) report.AppendLine("- " + line);
         report.AppendLine();
@@ -218,6 +224,38 @@ internal sealed class ExactCycleResearchReport
         File.WriteAllText(Path.Combine(output, "exact-cycle-research.md"), report.ToString(), Encoding.UTF8);
     }
 
+    private void WriteFullTrajectory(string output)
+    {
+        if (_fullStates.Count != 3 * (ExpectedBudget + 1) ||
+            _fullStates.GroupBy(s => s.Scenario).Count() != 3 ||
+            _fullStates.GroupBy(s => s.Scenario).Any(g =>
+                g.Count() != ExpectedBudget + 1 ||
+                !g.Select(s => s.Iteration).SequenceEqual(Enumerable.Range(0, ExpectedBudget + 1))))
+            throw new InvalidOperationException("BC-AUD-006: full trajectory incomplete.");
+
+        using var full = new StreamWriter(Path.Combine(output, "exact-cycle-full-states.csv"), false, new UTF8Encoding(false));
+        using var manifest = new StreamWriter(Path.Combine(output, "exact-cycle-state-sha256.csv"), false, new UTF8Encoding(false));
+        full.WriteLine("Scenario,Iteration,Field,RawBits");
+        manifest.WriteLine("Scenario,Iteration,FieldCount,SHA256");
+        foreach (var state in _fullStates)
+        {
+            if (state.Fields.Count == 0) throw new InvalidOperationException("BC-AUD-006: empty state.");
+            var canonical = new StringBuilder();
+            foreach (var field in state.Fields)
+            {
+                if (field.Name.Contains(",") || field.Name.Contains("=") || field.Name.Contains("\n") ||
+                    field.Bits.Contains(",") || field.Bits.Contains("\n"))
+                    throw new InvalidOperationException("BC-AUD-006: invalid canonical field characters.");
+                full.WriteLine(string.Join(",", state.Scenario,
+                    state.Iteration.ToString(CultureInfo.InvariantCulture), field.Name, field.Bits));
+                canonical.Append(field.Name).Append("=").Append(field.Bits).Append("\n");
+            }
+            var sha = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString())));
+            manifest.WriteLine(string.Join(",", state.Scenario,
+                state.Iteration.ToString(CultureInfo.InvariantCulture),
+                state.Fields.Count.ToString(CultureInfo.InvariantCulture), sha));
+        }
+    }
     private static int FindFirstPeriodTwo(IReadOnlyList<ExactCycleSample> states)
     {
         for (var i = 2; i < states.Count; i++)
@@ -228,7 +266,7 @@ internal sealed class ExactCycleResearchReport
         return -1;
     }
 
-    private static bool Same(ExactCycleSample a, ExactCycleSample b)
+    internal static bool Same(ExactCycleSample a, ExactCycleSample b)
     {
         if (a.Fields.Count != b.Fields.Count) return false;
         for (var i = 0; i < a.Fields.Count; i++)
