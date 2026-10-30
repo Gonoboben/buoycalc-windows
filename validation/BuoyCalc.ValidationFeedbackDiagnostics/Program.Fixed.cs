@@ -47,6 +47,19 @@ internal sealed record FixedIterationRow(
     int? CycleLength,
     int? StrictPeriod);
 
+internal sealed record FixedParityStep(
+    string Scenario,
+    int Iteration,
+    FixedFeedbackState Previous,
+    MooringShapeProjectionResult Projection,
+    MooringShapeForceResult ShapeForces,
+    CalculationResult NextResult,
+    MooringSurfaceBoundaryInfoResult NextBoundary,
+    MooringSurfaceBoundaryTensionTraceResult NextTrace,
+    MooringSequencePositionResult Sequence,
+    double FixedBuoyDragN,
+    double UpdatedLineForceN);
+
 internal static class FixedProgram
 {
     private const int Budget = MooringSignedCandidateResult.ProductionFeedbackBudget;
@@ -62,6 +75,7 @@ internal static class FixedProgram
         var allRows = new List<FixedIterationRow>();
         var summaries = new List<string>();
         var cycleResearch = new ExactCycleResearchReport();
+        var parityResearch = new ParityReadoutReport();
 
         foreach (var scenario in Scenarios())
         {
@@ -85,21 +99,26 @@ internal static class FixedProgram
 
             var firstPass = new List<ExactCycleSample>();
             var secondPass = new List<ExactCycleSample>();
+            var parityFirst = new List<ParityStepSample>();
+            var parityReplay = new List<ParityStepSample>();
             var rows = Diagnose(
                 scenario,
                 environment,
                 buoy,
                 run.Result,
                 run.Snapshot.TechnicalReportData.SequencePositions,
-                (iteration, state) => firstPass.Add(ExactCycleResearchReport.Capture(scenario.Id, iteration, state)));
+                (iteration, state) => firstPass.Add(ExactCycleResearchReport.Capture(scenario.Id, iteration, state)),
+                step => parityFirst.Add(ParityReadoutReport.Capture(step)));
             _ = Diagnose(
                 scenario,
                 environment,
                 buoy,
                 run.Result,
                 run.Snapshot.TechnicalReportData.SequencePositions,
-                (iteration, state) => secondPass.Add(ExactCycleResearchReport.Capture(scenario.Id, iteration, state)));
+                (iteration, state) => secondPass.Add(ExactCycleResearchReport.Capture(scenario.Id, iteration, state)),
+                step => parityReplay.Add(ParityReadoutReport.Capture(step)));
             cycleResearch.Analyze(scenario.Id, firstPass, secondPass);
+            parityResearch.Analyze(scenario.Id, parityFirst, parityReplay);
             allRows.AddRange(rows);
 
             var last = rows[^1];
@@ -123,6 +142,7 @@ internal static class FixedProgram
 
         cycleResearch.VerifyProductionControls();
         cycleResearch.Write(output);
+        parityResearch.Write(ResolveParityOutput(args, output));
         WriteCsv(Path.Combine(output, "feedback-budget-diagnostics.csv"), allRows);
         WriteMarkdown(Path.Combine(output, "feedback-budget-diagnostics.md"), allRows, summaries);
 
@@ -138,6 +158,14 @@ internal static class FixedProgram
             if (string.Equals(args[i], "--output", StringComparison.Ordinal))
                 return args[i + 1];
         return Path.Combine("artifacts", "validation-feedback-diagnostics");
+    }
+
+    private static string ResolveParityOutput(string[] args, string output)
+    {
+        for (var i = 0; i < args.Length - 1; i++)
+            if (string.Equals(args[i], "--parity-output", StringComparison.Ordinal))
+                return args[i + 1];
+        return Path.Combine(output, "parity-readout");
     }
 
     private static IReadOnlyList<FixedDiagnosticScenario> Scenarios() =>
@@ -216,7 +244,8 @@ internal static class FixedProgram
         BuoyInput buoy,
         CalculationResult baseResult,
         MooringSequencePositionResult sequence,
-        Action<int, FixedFeedbackState>? observe = null)
+        Action<int, FixedFeedbackState>? observe = null,
+        Action<FixedParityStep>? observeStep = null)
     {
         var boundary = MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, baseResult, sequence);
         if (!boundary.Solved || boundary.SolutionState is null || !boundary.BuoySteadyDragN.HasValue)
@@ -258,6 +287,11 @@ internal static class FixedProgram
             var nextTrace = MooringSurfaceBoundaryTensionTraceBuilder.Build(nextResult, sequence, nextBoundary);
             if (!nextTrace.Available)
                 throw new InvalidOperationException($"{scenario.Id}: trace failed at iteration {iteration}: {nextTrace.UnavailableReason}.");
+
+            observeStep?.Invoke(new FixedParityStep(
+                scenario.Id, iteration, state, projection, shapeForces,
+                nextResult, nextBoundary, nextTrace, sequence,
+                buoySteadyDragN, nextLineForceN));
 
             var next = State(nextResult, nextBoundary, nextTrace, Geometry(nextTrace), nextLineForceN);
             var differentFields = ExactDifferentFieldCount(state, next);

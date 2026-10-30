@@ -150,7 +150,7 @@ jobs:
               throw "BC-AUD-006 diagnostics restore failed with exit code $LASTEXITCODE"
             }
 
-            dotnet run --project validation/BuoyCalc.ValidationFeedbackDiagnostics/BuoyCalc.ValidationFeedbackDiagnostics.csproj --configuration Release --no-restore -- --output artifacts/bc-aud-006
+            dotnet run --project validation/BuoyCalc.ValidationFeedbackDiagnostics/BuoyCalc.ValidationFeedbackDiagnostics.csproj --configuration Release --no-restore -- --output artifacts/bc-aud-006 --parity-output artifacts/bc-aud-006-parity
             if ($LASTEXITCODE -ne 0) {
               throw "BC-AUD-006 exact-cycle validation failed with exit code $LASTEXITCODE"
             }
@@ -183,4 +183,12 @@ jobs:
         with:
           name: bc-aud-006-cycle-${{ github.sha }}
           path: artifacts/bc-aud-006
+          if-no-files-found: error
+
+      - name: Upload BC-AUD-006 mirror parity readout
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bc-aud-006-parity-${{ github.sha }}
+          path: artifacts/bc-aud-006-parity
           if-no-files-found: error
