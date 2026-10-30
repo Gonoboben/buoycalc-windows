@@ -14,6 +14,11 @@ internal sealed class ExactCycleResearchReport
     private const int ExpectedBudget = MooringSignedCandidateResult.ProductionFeedbackBudget;
     private readonly List<string> _summaries = new();
     private readonly List<ExactCycleSample> _fullStates = new();
+    private readonly List<string> _observerControlEvidence = new()
+    {
+        "Scenario,ExpectedStatus,ObserverSteps,CandidateFieldsIdentical,SelectedAuthorityUnchanged,OriginalSHA256,ObservedSHA256"
+    };
+    public IReadOnlyList<string> ObserverControlEvidence => _observerControlEvidence.AsReadOnly();
     private readonly List<string> _differences = new()
     {
         "Scenario,FirstStateIteration,SecondStateIteration,Field,FirstBits,SecondBits"
@@ -175,10 +180,12 @@ internal sealed class ExactCycleResearchReport
             accepted.Snapshot.SelectedEngineeringAssessment is null)
             throw new InvalidOperationException("BC-AUD-006: known Accepted/F1-F4 control failed.");
 
-        Console.WriteLine("BC_AUD_006_CONTROLS|NonPeriodicNotAccepted=True|OneStateNotPeriodTwo=True|PeriodTwoRecognized=True|RejectedPhysicalPreserved=True|AcceptedF1F2F3F4Preserved=True");
+        if (_observerControlEvidence.Count != 3)
+            throw new InvalidOperationException("BC-AUD-006: missing A03/A05 observer-control evidence.");
+        Console.WriteLine("BC_AUD_006_CONTROLS|NonPeriodicNotAccepted=True|OneStateNotPeriodTwo=True|PeriodTwoRecognized=True|RejectedPhysicalPreserved=True|AcceptedF1F2F3F4Preserved=True|A03ObserverParity=True|A05ObserverParity=True");
     }
 
-    private static ApplicationCalculationRun RunProductionControl(string title, double depth, double length, double current)
+    private ApplicationCalculationRun RunProductionControl(string title, double depth, double length, double current)
     {
         var env = new EnvironmentInput(
             1025.0, depth, 0.0, 0.0, 0.0,
@@ -197,7 +204,15 @@ internal sealed class ExactCycleResearchReport
         {
             new AssemblyItemInput(AssemblyItemKind.Line, title, true, rope, null, length, 1, 0.0, 0.0, 0.0, 0.0)
         };
-        return ApplicationCalculationRunner.Run(env, buoy, assembly, anchor, 3.0);
+        var run = ApplicationCalculationRunner.Run(env, buoy, assembly, anchor, 3.0);
+        var expectedStatus = title.StartsWith("A03", StringComparison.Ordinal)
+            ? MooringSignedCandidateStatus.RejectedPhysical
+            : title.StartsWith("A05", StringComparison.Ordinal)
+                ? MooringSignedCandidateStatus.Accepted
+                : throw new InvalidOperationException("Unexpected production control scenario.");
+        _observerControlEvidence.Add(
+            ObserverControlAudit.Verify(title, env, buoy, run, expectedStatus));
+        return run;
     }
 
     public void Write(string output)
