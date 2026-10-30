@@ -185,7 +185,7 @@ internal sealed class ExactCycleResearchReport
         Console.WriteLine("BC_AUD_006_CONTROLS|NonPeriodicNotAccepted=True|OneStateNotPeriodTwo=True|PeriodTwoRecognized=True|RejectedPhysicalPreserved=True|AcceptedF1F2F3F4Preserved=True|A03ObserverParity=True|A05ObserverParity=True");
     }
 
-    private static ApplicationCalculationRun RunProductionControl(string title, double depth, double length, double current)
+    private ApplicationCalculationRun RunProductionControl(string title, double depth, double length, double current)
     {
         var env = new EnvironmentInput(
             1025.0, depth, 0.0, 0.0, 0.0,
