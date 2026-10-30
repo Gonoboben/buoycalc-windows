@@ -14,6 +14,7 @@ internal sealed class ParityReadoutReport
     private const int Budget = MooringSignedCandidateResult.ProductionFeedbackBudget;
     private static readonly int[] TargetSegments = { 105, 150, 166, 243 };
     private readonly List<ParityStepSample> _steps = new();
+    private readonly List<ParityStepSample> _production = new();
 
     private static string Bits(double value) =>
         BitConverter.DoubleToInt64Bits(value).ToString("X16", CultureInfo.InvariantCulture);
@@ -139,9 +140,14 @@ internal sealed class ParityReadoutReport
         return new ParityStepSample(step.Scenario, step.Iteration, fields);
     }
 
-    public void Analyze(string scenario, IReadOnlyList<ParityStepSample> first, IReadOnlyList<ParityStepSample> replay)
+    public static ParityStepSample FromProduction(string scenario, MooringSignedFeedbackObservedStep observed) =>
+        new(scenario, observed.Iteration, observed.Fields.Select(field =>
+            new ParityReadoutField(field.Stage, field.Segment, field.Name, field.Bits)).ToArray());
+
+    public void Analyze(string scenario, IReadOnlyList<ParityStepSample> first,
+        IReadOnlyList<ParityStepSample> replay, IReadOnlyList<ParityStepSample> production)
     {
-        if (first.Count != Budget || replay.Count != Budget)
+        if (first.Count != Budget || replay.Count != Budget || production.Count != Budget)
             throw new InvalidOperationException($"{scenario}: incomplete parity-readout step count.");
         for (var i = 0; i < Budget; i++)
         {
@@ -149,14 +155,19 @@ internal sealed class ParityReadoutReport
                 !Same(first[i], replay[i]))
                 throw new InvalidOperationException(
                     $"{scenario}: parity-readout replay bit mismatch at iteration {i + 1}.");
+            if (!Same(first[i], production[i]))
+                throw new InvalidOperationException(
+                    $"{scenario}: actual production/mirror stage bits differ at iteration {i + 1}.");
         }
         _steps.AddRange(first);
-        Console.WriteLine($"BC_AUD_006_PARITY_READOUT|Scenario={scenario}|Steps={Budget}|ReplayBitsIdentical=True|Authority=MirrorOnly|ProductionParity=NOT_PROVEN|SolverModified=False");
+        _production.AddRange(production);
+        Console.WriteLine($"BC_AUD_006_PARITY_READOUT|Scenario={scenario}|Steps={Budget}|ReplayBitsIdentical=True|ProductionStageParityBitIdentical=True|Scope=ObservedFieldsOnly|SolverModified=False");
     }
 
     public void Write(string output)
     {
-        if (_steps.Count != 3 * Budget) throw new InvalidOperationException("Incomplete parity-readout.");
+        if (_steps.Count != 3 * Budget || _production.Count != 3 * Budget)
+            throw new InvalidOperationException("Incomplete mirror/production parity-readout.");
         Directory.CreateDirectory(output);
         using (var raw = new StreamWriter(Path.Combine(output, "parity-readout-fields.csv"), false, new UTF8Encoding(false)))
         using (var manifest = new StreamWriter(Path.Combine(output, "parity-readout-step-sha256.csv"), false, new UTF8Encoding(false)))
@@ -209,6 +220,8 @@ internal sealed class ParityReadoutReport
             }
         }
 
+        WriteProductionEvidence(output);
+
         File.WriteAllText(Path.Combine(output, "parity-readout-method.md"), string.Join("\n",
             "# BC-AUD-006-PARITY-READOUT",
             "",
@@ -219,8 +232,56 @@ internal sealed class ParityReadoutReport
             "Full raw 64-bit fields are in parity-readout-fields.csv.",
             "Recompute per-step SHA256 from UTF-8 lines: Stage/SegmentNumber/Field=RawBits followed by LF, in CSV row order within Scenario/Iteration; no BOM/header.",
             "parity-readout-orbit-differences.csv compares observed stage outputs at iterations 63 and 64, not a production trajectory.",
-            "No production parity, root cause, physics equivalence or F1-F4 equivalence is asserted.",
+            "Actual production observer and validation mirror matched by DIRECT raw-bit comparison across all instrumented fields.",
+            "This does not prove unobserved internal state equivalence, physical validity, root cause or F1-F4 equivalence.",
+            "parity-production-fields.csv / parity-production-step-sha256.csv publish actual production observer evidence.",
             "Do not convert BudgetExhausted to Accepted. BC-AUD-006 remains OPEN.",
             ""), new UTF8Encoding(false));
     }
+
+    private void WriteProductionEvidence(string output)
+    {
+        using var raw = new StreamWriter(Path.Combine(output, "parity-production-fields.csv"),
+            false, new UTF8Encoding(false));
+        using var manifest = new StreamWriter(Path.Combine(output, "parity-production-step-sha256.csv"),
+            false, new UTF8Encoding(false));
+        using var comparison = new StreamWriter(Path.Combine(output, "parity-production-mirror-comparison.csv"),
+            false, new UTF8Encoding(false));
+        raw.WriteLine("Scenario,Iteration,Stage,SegmentNumber,Field,RawBits");
+        manifest.WriteLine("Scenario,Iteration,FieldCount,SHA256");
+        comparison.WriteLine("Scenario,Iteration,ComparedFields,Disposition");
+
+        for (var i = 0; i < _production.Count; i++)
+        {
+            var observed = _production[i];
+            if (!Same(observed, _steps[i]))
+                throw new InvalidOperationException("Production parity changed before evidence writing.");
+            var canonical = new StringBuilder();
+            foreach (var field in observed.Fields)
+            {
+                raw.WriteLine(string.Join(",",
+                    observed.Scenario,
+                    observed.Iteration.ToString(CultureInfo.InvariantCulture),
+                    field.Stage,
+                    field.Segment.ToString(CultureInfo.InvariantCulture),
+                    field.Name,
+                    field.Bits));
+                canonical.Append(field.Stage).Append("/")
+                    .Append(field.Segment.ToString(CultureInfo.InvariantCulture)).Append("/")
+                    .Append(field.Name).Append("=").Append(field.Bits).Append('\n');
+            }
+            var sha = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString())));
+            manifest.WriteLine(string.Join(",",
+                observed.Scenario,
+                observed.Iteration.ToString(CultureInfo.InvariantCulture),
+                observed.Fields.Count.ToString(CultureInfo.InvariantCulture),
+                sha));
+            comparison.WriteLine(string.Join(",",
+                observed.Scenario,
+                observed.Iteration.ToString(CultureInfo.InvariantCulture),
+                observed.Fields.Count.ToString(CultureInfo.InvariantCulture),
+                "DIRECT_BITS_EQUAL"));
+        }
+    }
+
 }

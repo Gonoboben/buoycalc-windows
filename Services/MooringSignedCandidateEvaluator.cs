@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using BuoyCalc.Windows.Models;
 
@@ -20,7 +21,30 @@ public static class MooringSignedCandidateEvaluator
         EnvironmentInput? environment,
         BuoyInput? buoy,
         CalculationResult? baseResult,
-        MooringSequencePositionResult? sequence)
+        MooringSequencePositionResult? sequence) =>
+        BuildCore(environment, buoy, baseResult, sequence, null);
+
+    /// <summary>
+    /// Diagnostics only: observes raw bit fields from the same production feedback loop.
+    /// The observer cannot set any engineering state or acceptance decision.
+    /// </summary>
+    public static MooringSignedCandidateResult BuildWithDiagnosticObserver(
+        EnvironmentInput? environment,
+        BuoyInput? buoy,
+        CalculationResult? baseResult,
+        MooringSequencePositionResult? sequence,
+        Action<MooringSignedFeedbackObservedStep> observer)
+    {
+        ArgumentNullException.ThrowIfNull(observer);
+        return BuildCore(environment, buoy, baseResult, sequence, observer);
+    }
+
+    private static MooringSignedCandidateResult BuildCore(
+        EnvironmentInput? environment,
+        BuoyInput? buoy,
+        CalculationResult? baseResult,
+        MooringSequencePositionResult? sequence,
+        Action<MooringSignedFeedbackObservedStep>? observer)
     {
         if (environment is null || baseResult is null || sequence is null)
         {
@@ -147,6 +171,21 @@ public static class MooringSignedCandidateEvaluator
                     nextTrace.PointLoadCrossings,
                     "SignedCandidateGeometryInvalid",
                     geometryDiagnostic);
+            }
+
+            if (observer is not null)
+            {
+                var geometryNodes = currentGeometry.Nodes
+                    .Select(node => (X: node.XM, Z: node.ZM)).ToArray();
+                // Only read actual completed production stage outputs.
+                observer(MooringSignedFeedbackParityProbe.Capture(
+                    new MooringSignedFeedbackProbeInput(
+                        "Production", iteration,
+                        new MooringSignedFeedbackProbePrior(
+                            currentResult, currentBoundary, currentTrace,
+                            new MooringSignedFeedbackProbeGeometry(geometryNodes)),
+                        projection, shapeForces, nextResult, nextBoundary, nextTrace,
+                        sequence, buoySteadyDragN, updatedLineForceN)));
             }
 
             if (IsExactFixedPoint(

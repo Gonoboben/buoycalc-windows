@@ -101,6 +101,18 @@ internal static class FixedProgram
             var secondPass = new List<ExactCycleSample>();
             var parityFirst = new List<ParityStepSample>();
             var parityReplay = new List<ParityStepSample>();
+            var productionSteps = new List<ParityStepSample>();
+            var observedCandidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticObserver(
+                environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
+                observed => productionSteps.Add(ParityReadoutReport.FromProduction(scenario.Id, observed)));
+            if (observedCandidate.Status != candidate.Status ||
+                observedCandidate.FeedbackIterations != candidate.FeedbackIterations ||
+                observedCandidate.DiagnosticCode != candidate.DiagnosticCode ||
+                observedCandidate.ExactFixedPointReached != candidate.ExactFixedPointReached ||
+                observedCandidate.Boundary?.Q0N != candidate.Boundary?.Q0N ||
+                observedCandidate.Boundary?.SolutionState?.EndpointXM != candidate.Boundary?.SolutionState?.EndpointXM ||
+                observedCandidate.Boundary?.SolutionState?.EndpointZM != candidate.Boundary?.SolutionState?.EndpointZM)
+                throw new InvalidOperationException($"{scenario.Id}: diagnostic observer changed production candidate.");
             var rows = Diagnose(
                 scenario,
                 environment,
@@ -118,7 +130,7 @@ internal static class FixedProgram
                 (iteration, state) => secondPass.Add(ExactCycleResearchReport.Capture(scenario.Id, iteration, state)),
                 step => parityReplay.Add(ParityReadoutReport.Capture(step)));
             cycleResearch.Analyze(scenario.Id, firstPass, secondPass);
-            parityResearch.Analyze(scenario.Id, parityFirst, parityReplay);
+            parityResearch.Analyze(scenario.Id, parityFirst, parityReplay, productionSteps);
             allRows.AddRange(rows);
 
             var last = rows[^1];
