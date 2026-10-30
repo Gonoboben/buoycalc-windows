@@ -225,7 +225,7 @@ internal sealed class ParityReadoutReport
         File.WriteAllText(Path.Combine(output, "parity-readout-method.md"), string.Join("\n",
             "# BC-AUD-006-PARITY-READOUT",
             "",
-            "Source: validation-only two-pass mirror; production has no internal iteration observer.",
+            "Source: two-pass validation mirror PLUS an explicit INTERNAL diagnostic observer of the production feedback loop.",
             "Every step 1..64 in A06/A11/A15 is recorded from the existing mirror stages.",
             "After.Stage values come from real post-apply/boundary/trace outputs, not solver replacements.",
             "Projection stage records exact geometry endpoints/differences, speed, dot, normal speed and calculated shape-force rows.",
@@ -235,6 +235,8 @@ internal sealed class ParityReadoutReport
             "Actual production observer and validation mirror matched by DIRECT raw-bit comparison across all instrumented fields.",
             "This does not prove unobserved internal state equivalence, physical validity, root cause or F1-F4 equivalence.",
             "parity-production-fields.csv / parity-production-step-sha256.csv publish actual production observer evidence.",
+            "parity-observer-controls.csv records direct A03 rejection/A05 Accepted candidate parity and F1-F4 authority preservation.",
+            "The observer entry point is internal and only friend-accessible to the validation diagnostic assembly.",
             "Do not convert BudgetExhausted to Accepted. BC-AUD-006 remains OPEN.",
             ""), new UTF8Encoding(false));
     }

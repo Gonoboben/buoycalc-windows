@@ -7,8 +7,8 @@ using BuoyCalc.Windows.Models;
 namespace BuoyCalc.Windows.Services;
 
 /// <summary>Immutable observation data, not calculation result or engineering authority.</summary>
-public sealed record MooringSignedFeedbackObservedField(string Stage, int Segment, string Name, string Bits);
-public sealed record MooringSignedFeedbackObservedStep(int Iteration, IReadOnlyList<MooringSignedFeedbackObservedField> Fields);
+internal sealed record MooringSignedFeedbackObservedField(string Stage, int Segment, string Name, string Bits);
+internal sealed record MooringSignedFeedbackObservedStep(int Iteration, IReadOnlyList<MooringSignedFeedbackObservedField> Fields);
 
 internal sealed record MooringSignedFeedbackProbeGeometry(IReadOnlyList<(double X, double Z)> Nodes);
 internal sealed record MooringSignedFeedbackProbePrior(

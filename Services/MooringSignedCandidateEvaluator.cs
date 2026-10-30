@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using BuoyCalc.Windows.Models;
 
@@ -28,7 +27,7 @@ public static class MooringSignedCandidateEvaluator
     /// Diagnostics only: observes raw bit fields from the same production feedback loop.
     /// The observer cannot set any engineering state or acceptance decision.
     /// </summary>
-    public static MooringSignedCandidateResult BuildWithDiagnosticObserver(
+    internal static MooringSignedCandidateResult BuildWithDiagnosticObserver(
         EnvironmentInput? environment,
         BuoyInput? buoy,
         CalculationResult? baseResult,

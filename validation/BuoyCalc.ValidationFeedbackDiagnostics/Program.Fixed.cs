@@ -154,7 +154,12 @@ internal static class FixedProgram
 
         cycleResearch.VerifyProductionControls();
         cycleResearch.Write(output);
-        parityResearch.Write(ResolveParityOutput(args, output));
+        var parityOutput = ResolveParityOutput(args, output);
+        parityResearch.Write(parityOutput);
+        File.WriteAllLines(
+            Path.Combine(parityOutput, "parity-observer-controls.csv"),
+            cycleResearch.ObserverControlEvidence,
+            new UTF8Encoding(false));
         WriteCsv(Path.Combine(output, "feedback-budget-diagnostics.csv"), allRows);
         WriteMarkdown(Path.Combine(output, "feedback-budget-diagnostics.md"), allRows, summaries);
 
