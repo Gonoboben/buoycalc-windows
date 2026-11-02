@@ -37,9 +37,11 @@ internal static class H2AuthorityProof
             var legacyCandidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                 environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions, false, false);
             var legacySnapshot = CalculationSnapshotBuilder.BuildWithDiagnosticCandidate(environment, buoy, run.Result, legacyCandidate);
-            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R", "H2R3" })
+            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R", "H2R3", "H2R4" })
             {
                 var fixedPointRawFieldCount = 0;
+                var transitions = new List<string>();
+                void ObserveRecovery(int iteration, string stage) => transitions.Add($"{iteration}:{stage}");
                 long[]? fixedBefore = null;
                 long[]? fixedAfter = null;
                 void VerifyFixedPoint(IReadOnlyList<long> before, IReadOnlyList<long> after)
@@ -53,10 +55,14 @@ internal static class H2AuthorityProof
                 }
                 var candidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode == "H2R3");
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery);
+                var firstTransitions = transitions.ToArray();
+                transitions.Clear();
                 var replay = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode == "H2R3");
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery);
+                if (!transitions.SequenceEqual(firstTransitions))
+                    throw new InvalidOperationException($"{scenario.Id}/{mode}: arithmetic transition replay differs.");
                 if (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(replay))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: candidate replay differs.");
                 if (mode == "B0" && ObserverControlAudit.Canonical(candidate) !=
@@ -72,7 +78,7 @@ internal static class H2AuthorityProof
                 var f4 = snapshot.SelectedEngineeringAssessment;
                 var authority = ObserverControlAudit.Canonical(Authority(snapshot));
                 var originalAuthority = ObserverControlAudit.Canonical(Authority(legacySnapshot));
-                if (mode == "H2R3" && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
+                if ((mode is "H2R3" or "H2R4") && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
                     (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
                      authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
                     throw new InvalidOperationException($"{scenario.Id}: second-stage recovery changed an existing production Accepted result.");
@@ -141,7 +147,7 @@ internal static class H2AuthorityProof
                     F1N = f1?.DemandN, DeltaF1N = Delta(f1?.DemandN, legacySnapshot.SelectedDesignTensionDemand?.DemandN),
                     DeltaX = Delta(candidate.Shape?.AnchorPoint?.XOffsetM, legacyCandidate.Shape?.AnchorPoint?.XOffsetM),
                     F2HorizontalN = f2?.HorizontalDemandN, F2NormalN = f2?.SignedNormalReactionN,
-                    F4Verdict = f4?.Verdict, FixedPointRawFieldCount = fixedPointRawFieldCount, Metrics = metrics });
+                    RecoveryTransitions = transitions.ToArray(), F4Verdict = f4?.Verdict, FixedPointRawFieldCount = fixedPointRawFieldCount, Metrics = metrics });
                 File.WriteAllText(Path.Combine(output, "summary.json"),
                     JsonSerializer.Serialize(summaries, new JsonSerializerOptions { WriteIndented = true }));
                 Console.WriteLine($"H2_AUTHORITY|{scenario.Id}|{mode}|{candidate.Status}|{candidate.FeedbackIterations}|{evidence.BaselineComparison}");

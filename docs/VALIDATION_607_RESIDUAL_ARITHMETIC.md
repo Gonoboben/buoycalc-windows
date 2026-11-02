@@ -46,3 +46,26 @@ feedback convergence threshold. Windows exact-head CI and actual artifact
 review remain mandatory before any production activation. No frozen baseline
 may be changed to hide a difference. This is numerical research, not field or
 anchor/soil suitability evidence.
+
+## Additional controls and wider matrix
+
+Exact-head 6f232bac Windows .NET 41445375561, Validation601 41445375301,
+Selected Shape 41445375330 and Report Store 41445375241 succeeded. The downloaded
+630-row proof artifact is 13143005555, SHA256
+638e8a4e484c47c339222f37fdba3326b1126fe5ccddb0cf6ae10325e190cb01.
+All 81 current Accepted trees stayed exact. Core and residual final-state
+transcripts were directly compared; same-state force rounding differences are
+reported independently from convergence.
+
+H2R4 is a diagnostic negative/alternative control: after a third exact cycle,
+group the final product as `k * (normalSpeed * normalSpeed)`. It remains disabled
+in production. The initial eight-fixture pilot did not fix 20/24/0.6; it retained
+the H2R3 fixed points for 20/21/0.6 and 380/418/0.45. Recovery transition sequences
+are emitted and directly compared across both replays; no history crosses maps.
+
+Coverage is expanded to 174 fixtures with 36 shallow/deep residual neighborhoods,
+9 additional 380 m neighborhoods, 18 Cd/diameter/density combinations, 4 explicit
+wave-proxy combinations and 2 deep vertical-current cases. These are declared
+numerical test inputs, not environmental/field claims. Final counts for this
+wider matrix must come from its actual emitted evidence, not the earlier 105-row
+fixture totals. All previously Accepted production outputs must stay exact.
