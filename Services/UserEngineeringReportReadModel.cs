@@ -180,7 +180,7 @@ public sealed record UserEngineeringReportReadModel(
     UserEngineeringPhysicalDispositionReadModel? PhysicalDisposition,
     UserEngineeringAssessmentReadModel? Assessment)
 {
-    public MooringSignedCandidateStatus? SignedCandidateStatus { get; init; }
+    public MooringSignedCandidateStatus? CandidateStatus { get; init; }
 }
 
 public static class UserEngineeringReportReadModelProjector
@@ -280,7 +280,7 @@ public static class UserEngineeringReportReadModelProjector
             ProjectPhysicalDisposition(snapshot.PhysicalDisposition),
             ProjectAssessment(snapshot.SelectedEngineeringAssessment))
         {
-            SignedCandidateStatus = snapshot.SignedCandidate?.Status
+            CandidateStatus = snapshot.SignedCandidate?.Status
         };
     }
 

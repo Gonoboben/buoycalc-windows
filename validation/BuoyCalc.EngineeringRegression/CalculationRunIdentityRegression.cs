@@ -56,7 +56,7 @@ internal static class CalculationRunIdentityRegression
             var statusRun = Run(fixture);
             var statusReport = UserEngineeringReportReadModelProjector.Project(
                 "PDF status provenance", fixture.Environment, fixture.Buoy, fixture.Anchor, statusRun.Snapshot);
-            if (statusRun.Snapshot.SignedCandidate?.Status != expected || statusReport.SignedCandidateStatus != expected)
+            if (statusRun.Snapshot.SignedCandidate?.Status != expected || statusReport.CandidateStatus != expected)
                 throw new InvalidOperationException($"PDF status provenance: expected retained {expected}.");
             ValidateRepeatedPdfExport(statusReport, statusReport.Provenance);
         }
@@ -168,9 +168,9 @@ internal static class CalculationRunIdentityRegression
                 })
                     for (var offset = 0; offset < value.Length; offset += width)
                         RequireValue(value.Substring(offset, Math.Min(width, value.Length - offset)), label);
-                if (report.SignedCandidateStatus is null)
+                if (report.CandidateStatus is null)
                     throw new InvalidOperationException("PDF status provenance missing from typed report.");
-                RequireValue("Signed candidate status" + report.SignedCandidateStatus, "actual signed candidate status");
+                RequireValue("Signed candidate status" + report.CandidateStatus, "actual signed candidate status");
                 if (report.PhysicalDisposition is not null)
                 {
                     RequireValue(report.PhysicalDisposition.DiagnosticCode, "physical diagnostic code");
@@ -179,11 +179,11 @@ internal static class CalculationRunIdentityRegression
             }
             var evidenceDir = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "bc-aud-005-pdf-provenance");
             Directory.CreateDirectory(evidenceDir);
-            var prefix = "pdf-provenance-" + report.SignedCandidateStatus;
+            var prefix = "pdf-provenance-" + report.CandidateStatus;
             File.Copy(pathA, Path.Combine(evidenceDir, prefix + ".pdf"), overwrite: true);
             File.WriteAllText(Path.Combine(evidenceDir, prefix + "-expected.json"), JsonSerializer.Serialize(new
             {
-                Provenance = provenance, report.SignedCandidateStatus,
+                Provenance = provenance, report.CandidateStatus,
                 DiagnosticCode = report.PhysicalDisposition?.DiagnosticCode,
                 DiagnosticText = report.PhysicalDisposition?.DiagnosticText
             }, new JsonSerializerOptions { WriteIndented = true }));

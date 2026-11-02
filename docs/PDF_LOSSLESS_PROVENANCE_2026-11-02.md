@@ -27,3 +27,6 @@ No solver, numerical algorithm, F1-F4 source, classification, persisted project
 format or frozen baseline changes. An optional init-only report metadata field
 preserves existing record constructor call sites. Existing PDF layout/glyph,
 preflight, repeated-run and stale-export regressions remain required.
+
+The projected field is `CandidateStatus`; the renderer never reads the raw
+snapshot candidate. The existing renderer boundary guard remains unchanged.

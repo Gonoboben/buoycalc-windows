@@ -509,7 +509,7 @@ public static class PdfReportBuilder
         var anchorSource = report.AnchorReaction?.SourceIdentity.ToString() ?? "не определён";
         var structuralSource = report.Structural?.SourceIdentity.ToString() ?? "не определён";
         var assessmentSource = report.Assessment?.SourceIdentity.ToString() ?? "не определён";
-        var candidateStatus = report.SignedCandidateStatus?.ToString()
+        var candidateStatus = report.CandidateStatus?.ToString()
             ?? report.PhysicalDisposition?.CandidateStatus.ToString() ?? "не определён";
         var physicalCode = report.PhysicalDisposition?.DiagnosticCode ?? "не применим";
 
