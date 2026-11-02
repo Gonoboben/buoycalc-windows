@@ -33,8 +33,27 @@ public static class MooringShapeForceAnalyzer
 {
     private const double RelativeTolerance = 0.25;
 
-    public static MooringShapeForceResult Build(CalculationResult result, MooringShapeProjectionResult projection)
+    public static MooringShapeForceResult Build(CalculationResult result, MooringShapeProjectionResult projection) =>
+        BuildCore(result, projection, null);
+
+    // BC-AUD-006 research ONLY: original tangent used directly; same physical force formula.
+    internal static MooringShapeForceResult BuildWithDiagnosticTangents(
+        CalculationResult result,
+        MooringShapeProjectionResult projection,
+        MooringSurfaceBoundaryTensionTraceResult trace) =>
+        BuildCore(result, projection, trace);
+
+    private static MooringShapeForceResult BuildCore(
+        CalculationResult result,
+        MooringShapeProjectionResult projection,
+        MooringSurfaceBoundaryTensionTraceResult? diagnosticTrace)
     {
+        if (diagnosticTrace is not null &&
+            (diagnosticTrace.Rows.Count != projection.Rows.Count ||
+             diagnosticTrace.Rows.Where((row, i) =>
+                 row.SegmentNumber != projection.Rows[i].SegmentNumber ||
+                 !row.TangentX.HasValue || !row.TangentZ.HasValue).Any()))
+            throw new InvalidOperationException("BC-AUD-006: research tangent/projection mismatch.");
         if (result.SegmentRows.Count == 0 || projection.Rows.Count == 0)
         {
             return new MooringShapeForceResult(
@@ -59,8 +78,12 @@ public static class MooringShapeForceAnalyzer
             }
 
             var segmentLengthM = Math.Max(0.0001, projectionRow.SegmentLengthM);
-            var tx = projectionRow.DeltaXM / segmentLengthM;
-            var tz = projectionRow.DeltaZM / segmentLengthM;
+            var tx = diagnosticTrace is null
+                ? projectionRow.DeltaXM / segmentLengthM
+                : diagnosticTrace.Rows[rows.Count].TangentX!.Value;
+            var tz = diagnosticTrace is null
+                ? projectionRow.DeltaZM / segmentLengthM
+                : diagnosticTrace.Rows[rows.Count].TangentZ!.Value;
 
             var currentX = segment.LocalSpeedMS;
             var currentZ = segment.VerticalCurrentMS;

@@ -132,7 +132,8 @@ Assert-Contains $snapshotBoundary "MooringSelectedShapeResult? ShadowSelectedCor
 Assert-Contains $snapshotBoundary "return Build(environment, null, result);" "CalculationSnapshot compatibility overload"
 Assert-Contains $snapshotBoundary "var data = TechnicalReportDataBuilder.Build(environment, buoy, result);" "CalculationSnapshotBuilder"
 Assert-Contains $snapshotBoundary "var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);" "CalculationSnapshotBuilder"
-Assert-Contains $snapshotBoundary "var signedCandidate = MooringSignedCandidateEvaluator.Build(" "CalculationSnapshotBuilder shadow candidate"
+Assert-Contains $snapshotBoundary "result) => BuildCore(environment, buoy, result, null);" "CalculationSnapshotBuilder public production path disables diagnostic injection"
+Assert-Contains $snapshotBoundary "var signedCandidate = diagnosticCandidate ?? MooringSignedCandidateEvaluator.Build(" "CalculationSnapshotBuilder production candidate remains the default"
 Assert-Contains $snapshotBoundary "SignedCandidate = signedCandidate" "CalculationSnapshotBuilder shadow candidate retention"
 Assert-Contains $snapshotBoundary "ShadowSelectedCore = shadowSelectedCore" "CalculationSnapshotBuilder shadow selection retention"
 Assert-NotContains $snapshotBoundary "TechnicalReportStorePublisher" "CalculationSnapshotBuilder"
@@ -140,7 +141,7 @@ Assert-NotContains $snapshotBoundary "SelectedShapeStore.Current" "CalculationSn
 
 $dataBuildIndex = $snapshotBoundary.IndexOf("var data = TechnicalReportDataBuilder.Build(environment, buoy, result);")
 $selectedShapeIndex = $snapshotBoundary.IndexOf("var selectedShape = SelectedMooringShapeProvider.Build(data.Shape, data.IterativeSolver);")
-$signedCandidateIndex = $snapshotBoundary.IndexOf("var signedCandidate = MooringSignedCandidateEvaluator.Build(")
+$signedCandidateIndex = $snapshotBoundary.IndexOf("var signedCandidate = diagnosticCandidate ?? MooringSignedCandidateEvaluator.Build(")
 if ($dataBuildIndex -lt 0 -or $selectedShapeIndex -le $dataBuildIndex) {
     throw "CalculationSnapshotBuilder must preserve Build -> stateless selected X/Z order."
 }

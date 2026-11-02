@@ -96,7 +96,7 @@ internal static class ObserverControlAudit
         });
     }
 
-    private static string Canonical(object? source)
+    internal static string Canonical(object? source)
     {
         var builder = new StringBuilder();
         Visit(source, "$", builder, new HashSet<object>(ReferenceEqualityComparer.Instance));

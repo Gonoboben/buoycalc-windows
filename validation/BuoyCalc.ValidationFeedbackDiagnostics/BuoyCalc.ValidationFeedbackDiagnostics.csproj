@@ -4,9 +4,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <StartupObject>FixedProgram</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../BuoyCalc.Windows.csproj" />
+    <!-- Reuse authoritative fixture definitions unchanged; do not copy numerical inputs. -->
+    <Compile Include="../BuoyCalc.EngineeringRegression/HistoricalGoldenImpactRegression.cs" Link="HistoricalGoldenImpactRegression.cs" />
+    <Compile Include="../BuoyCalc.ValidationCampaign/Program.cs" Link="SeriesACampaign.cs" />
   </ItemGroup>
 </Project>

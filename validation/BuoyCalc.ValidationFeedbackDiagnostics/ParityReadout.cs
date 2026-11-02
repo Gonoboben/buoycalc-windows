@@ -33,7 +33,7 @@ internal sealed class ParityReadoutReport
         return true;
     }
 
-    public static ParityStepSample Capture(FixedParityStep step)
+    public static ParityStepSample Capture(FixedParityStep step, bool allowDiagnosticBuoyOverride = false)
     {
         var fields = new List<ParityReadoutField>();
         void Record(string stage, int segment, string field, double value) =>
@@ -82,7 +82,8 @@ internal sealed class ParityReadoutReport
         // No tolerance is used to accept or correct any floating-point state.
         if (Bits(step.UpdatedLineForceN) != Bits(nextLine) ||
             Bits(recomposed) != Bits(step.NextResult.CurrentForceN) ||
-            Bits(boundaryDrag) != Bits(Math.Max(0.0, recovered)) ||
+            (!allowDiagnosticBuoyOverride &&
+                Bits(boundaryDrag) != Bits(Math.Max(0.0, recovered))) ||
             Bits(traceStart) != Bits(boundaryDrag))
             throw new InvalidOperationException(
                 $"{step.Scenario} iteration {step.Iteration}: failed observed force-recomposition identity.");
