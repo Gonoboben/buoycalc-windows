@@ -76,6 +76,8 @@ internal static class FixedProgram
         var summaries = new List<string>();
         var cycleResearch = new ExactCycleResearchReport();
         var parityResearch = new ParityReadoutReport();
+        var isolationResearch = new RootCauseIsolationResearch(
+            Path.Combine(ResolveParityOutput(args, output), "root-cause-isolation"));
 
         foreach (var scenario in Scenarios())
         {
@@ -131,6 +133,8 @@ internal static class FixedProgram
                 step => parityReplay.Add(ParityReadoutReport.Capture(step)));
             cycleResearch.Analyze(scenario.Id, firstPass, secondPass);
             parityResearch.Analyze(scenario.Id, parityFirst, parityReplay, productionSteps);
+            isolationResearch.AnalyzeScenario(scenario, environment, buoy, run.Result,
+                run.Snapshot.TechnicalReportData.SequencePositions, firstPass, parityFirst);
             allRows.AddRange(rows);
 
             var last = rows[^1];
@@ -153,6 +157,7 @@ internal static class FixedProgram
         }
 
         cycleResearch.VerifyProductionControls();
+        isolationResearch.Finish();
         cycleResearch.Write(output);
         var parityOutput = ResolveParityOutput(args, output);
         parityResearch.Write(parityOutput);
@@ -255,14 +260,15 @@ internal static class FixedProgram
     private static AssemblyItemInput Line(string title, double lengthM, RopePreset rope) =>
         new(AssemblyItemKind.Line, title, true, rope, null, lengthM, 1, 0.0, 0.0, 0.0, 0.0);
 
-    private static IReadOnlyList<FixedIterationRow> Diagnose(
+    internal static IReadOnlyList<FixedIterationRow> Diagnose(
         FixedDiagnosticScenario scenario,
         EnvironmentInput environment,
         BuoyInput buoy,
         CalculationResult baseResult,
         MooringSequencePositionResult sequence,
         Action<int, FixedFeedbackState>? observe = null,
-        Action<FixedParityStep>? observeStep = null)
+        Action<FixedParityStep>? observeStep = null,
+        string mode = "B0")
     {
         var boundary = MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, baseResult, sequence);
         if (!boundary.Solved || boundary.SolutionState is null || !boundary.BuoySteadyDragN.HasValue)
@@ -288,7 +294,9 @@ internal static class FixedProgram
         for (var iteration = 1; iteration <= Budget; iteration++)
         {
             var projection = Projection(state.Trace, state.Geometry);
-            var shapeForces = MooringShapeForceAnalyzer.Build(state.Result, projection);
+            var shapeForces = mode is "H2" or "H1H2"
+                ? MooringShapeForceAnalyzer.BuildWithDiagnosticTangents(state.Result, projection, state.Trace)
+                : MooringShapeForceAnalyzer.Build(state.Result, projection);
             var nextResult = ApplyShapeForces(
                 baseResult,
                 state.Result,
@@ -297,13 +305,44 @@ internal static class FixedProgram
                 buoySteadyDragN,
                 out var nextLineForceN);
 
-            var nextBoundary = MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, nextResult, sequence);
+            MooringSurfaceBoundaryInfoResult nextBoundary;
+            if (mode is "H1" or "H1H2" or "H1N1" or "H1N2")
+            {
+                var lineSum = nextResult.SegmentRows.OrderBy(s => s.Number).Sum(s => s.CurrentForceN);
+                var ordered = sequence.Rows.OrderBy(s => s.Number).ToList();
+                var pointSum = ordered.Where((row, index) =>
+                    row.IsDiscrete && index != 0 && index != ordered.Count - 1)
+                    .Sum(row => row.CurrentForceN);
+                var injectedDrag = mode switch
+                {
+                    "H1" or "H1H2" => buoySteadyDragN,
+                    "H1N1" => nextResult.CurrentForceN - (lineSum + pointSum),
+                    "H1N2" => (nextResult.CurrentForceN - pointSum) - lineSum,
+                    _ => throw new InvalidOperationException("Invalid isolation mode.")
+                };
+                nextBoundary = MooringSurfaceBoundaryInfoAnalyzer.BuildWithDiagnosticBuoyDrag(
+                    environment, buoy, nextResult, sequence, injectedDrag);
+            }
+            else
+            {
+                nextBoundary = MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, nextResult, sequence);
+            }
             if (!nextBoundary.Solved || nextBoundary.SolutionState is null)
+            {
+                if (mode != "B0")
+                    throw new IsolationExperimentStop(mode, iteration,
+                        "NonSolvedBoundary", nextBoundary.Classification.ToString());
                 throw new InvalidOperationException($"{scenario.Id}: boundary failed at iteration {iteration}: {nextBoundary.Classification}.");
+            }
 
             var nextTrace = MooringSurfaceBoundaryTensionTraceBuilder.Build(nextResult, sequence, nextBoundary);
             if (!nextTrace.Available)
+            {
+                if (mode != "B0")
+                    throw new IsolationExperimentStop(mode, iteration,
+                        "TraceUnavailable", nextTrace.UnavailableReason);
                 throw new InvalidOperationException($"{scenario.Id}: trace failed at iteration {iteration}: {nextTrace.UnavailableReason}.");
+            }
 
             observeStep?.Invoke(new FixedParityStep(
                 scenario.Id, iteration, state, projection, shapeForces,
@@ -353,7 +392,7 @@ internal static class FixedProgram
             observe?.Invoke(iteration, state);
         }
 
-        if (rows.Count != Budget || rows[^1].StrictPeriod != 2)
+        if (mode == "B0" && (rows.Count != Budget || rows[^1].StrictPeriod != 2))
             throw new InvalidOperationException($"{scenario.Id}: strict bitwise period-two evidence missing at budget {Budget}.");
 
         return rows;
