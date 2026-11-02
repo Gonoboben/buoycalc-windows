@@ -178,7 +178,10 @@ public sealed record UserEngineeringReportReadModel(
     UserEngineeringAnchorReactionReadModel? AnchorReaction,
     UserEngineeringStructuralReadModel? Structural,
     UserEngineeringPhysicalDispositionReadModel? PhysicalDisposition,
-    UserEngineeringAssessmentReadModel? Assessment);
+    UserEngineeringAssessmentReadModel? Assessment)
+{
+    public MooringSignedCandidateStatus? SignedCandidateStatus { get; init; }
+}
 
 public static class UserEngineeringReportReadModelProjector
 {
@@ -275,7 +278,10 @@ public static class UserEngineeringReportReadModelProjector
             ProjectAnchorReaction(snapshot.SelectedAnchorReaction),
             ProjectStructural(snapshot.SelectedLocalStructuralCapacity),
             ProjectPhysicalDisposition(snapshot.PhysicalDisposition),
-            ProjectAssessment(snapshot.SelectedEngineeringAssessment));
+            ProjectAssessment(snapshot.SelectedEngineeringAssessment))
+        {
+            SignedCandidateStatus = snapshot.SignedCandidate?.Status
+        };
     }
 
     private static UserEngineeringDesignLoadReadModel? ProjectDesignLoad(

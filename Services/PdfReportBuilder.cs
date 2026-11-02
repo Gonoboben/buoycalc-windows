@@ -440,11 +440,14 @@ public static class PdfReportBuilder
             writer.KeyValueTable(new[]
             {
                 ("Candidate status", disposition.CandidateStatus.ToString()),
-                ("Код физического отказа", disposition.DiagnosticCode),
-                ("Диагностика", disposition.DiagnosticText),
                 ("Selected X/Z authority", "отсутствует"),
                 ("Selected F1/F2/F3/F4 authority", "отсутствует")
             });
+            writer.Space(8);
+            writer.Section("Код физического отказа");
+            writer.Text(disposition.DiagnosticCode, 9.5f);
+            writer.Section("Диагностика");
+            writer.Text(disposition.DiagnosticText, 9.5f);
             writer.Space(8);
             writer.Text(disposition.MethodNote, 9.5f);
             writer.Text("Физический отказ является terminal engineering evidence signed candidate. Fallback/iterative X/Z не используется как engineering authority.", 9.5f);
@@ -506,8 +509,9 @@ public static class PdfReportBuilder
         var anchorSource = report.AnchorReaction?.SourceIdentity.ToString() ?? "не определён";
         var structuralSource = report.Structural?.SourceIdentity.ToString() ?? "не определён";
         var assessmentSource = report.Assessment?.SourceIdentity.ToString() ?? "не определён";
-        var physicalStatus = report.PhysicalDisposition?.CandidateStatus.ToString() ?? "не определён";
-        var physicalCode = report.PhysicalDisposition?.DiagnosticCode ?? "не определён";
+        var candidateStatus = report.SignedCandidateStatus?.ToString()
+            ?? report.PhysicalDisposition?.CandidateStatus.ToString() ?? "не определён";
+        var physicalCode = report.PhysicalDisposition?.DiagnosticCode ?? "не применим";
 
         writer.BeginPage();
         writer.Title("Воспроизводимость и provenance");
@@ -516,17 +520,18 @@ public static class PdfReportBuilder
             9.5f);
         writer.Space(10);
         writer.Section("Идентификация отчёта");
-        writer.KeyValueTable(new[]
+        var provenanceRows = new List<(string Label, string Value)>
         {
             ("Проект", report.ProjectName),
             ("Run ID", provenance.RunId),
-            ("Время расчёта, UTC", provenance.CalculationTimestampUtc.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture)),
-            ("Input hash (SHA-256)", provenance.InputHash),
-            ("Result hash (SHA-256)", provenance.ResultHash),
-            ("Source identity", provenance.SourceIdentity),
-            ("Время экспорта PDF, UTC", provenance.ExportTimestampUtc.ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture)),
-            ("Typed source", "UserEngineeringReportReadModel")
-        });
+            ("Время расчёта, UTC", provenance.CalculationTimestampUtc.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture))
+        };
+        AppendChunkedRows(provenanceRows, "Input hash (SHA-256)", provenance.InputHash, 32);
+        AppendChunkedRows(provenanceRows, "Result hash (SHA-256)", provenance.ResultHash, 32);
+        AppendChunkedRows(provenanceRows, "Source identity", provenance.SourceIdentity, 48);
+        provenanceRows.Add(("Время экспорта PDF, UTC", provenance.ExportTimestampUtc.ToString("yyyy-MM-dd HH:mm:ss.fffffff 'UTC'", CultureInfo.InvariantCulture)));
+        provenanceRows.Add(("Typed source", "UserEngineeringReportReadModel"));
+        writer.KeyValueTable(provenanceRows, rowHeight: 20);
 
         writer.Space(12);
         writer.Section("Источники selected authority");
@@ -539,7 +544,7 @@ public static class PdfReportBuilder
             ("F2 anchor-reaction source", anchorSource),
             ("F3 structural source", structuralSource),
             ("F4 assessment source", assessmentSource),
-            ("Signed candidate status", physicalStatus),
+            ("Signed candidate status", candidateStatus),
             ("Physical disposition code", physicalCode)
         });
 
@@ -725,13 +730,13 @@ public static class PdfReportBuilder
             _y += height;
         }
 
-        public void KeyValueTable(IReadOnlyList<(string Label, string Value)> rows)
+        public void KeyValueTable(IReadOnlyList<(string Label, string Value)> rows, float rowHeight = 22)
         {
             const float labelWidth = 210;
             var widths = new[] { labelWidth, PageWidth - 2 * Margin - labelWidth };
             foreach (var row in rows)
             {
-                DrawTableRow(new[] { row.Label, row.Value }, widths, false, 22, 8.5f, 44, 62);
+                DrawTableRow(new[] { row.Label, row.Value }, widths, false, rowHeight, 8.5f, 44, 62);
             }
         }
 

@@ -211,3 +211,11 @@ jobs:
           name: bc-aud-006-production-series-a-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/bc-aud-006-production-series-a
           if-no-files-found: error
+
+      - name: Upload lossless PDF provenance evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bc-aud-005-pdf-provenance-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/bc-aud-005-pdf-provenance
+          if-no-files-found: error
