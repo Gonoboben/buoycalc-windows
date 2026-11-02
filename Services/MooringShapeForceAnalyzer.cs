@@ -42,13 +42,15 @@ public static class MooringShapeForceAnalyzer
     internal static MooringShapeForceResult BuildFromTensionTraceTangents(
         CalculationResult result,
         MooringShapeProjectionResult projection,
-        MooringSurfaceBoundaryTensionTraceResult trace) =>
-        BuildCore(result, projection, trace);
+        MooringSurfaceBoundaryTensionTraceResult trace,
+        bool useSquaredNormal = false) =>
+        BuildCore(result, projection, trace, useSquaredNormal);
 
     private static MooringShapeForceResult BuildCore(
         CalculationResult result,
         MooringShapeProjectionResult projection,
-        MooringSurfaceBoundaryTensionTraceResult? diagnosticTrace)
+        MooringSurfaceBoundaryTensionTraceResult? diagnosticTrace,
+        bool useSquaredNormal = false)
     {
         if (diagnosticTrace is not null &&
             (diagnosticTrace.Rows.Count != projection.Rows.Count ||
@@ -91,9 +93,12 @@ public static class MooringShapeForceAnalyzer
             var currentZ = segment.VerticalCurrentMS;
             var speed = Math.Sqrt(currentX * currentX + currentZ * currentZ);
             var dot = currentX * tx + currentZ * tz;
-            var normalSpeed = Math.Sqrt(Math.Max(0, speed * speed - dot * dot));
+            var normalSquared = Math.Max(0, speed * speed - dot * dot);
+            var normalSpeed = Math.Sqrt(normalSquared);
 
-            var shapeForceN = 0.5 * segment.WaterDensityKgM3 * segment.DragCoefficient * segment.ProjectedAreaM2 * normalSpeed * normalSpeed;
+            var shapeForceN = useSquaredNormal
+                ? 0.5 * segment.WaterDensityKgM3 * segment.DragCoefficient * segment.ProjectedAreaM2 * normalSquared
+                : 0.5 * segment.WaterDensityKgM3 * segment.DragCoefficient * segment.ProjectedAreaM2 * normalSpeed * normalSpeed;
             var originalForceN = segment.CurrentForceN;
             var differenceN = shapeForceN - originalForceN;
             var ratio = Math.Abs(originalForceN) > 0.0001 ? shapeForceN / originalForceN : 0;

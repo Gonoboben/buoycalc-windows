@@ -25,7 +25,11 @@ internal static class H2AuthorityProof
             !Cycle(new[] { B(0.0) }, new[] { B(-0.0) }, new[] { B(0.0) }))
             throw new InvalidOperationException("Exact two-cycle detector failed missing/drifting/fixed/one-ULP/schema/signed-zero controls.");
         var summaries = new List<object>();
-        foreach (var scenario in AuthorityProofFixtures.Build())
+        var fixtures = AuthorityProofFixtures.Build();
+        if (args.Contains("--residual-only", StringComparer.Ordinal))
+            fixtures = fixtures.Where(f => f.Id is "A03" or "A05" or "A06" or "A11" or "A15" or
+                "grid-20-1.05-0.6" or "grid-20-1.2-0.6" or "grid-380-1.1-0.45");
+        foreach (var scenario in fixtures)
         {
             var environment = scenario.Environment;
             var buoy = scenario.Buoy;
@@ -33,7 +37,7 @@ internal static class H2AuthorityProof
             var legacyCandidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                 environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions, false, false);
             var legacySnapshot = CalculationSnapshotBuilder.BuildWithDiagnosticCandidate(environment, buoy, run.Result, legacyCandidate);
-            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R" })
+            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R", "H2R3" })
             {
                 var fixedPointRawFieldCount = 0;
                 long[]? fixedBefore = null;
@@ -49,10 +53,10 @@ internal static class H2AuthorityProof
                 }
                 var candidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode == "H2R", fixedPointObserver: VerifyFixedPoint);
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode == "H2R3");
                 var replay = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode == "H2R", fixedPointObserver: VerifyFixedPoint);
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode == "H2R3");
                 if (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(replay))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: candidate replay differs.");
                 if (mode == "B0" && ObserverControlAudit.Canonical(candidate) !=
@@ -68,6 +72,10 @@ internal static class H2AuthorityProof
                 var f4 = snapshot.SelectedEngineeringAssessment;
                 var authority = ObserverControlAudit.Canonical(Authority(snapshot));
                 var originalAuthority = ObserverControlAudit.Canonical(Authority(legacySnapshot));
+                if (mode == "H2R3" && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
+                    (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
+                     authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
+                    throw new InvalidOperationException($"{scenario.Id}: second-stage recovery changed an existing production Accepted result.");
                 if (mode == "H2R" && (ObserverControlAudit.Canonical(candidate) !=
                     ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
                     authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
@@ -109,7 +117,8 @@ internal static class H2AuthorityProof
                             ? "BitIdenticalF1F4" : "DifferentF1F4"
                         : "NoLegacySelectedF1F4Reference"
                 };
-                if (scenario.Id is "A03" or "A05" or "A06" or "A11" or "A15")
+                if (scenario.Id is "A03" or "A05" or "A06" or "A11" or "A15" or
+                    "grid-20-1.05-0.6" or "grid-20-1.2-0.6" or "grid-380-1.1-0.45")
                 {
                     File.WriteAllText(Path.Combine(output, $"{scenario.Id}-{mode}.json"),
                         JsonSerializer.Serialize(evidence, new JsonSerializerOptions { WriteIndented = true }));
