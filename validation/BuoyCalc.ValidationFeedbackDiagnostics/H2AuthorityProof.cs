@@ -25,7 +25,11 @@ internal static class H2AuthorityProof
             !Cycle(new[] { B(0.0) }, new[] { B(-0.0) }, new[] { B(0.0) }))
             throw new InvalidOperationException("Exact two-cycle detector failed missing/drifting/fixed/one-ULP/schema/signed-zero controls.");
         var summaries = new List<object>();
-        foreach (var scenario in AuthorityProofFixtures.Build())
+        var fixtures = AuthorityProofFixtures.Build();
+        if (args.Contains("--residual-only", StringComparer.Ordinal))
+            fixtures = fixtures.Where(f => f.Id is "A03" or "A05" or "A06" or "A11" or "A15" or
+                "grid-20-1.05-0.6" or "grid-20-1.2-0.6" or "grid-380-1.1-0.45");
+        foreach (var scenario in fixtures)
         {
             var environment = scenario.Environment;
             var buoy = scenario.Buoy;
@@ -33,9 +37,13 @@ internal static class H2AuthorityProof
             var legacyCandidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                 environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions, false, false);
             var legacySnapshot = CalculationSnapshotBuilder.BuildWithDiagnosticCandidate(environment, buoy, run.Result, legacyCandidate);
-            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R" })
+            MooringSignedCandidateResult? previousRecovery = null;
+            string? previousRecoveryAuthority = null;
+            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R", "H2R3", "H2R4" })
             {
                 var fixedPointRawFieldCount = 0;
+                var transitions = new List<string>();
+                void ObserveRecovery(int iteration, string stage) => transitions.Add($"{iteration}:{stage}");
                 long[]? fixedBefore = null;
                 long[]? fixedAfter = null;
                 void VerifyFixedPoint(IReadOnlyList<long> before, IReadOnlyList<long> after)
@@ -49,10 +57,14 @@ internal static class H2AuthorityProof
                 }
                 var candidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode == "H2R", fixedPointObserver: VerifyFixedPoint);
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery);
+                var firstTransitions = transitions.ToArray();
+                transitions.Clear();
                 var replay = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode == "H2R", fixedPointObserver: VerifyFixedPoint);
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery);
+                if (!transitions.SequenceEqual(firstTransitions))
+                    throw new InvalidOperationException($"{scenario.Id}/{mode}: arithmetic transition replay differs.");
                 if (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(replay))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: candidate replay differs.");
                 if (mode == "B0" && ObserverControlAudit.Canonical(candidate) !=
@@ -68,10 +80,18 @@ internal static class H2AuthorityProof
                 var f4 = snapshot.SelectedEngineeringAssessment;
                 var authority = ObserverControlAudit.Canonical(Authority(snapshot));
                 var originalAuthority = ObserverControlAudit.Canonical(Authority(legacySnapshot));
-                if (mode == "H2R" && (ObserverControlAudit.Canonical(candidate) !=
+                if (mode == "H2R") { previousRecovery = candidate; previousRecoveryAuthority = authority; }
+                if ((mode is "H2R3" or "H2R4") && previousRecovery?.Status == MooringSignedCandidateStatus.Accepted &&
+                    (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(previousRecovery) || authority != previousRecoveryAuthority))
+                    throw new InvalidOperationException($"{scenario.Id}: second-stage arithmetic changed an original H2R Accepted result.");
+                if ((mode is "H2R3" or "H2R4") && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
+                    (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
+                     authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
+                    throw new InvalidOperationException($"{scenario.Id}: second-stage recovery changed an existing production Accepted result.");
+                if (mode == "H2R3" && (ObserverControlAudit.Canonical(candidate) !=
                     ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
                     authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
-                    throw new InvalidOperationException($"{scenario.Id}: production differs from the proven H2R candidate/F1-F4.");
+                    throw new InvalidOperationException($"{scenario.Id}: production differs from the proven second-stage candidate/F1-F4.");
                 if (authority != ObserverControlAudit.Canonical(Authority(repeatedSnapshot)))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: actual F1-F4 replay differs.");
                 if (mode == "B0" && authority != originalAuthority)
@@ -109,7 +129,8 @@ internal static class H2AuthorityProof
                             ? "BitIdenticalF1F4" : "DifferentF1F4"
                         : "NoLegacySelectedF1F4Reference"
                 };
-                if (scenario.Id is "A03" or "A05" or "A06" or "A11" or "A15")
+                if (scenario.Id is "A03" or "A05" or "A06" or "A11" or "A15" or
+                    "grid-20-1.05-0.6" or "grid-20-1.2-0.6" or "grid-380-1.1-0.45")
                 {
                     File.WriteAllText(Path.Combine(output, $"{scenario.Id}-{mode}.json"),
                         JsonSerializer.Serialize(evidence, new JsonSerializerOptions { WriteIndented = true }));
@@ -123,6 +144,10 @@ internal static class H2AuthorityProof
                 }
                 summaries.Add(new { scenario.Id, Mode = mode, evidence.LegacyStatus, evidence.ProductionStatus, evidence.Status,
                     candidate.FeedbackIterations, candidate.DiagnosticCode, evidence.BaselineComparison,
+                    InputHash = run.Snapshot.Provenance!.InputHash,
+                    OriginalRecoveryStatus = previousRecovery?.Status.ToString(),
+                    OriginalRecoveryCandidateSHA256 = previousRecovery is null ? null : Digest(ObserverControlAudit.Canonical(previousRecovery)),
+                    OriginalRecoveryAuthoritySHA256 = previousRecoveryAuthority is null ? null : Digest(previousRecoveryAuthority),
                     CandidateSHA256 = Digest(ObserverControlAudit.Canonical(candidate)),
                     LegacyCandidateSHA256 = Digest(ObserverControlAudit.Canonical(legacyCandidate)),
                     ProductionCandidateSHA256 = Digest(ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate)),
@@ -132,7 +157,7 @@ internal static class H2AuthorityProof
                     F1N = f1?.DemandN, DeltaF1N = Delta(f1?.DemandN, legacySnapshot.SelectedDesignTensionDemand?.DemandN),
                     DeltaX = Delta(candidate.Shape?.AnchorPoint?.XOffsetM, legacyCandidate.Shape?.AnchorPoint?.XOffsetM),
                     F2HorizontalN = f2?.HorizontalDemandN, F2NormalN = f2?.SignedNormalReactionN,
-                    F4Verdict = f4?.Verdict, FixedPointRawFieldCount = fixedPointRawFieldCount, Metrics = metrics });
+                    RecoveryTransitions = transitions.ToArray(), F4Verdict = f4?.Verdict, FixedPointRawFieldCount = fixedPointRawFieldCount, Metrics = metrics });
                 File.WriteAllText(Path.Combine(output, "summary.json"),
                     JsonSerializer.Serialize(summaries, new JsonSerializerOptions { WriteIndented = true }));
                 Console.WriteLine($"H2_AUTHORITY|{scenario.Id}|{mode}|{candidate.Status}|{candidate.FeedbackIterations}|{evidence.BaselineComparison}");

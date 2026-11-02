@@ -21,7 +21,7 @@ public static class MooringSignedCandidateEvaluator
         BuoyInput? buoy,
         CalculationResult? baseResult,
         MooringSequencePositionResult? sequence) =>
-        BuildCore(environment, buoy, baseResult, sequence, null, recoverExactTwoCycles: true);
+        BuildCore(environment, buoy, baseResult, sequence, null, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true);
 
     /// <summary>
     /// Diagnostics only: observes raw bit fields from the same production feedback loop.
@@ -35,7 +35,7 @@ public static class MooringSignedCandidateEvaluator
         Action<MooringSignedFeedbackObservedStep> observer)
     {
         ArgumentNullException.ThrowIfNull(observer);
-        return BuildCore(environment, buoy, baseResult, sequence, observer, recoverExactTwoCycles: true);
+        return BuildCore(environment, buoy, baseResult, sequence, observer, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true);
     }
 
     // Validation only: run an isolated arithmetic intervention through every existing
@@ -49,8 +49,11 @@ public static class MooringSignedCandidateEvaluator
         bool fixedBuoyDrag,
         Action<MooringSignedFeedbackObservedStep>? observer = null,
         bool recoverExactTwoCycles = false,
-        Action<IReadOnlyList<long>, IReadOnlyList<long>>? fixedPointObserver = null) =>
-        BuildCore(environment, buoy, baseResult, sequence, observer, directTangents, fixedBuoyDrag, recoverExactTwoCycles, fixedPointObserver);
+        Action<IReadOnlyList<long>, IReadOnlyList<long>>? fixedPointObserver = null,
+        bool recoverSquaredNormalCycles = false,
+        bool recoverGroupedNormalCycles = false,
+        Action<int, string>? recoveryObserver = null) =>
+        BuildCore(environment, buoy, baseResult, sequence, observer, directTangents, fixedBuoyDrag, recoverExactTwoCycles, fixedPointObserver, recoverSquaredNormalCycles, recoverGroupedNormalCycles, recoveryObserver);
 
     private static MooringSignedCandidateResult BuildCore(
         EnvironmentInput? environment,
@@ -61,7 +64,10 @@ public static class MooringSignedCandidateEvaluator
         bool directTangents = false,
         bool fixedBuoyDrag = false,
         bool recoverExactTwoCycles = false,
-        Action<IReadOnlyList<long>, IReadOnlyList<long>>? fixedPointObserver = null)
+        Action<IReadOnlyList<long>, IReadOnlyList<long>>? fixedPointObserver = null,
+        bool recoverSquaredNormalCycles = false,
+        bool recoverGroupedNormalCycles = false,
+        Action<int, string>? recoveryObserver = null)
     {
         if (environment is null || baseResult is null || sequence is null)
         {
@@ -122,7 +128,11 @@ public static class MooringSignedCandidateEvaluator
         var canRecover = recoverExactTwoCycles && !directTangents && !fixedBuoyDrag &&
             currentResult.SegmentRows.All(s => s.SegmentLengthM >= MooringShapeForceAnalyzer.TangentProjectionLengthFloorM);
         var useDirectTangents = directTangents;
+        var useSquaredNormal = false;
+        var groupNormalProduct = false;
         int? recoveryStartedAt = null;
+        int? squaredRecoveryStartedAt = null;
+        int? groupedRecoveryStartedAt = null;
         long[]? olderBits = null;
         var currentBits = canRecover
             ? CaptureCycleStateBits(currentResult, currentBoundary, currentTrace, currentGeometry, currentLineForceN)
@@ -142,7 +152,7 @@ public static class MooringSignedCandidateEvaluator
             }
 
             var shapeForces = useDirectTangents
-                ? MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(currentResult, projection, currentTrace)
+                ? MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(currentResult, projection, currentTrace, useSquaredNormal, groupNormalProduct)
                 : MooringShapeForceAnalyzer.Build(currentResult, projection);
             if (!TryApplyShapeForces(
                     baseResult,
@@ -256,11 +266,14 @@ public static class MooringSignedCandidateEvaluator
                     nextTrace.PointLoadCrossings,
                     "SignedCandidateExactFixedPoint",
                     $"Signed boundary/shape-force feedback reached an exact deterministic fixed point at iteration {iteration} within the fixed production budget {MooringSignedCandidateResult.ProductionFeedbackBudget}." +
-                        (recoveryStartedAt.HasValue ? $" Direct-tangent arithmetic recovery began after a raw-bit period-2 cycle at iteration {recoveryStartedAt.Value}; no orbit member was accepted." : string.Empty),
+                        (recoveryStartedAt.HasValue ? $" Direct-tangent arithmetic recovery began after a raw-bit period-2 cycle at iteration {recoveryStartedAt.Value}; no orbit member was accepted." : string.Empty) +
+                        (squaredRecoveryStartedAt.HasValue ? $" Secondary squared-normal recovery began after a second exact cycle at iteration {squaredRecoveryStartedAt.Value}." : string.Empty) +
+                        (groupedRecoveryStartedAt.HasValue ? $" Experimental grouped-normal-product recovery began after a third exact cycle at iteration {groupedRecoveryStartedAt.Value}." : string.Empty),
                     nextTrace);
             }
 
-            if (canRecover && !useDirectTangents)
+            if (canRecover && (!useDirectTangents || (recoverSquaredNormalCycles && !useSquaredNormal) ||
+                (recoverGroupedNormalCycles && !groupNormalProduct)))
             {
                 var nextBits = CaptureCycleStateBits(nextResult, nextBoundary, nextTrace, nextGeometry, updatedLineForceN);
                 if (IsExactTwoCycle(olderBits, currentBits!, nextBits))
@@ -268,11 +281,32 @@ public static class MooringSignedCandidateEvaluator
                     // Change only the subsequent arithmetic map, never accept this
                     // repeated state. The unchanged fixed-point gate above is still
                     // the only way to construct Accepted within the SAME 64 steps.
-                    useDirectTangents = true;
-                    recoveryStartedAt = iteration;
+                    if (!useDirectTangents)
+                    {
+                        useDirectTangents = true;
+                        recoveryStartedAt = iteration;
+                        recoveryObserver?.Invoke(iteration, "TraceTangents");
+                    }
+                    else if (!useSquaredNormal)
+                    {
+                        useSquaredNormal = true;
+                        squaredRecoveryStartedAt = iteration;
+                        recoveryObserver?.Invoke(iteration, "SquaredNormal");
+                    }
+                    else
+                    {
+                        groupNormalProduct = true;
+                        groupedRecoveryStartedAt = iteration;
+                        recoveryObserver?.Invoke(iteration, "GroupedNormalProduct");
+                    }
+                    olderBits = null; // Never infer a cycle across two different maps.
+                    currentBits = nextBits;
                 }
-                olderBits = currentBits;
-                currentBits = nextBits;
+                else
+                {
+                    olderBits = currentBits;
+                    currentBits = nextBits;
+                }
             }
 
             currentResult = nextResult;

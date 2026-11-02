@@ -66,8 +66,8 @@ internal static class Program
         var acceptedControls = results.Count(x => x.CandidateStatus == MooringSignedCandidateStatus.Accepted.ToString());
         var budgetControls = results.Count(x => x.CandidateStatus == MooringSignedCandidateStatus.BudgetExhausted.ToString());
 
-        if (results.Count != 9 || rejectedPhysical != 5 || dispositions != 5 || blocked != 5 ||
-            acceptedControls != 2 || budgetControls != 1)
+        if (results.Count != 10 || rejectedPhysical != 5 || dispositions != 5 || blocked != 5 ||
+            acceptedControls != 3 || budgetControls != 1)
         {
             throw new InvalidOperationException(
                 $"Validation #601 rollup mismatch: scenarios={results.Count}, rejected={rejectedPhysical}, dispositions={dispositions}, blocked={blocked}, accepted={acceptedControls}, budget={budgetControls}.");
@@ -82,6 +82,7 @@ internal static class Program
             $"AcceptedControls={acceptedControls}",
             $"BudgetExhaustedControls={budgetControls}",
             "ExactCycleArithmeticRecovery=True",
+            "SquaredNormalArithmeticRecovery=True",
             "EpsilonIntroduced=False",
             "F1F2F3F4Fabricated=False"));
 
@@ -173,9 +174,19 @@ internal static class Program
                 true),
             new ValidationScenario(
                 "V601-09",
-                "Unresolved non-Accepted budget control after recovery",
+                "Former residual budget control requires real second-stage Accepted",
                 20.0,
                 21.0,
+                0.6,
+                MooringSignedCandidateStatus.Accepted,
+                MooringSurfaceBoundaryInfoClassification.SolvedByBoundedBisection,
+                false,
+                true),
+            new ValidationScenario(
+                "V601-10",
+                "Unresolved 20/24/0.6 remains non-Accepted after all production stages",
+                20.0,
+                24.0,
                 0.6,
                 MooringSignedCandidateStatus.BudgetExhausted,
                 MooringSurfaceBoundaryInfoClassification.SolvedByBoundedBisection,
