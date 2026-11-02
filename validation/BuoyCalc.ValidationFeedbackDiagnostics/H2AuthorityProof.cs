@@ -16,14 +16,21 @@ internal static class H2AuthorityProof
             var environment = scenario.Environment;
             var buoy = scenario.Buoy;
             var run = ApplicationCalculationRunner.Run(environment, buoy, scenario.Assembly, scenario.Anchor, scenario.SafetyFactor);
-            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2" })
+            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R" })
             {
+                var fixedPointRawFieldCount = 0;
+                void VerifyFixedPoint(IReadOnlyList<long> before, IReadOnlyList<long> after)
+                {
+                    if (!before.SequenceEqual(after))
+                        throw new InvalidOperationException($"{scenario.Id}/{mode}: Accepted fixed-point raw states differ.");
+                    fixedPointRawFieldCount = before.Count;
+                }
                 var candidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2");
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode == "H2R", fixedPointObserver: VerifyFixedPoint);
                 var replay = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2");
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode == "H2R", fixedPointObserver: VerifyFixedPoint);
                 if (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(replay))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: candidate replay differs.");
                 if (mode == "B0" && ObserverControlAudit.Canonical(candidate) !=
@@ -43,6 +50,10 @@ internal static class H2AuthorityProof
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: actual F1-F4 replay differs.");
                 if (mode == "B0" && authority != originalAuthority)
                     throw new InvalidOperationException($"{scenario.Id}: actual B0 F1-F4 differ.");
+                if (mode == "H2R" && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
+                    (authority != originalAuthority || ObserverControlAudit.Canonical(candidate) !=
+                     ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate)))
+                    throw new InvalidOperationException($"{scenario.Id}: recovery changed a previously Accepted candidate/F1-F4.");
                 if (run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.RejectedPhysical &&
                     (candidate.Status != MooringSignedCandidateStatus.RejectedPhysical || snapshot.SelectedShape is not null))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: physical rejection changed.");
@@ -55,7 +66,7 @@ internal static class H2AuthorityProof
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: non-Accepted candidate gained F1-F4.");
                 if (scenario.Id == "A05" && (candidate.Status != MooringSignedCandidateStatus.Accepted || authority != originalAuthority))
                     throw new InvalidOperationException($"A05/{mode}: Accepted/F1-F4 control changed.");
-                if ((scenario.Id is "A06" or "A11" or "A15") && mode == "H2" && candidate.Status != MooringSignedCandidateStatus.Accepted)
+                if ((scenario.Id is "A06" or "A11" or "A15") && (mode is "H2" or "H2R") && candidate.Status != MooringSignedCandidateStatus.Accepted)
                     throw new InvalidOperationException($"{scenario.Id}: H2 failed actual acceptance.");
                 var metrics = candidate.Status == MooringSignedCandidateStatus.Accepted
                     ? AuthorityProofInspection.Inspect(run.Result, run.Snapshot.TechnicalReportData.SequencePositions, candidate, mode)
@@ -80,7 +91,7 @@ internal static class H2AuthorityProof
                     F1N = f1?.DemandN, DeltaF1N = Delta(f1?.DemandN, run.Snapshot.SelectedDesignTensionDemand?.DemandN),
                     DeltaX = Delta(candidate.Shape?.AnchorPoint?.XOffsetM, run.Snapshot.SignedCandidate.Shape?.AnchorPoint?.XOffsetM),
                     F2HorizontalN = f2?.HorizontalDemandN, F2NormalN = f2?.SignedNormalReactionN,
-                    F4Verdict = f4?.Verdict, Metrics = metrics });
+                    F4Verdict = f4?.Verdict, FixedPointRawFieldCount = fixedPointRawFieldCount, Metrics = metrics });
                 File.WriteAllText(Path.Combine(output, "summary.json"),
                     JsonSerializer.Serialize(summaries, new JsonSerializerOptions { WriteIndented = true }));
                 Console.WriteLine($"H2_AUTHORITY|{scenario.Id}|{mode}|{candidate.Status}|{candidate.FeedbackIterations}|{evidence.BaselineComparison}");

@@ -73,3 +73,33 @@ has proved that the original deterministic map cannot reach its fixed point.
 Continue within the original total 64-step budget and still require the actual
 production fixed-point and Accepted-shape gates. Do not accept an orbit member.
 This is a new validation hypothesis, not an approved production fix.
+
+## Exact period-2-triggered H2R experiment
+
+H2R starts with the original map. It compares the complete changing feedback
+state directly as ordered raw IEEE-754 fields (including total force, all
+boundary states, segment forces, trace scalars and geometry nodes). Only after
+`next == two_states_back` and `next != current` in raw bits does it enable direct
+tangent arithmetic for subsequent iterations. The observed orbit state is never
+accepted. The original exact-fixed-point and Accepted-shape gates remain the
+only way to return Accepted. Total feedback steps remain at most 64. Any
+segment shorter than 0.0001 m disables recovery, preserving the original floor.
+Normal public Build and observer paths still disable H2R in this research PR.
+
+The local 105-fixture H2R run produced 81 Accepted, 3 BudgetExhausted,
+12 RejectedPhysical, 6 RejectedNumerical and 3 Indeterminate. Every one of the
+67 old Accepted candidate trees and F1-F4 trees remained bit-identical. All 12
+physical rejections remained rejected; all numerical/indeterminate controls
+retained their status. A06/A11/A15 passed real acceptance at 16/17/17 iterations.
+The other 3 budget failures remain non-accepted; no outcome is padded or forced.
+
+The proof additionally observes actual consecutive states at the production
+fixed-point gate and compares their complete raw state vectors. Candidate replay
+alone is not substituted for this fixed-point verification.
+
+The earlier 37144625 head failed a lexical architecture guard after the snapshot
+adapter changed `var signedCandidate = Build(...)` into a nullable diagnostic
+handoff. This was not a numerical test failure. The guards now explicitly require
+the public path to pass null, keep the original evaluator as default, preserve
+construction order, and reject every production caller of the internal handoff.
+No physical check, baseline or regression expectation was removed.

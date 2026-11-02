@@ -25,7 +25,7 @@ internal static class AuthorityProofInspection
             .OrderBy(p => p.PositionAlongLineM).ThenBy(p => p.Number).ToArray();
         var maxLength = 0.0; var maxTangent = 0.0; var maxH = 0.0; var maxV = 0.0;
         var maxJump = 0.0; var unitNorm = 0.0; var previousH = trace.StartHN.Value;
-        var previousV = trace.StartVN.Value; var pointIndex = 0;
+        var previousV = trace.StartVN!.Value; var pointIndex = 0;
         for (var i = 0; i < trace.Rows.Count; i++)
         {
             var row = trace.Rows[i]; var segment = segments[i]; var p = projection.Rows[i];
@@ -43,7 +43,7 @@ internal static class AuthorityProofInspection
             maxJump = Math.Max(maxJump, Math.Max(Math.Abs((row.StartHN - previousH) - jumpH), Math.Abs((row.StartVN - previousV) - jumpV)));
             maxH = Math.Max(maxH, Math.Abs((row.EndHN - row.StartHN) - direct.Rows[i].ShapeForceN));
             maxV = Math.Max(maxV, Math.Abs((row.EndVN - row.StartVN) + segment.WeightWaterKg * MooringSurfaceBoundaryIntegrationKernel.GravityMS2));
-            if (mode is "H2" or "H1H2")
+            if ((mode is "H2" or "H1H2") || (mode == "H2R" && candidate.DiagnosticText.Contains("recovery began", StringComparison.Ordinal)))
                 Require(Bits(row.EndHN) == Bits(row.StartHN + direct.Rows[i].ShapeForceN), "H2 fixed-point segment H identity differs.");
             Require(Bits(row.EndVN) == Bits(row.StartVN - segment.WeightWaterKg * MooringSurfaceBoundaryIntegrationKernel.GravityMS2), "Signed submerged-weight update differs.");
             previousH = row.EndHN; previousV = row.EndVN;
@@ -54,7 +54,7 @@ internal static class AuthorityProofInspection
             terminalJumpH += internalPoints[pointIndex].CurrentForceN;
             terminalJumpV -= internalPoints[pointIndex++].WeightWaterKg * MooringSurfaceBoundaryIntegrationKernel.GravityMS2;
         }
-        maxJump = Math.Max(maxJump, Math.Max(Math.Abs(trace.EndHN.Value - previousH - terminalJumpH), Math.Abs(trace.EndVN.Value - previousV - terminalJumpV)));
+        maxJump = Math.Max(maxJump, Math.Max(Math.Abs(trace.EndHN!.Value - previousH - terminalJumpH), Math.Abs(trace.EndVN!.Value - previousV - terminalJumpV)));
         Require(pointIndex == candidate.PointLoadCrossings && pointIndex == trace.PointLoadCrossings, "Discrete load crossings differ.");
         // Same published identity scales as evaluator/kernel. No feedback convergence tolerance.
         Require(maxJump <= 1e-6 && maxLength <= MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM, "Existing point-load/geometry identity bound exceeded.");
@@ -65,8 +65,8 @@ internal static class AuthorityProofInspection
             MaxCoordinateTangentDelta = maxTangent, MaxTangentUnitNormResidual = unitNorm,
             MaxDirectTangentForceVsTraceResidualN = maxH, MaxSignedWeightVerticalForceResidualN = maxV,
             MaxDiscreteJumpResidualN = maxJump, PointLoadCrossings = pointIndex,
-            DirectTangentGlobalHorizontalResidualN = trace.EndHN.Value - trace.StartHN.Value - direct.Rows.Sum(r => r.ShapeForceN) - internalPoints.Sum(p => p.CurrentForceN),
-            GlobalVerticalResidualN = trace.EndVN.Value - trace.StartVN.Value + segments.Sum(s => s.WeightWaterKg) * MooringSurfaceBoundaryIntegrationKernel.GravityMS2 + internalPoints.Sum(p => p.WeightWaterKg) * MooringSurfaceBoundaryIntegrationKernel.GravityMS2,
+            DirectTangentGlobalHorizontalResidualN = trace.EndHN!.Value - trace.StartHN.Value - direct.Rows.Sum(r => r.ShapeForceN) - internalPoints.Sum(p => p.CurrentForceN),
+            GlobalVerticalResidualN = trace.EndVN!.Value - trace.StartVN!.Value + segments.Sum(s => s.WeightWaterKg) * MooringSurfaceBoundaryIntegrationKernel.GravityMS2 + internalPoints.Sum(p => p.WeightWaterKg) * MooringSurfaceBoundaryIntegrationKernel.GravityMS2,
             SignedLineWeightKg = segments.Sum(s => s.WeightWaterKg), MinSegmentLengthM = segments.Min(s => s.SegmentLengthM)
         };
     }

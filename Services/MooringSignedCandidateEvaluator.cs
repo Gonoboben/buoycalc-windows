@@ -47,8 +47,10 @@ public static class MooringSignedCandidateEvaluator
         MooringSequencePositionResult? sequence,
         bool directTangents,
         bool fixedBuoyDrag,
-        Action<MooringSignedFeedbackObservedStep>? observer = null) =>
-        BuildCore(environment, buoy, baseResult, sequence, observer, directTangents, fixedBuoyDrag);
+        Action<MooringSignedFeedbackObservedStep>? observer = null,
+        bool recoverExactTwoCycles = false,
+        Action<IReadOnlyList<long>, IReadOnlyList<long>>? fixedPointObserver = null) =>
+        BuildCore(environment, buoy, baseResult, sequence, observer, directTangents, fixedBuoyDrag, recoverExactTwoCycles, fixedPointObserver);
 
     private static MooringSignedCandidateResult BuildCore(
         EnvironmentInput? environment,
@@ -57,7 +59,9 @@ public static class MooringSignedCandidateEvaluator
         MooringSequencePositionResult? sequence,
         Action<MooringSignedFeedbackObservedStep>? observer,
         bool directTangents = false,
-        bool fixedBuoyDrag = false)
+        bool fixedBuoyDrag = false,
+        bool recoverExactTwoCycles = false,
+        Action<IReadOnlyList<long>, IReadOnlyList<long>>? fixedPointObserver = null)
     {
         if (environment is null || baseResult is null || sequence is null)
         {
@@ -113,6 +117,16 @@ public static class MooringSignedCandidateEvaluator
 
         var currentLineForceN = currentResult.SegmentRows.Sum(x => x.CurrentForceN);
         var buoySteadyDragN = currentBoundary.BuoySteadyDragN!.Value;
+        // Below the existing projection denominator floor, a direct unit tangent
+        // is not the same mathematical force law. Keep the original path there.
+        var canRecover = recoverExactTwoCycles && !directTangents && !fixedBuoyDrag &&
+            currentResult.SegmentRows.All(s => s.SegmentLengthM >= 0.0001);
+        var useDirectTangents = directTangents;
+        int? recoveryStartedAt = null;
+        long[]? olderBits = null;
+        var currentBits = canRecover
+            ? CaptureCycleStateBits(currentResult, currentBoundary, currentTrace, currentGeometry, currentLineForceN)
+            : null;
 
         for (var iteration = 1; iteration <= MooringSignedCandidateResult.ProductionFeedbackBudget; iteration++)
         {
@@ -127,7 +141,7 @@ public static class MooringSignedCandidateEvaluator
                     projectionDiagnostic);
             }
 
-            var shapeForces = directTangents
+            var shapeForces = useDirectTangents
                 ? MooringShapeForceAnalyzer.BuildWithDiagnosticTangents(currentResult, projection, currentTrace)
                 : MooringShapeForceAnalyzer.Build(currentResult, projection);
             if (!TryApplyShapeForces(
@@ -214,6 +228,9 @@ public static class MooringSignedCandidateEvaluator
                     nextGeometry,
                     updatedLineForceN))
             {
+                fixedPointObserver?.Invoke(
+                    CaptureCycleStateBits(currentResult, currentBoundary, currentTrace, currentGeometry, currentLineForceN),
+                    CaptureCycleStateBits(nextResult, nextBoundary, nextTrace, nextGeometry, updatedLineForceN));
                 if (!TryBuildAcceptedShape(
                         nextResult,
                         nextBoundary,
@@ -238,8 +255,25 @@ public static class MooringSignedCandidateEvaluator
                     nextTrace.PointLoadCrossings > 0,
                     nextTrace.PointLoadCrossings,
                     "SignedCandidateExactFixedPoint",
-                    $"Signed boundary/shape-force feedback reached an exact deterministic fixed point at iteration {iteration} within the fixed production budget {MooringSignedCandidateResult.ProductionFeedbackBudget}.",
+                    $"Signed boundary/shape-force feedback reached an exact deterministic fixed point at iteration {iteration} within the fixed production budget {MooringSignedCandidateResult.ProductionFeedbackBudget}." +
+                        (recoveryStartedAt.HasValue ? $" Direct-tangent arithmetic recovery began after a raw-bit period-2 cycle at iteration {recoveryStartedAt.Value}; no orbit member was accepted." : string.Empty),
                     nextTrace);
+            }
+
+            if (canRecover && !useDirectTangents)
+            {
+                var nextBits = CaptureCycleStateBits(nextResult, nextBoundary, nextTrace, nextGeometry, updatedLineForceN);
+                if (olderBits is not null && nextBits.AsSpan().SequenceEqual(olderBits) &&
+                    !nextBits.AsSpan().SequenceEqual(currentBits))
+                {
+                    // Change only the subsequent arithmetic map, never accept this
+                    // repeated state. The unchanged fixed-point gate above is still
+                    // the only way to construct Accepted within the SAME 64 steps.
+                    useDirectTangents = true;
+                    recoveryStartedAt = iteration;
+                }
+                olderBits = currentBits;
+                currentBits = nextBits;
             }
 
             currentResult = nextResult;
@@ -265,6 +299,47 @@ public static class MooringSignedCandidateEvaluator
         double.IsFinite(boundary.Q0N.Value) &&
         boundary.BuoySteadyDragN.HasValue &&
         double.IsFinite(boundary.BuoySteadyDragN.Value);
+
+    private static long[] CaptureCycleStateBits(CalculationResult result,
+        MooringSurfaceBoundaryInfoResult boundary, MooringSurfaceBoundaryTensionTraceResult trace,
+        FeedbackGeometry geometry, double lineForceN)
+    {
+        var bits = new List<long>();
+        void D(double value) => bits.Add(BitConverter.DoubleToInt64Bits(value));
+        void N(double? value) { bits.Add(value.HasValue ? 1 : 0); if (value.HasValue) D(value.Value); }
+        void State(MooringSurfaceBoundaryIntegrationState? state)
+        {
+            bits.Add(state is null ? 0 : 1);
+            if (state is null) return;
+            D(state.EndpointXM); D(state.EndpointZM); D(state.EndHN); D(state.EndVN);
+            D(state.MinHN); D(state.MaxHN); D(state.MinVN); D(state.MaxVN);
+            bits.Add(state.VSignChange ? 1 : 0); bits.Add(state.PointLoadCrossings); bits.Add(state.IndeterminateSegmentCount);
+        }
+        // Every changing input/output of the deterministic feedback map. Other
+        // result/segment properties are inherited unchanged from the same base.
+        D(result.CurrentForceN); D(result.HorizontalForceN); D(lineForceN);
+        bits.Add((long)boundary.Classification); bits.Add(boundary.Available ? 1 : 0); bits.Add(boundary.Solved ? 1 : 0);
+        N(boundary.TargetDepthM); N(boundary.LineLengthM); N(boundary.BuoySteadyDragN);
+        N(boundary.QCapacityN); N(boundary.Q0N); N(boundary.Q0CapacityRatio); N(boundary.ActualBuoyancyRatio);
+        State(boundary.LowerBoundaryState); State(boundary.CapacityBoundaryState); State(boundary.SolutionState);
+        N(boundary.LowerResidualM); N(boundary.CapacityResidualM); N(boundary.MinimumQForDownwardVerticalGeometryN);
+        bits.Add(boundary.RootBracketed ? 1 : 0); bits.Add(boundary.MonotoneSample ? 1 : 0); bits.Add(boundary.Iterations);
+        bits.Add(result.SegmentRows.Count);
+        foreach (var row in result.SegmentRows.OrderBy(s => s.Number)) { bits.Add(row.Number); D(row.CurrentForceN); }
+        bits.Add(trace.Available ? 1 : 0); bits.Add((long)trace.ParentClassification);
+        N(trace.StartHN); N(trace.StartVN); N(trace.EndHN); N(trace.EndVN);
+        bits.Add(trace.PointLoadCrossings); bits.Add(trace.IndeterminateSegmentCount); bits.Add(trace.Rows.Count);
+        foreach (var row in trace.Rows)
+        {
+            bits.Add(row.SegmentNumber); D(row.StartLengthM); D(row.EndLengthM); D(row.MidLengthM); D(row.EstimatedDepthM);
+            bits.Add(row.PointLoadCrossingsAppliedBeforeSegment);
+            D(row.StartHN); D(row.StartVN); D(row.MidHN); D(row.MidVN); D(row.EndHN); D(row.EndVN); D(row.MidTensionN);
+            N(row.TangentX); N(row.TangentZ); N(row.SignedAngleFromDownwardVerticalDeg);
+        }
+        bits.Add(geometry.Nodes.Count); D(geometry.EndpointXM); D(geometry.EndpointZM);
+        foreach (var node in geometry.Nodes) { D(node.XM); D(node.ZM); }
+        return bits.ToArray();
+    }
 
     private static MooringSignedCandidateResult FromBoundary(
         MooringSurfaceBoundaryInfoResult boundary,
