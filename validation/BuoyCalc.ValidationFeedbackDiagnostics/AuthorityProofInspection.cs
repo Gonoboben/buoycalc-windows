@@ -18,7 +18,7 @@ internal static class AuthorityProofInspection
             Bits(trace.EndHN!.Value) == Bits(boundary.SolutionState.EndHN) &&
             Bits(trace.EndVN!.Value) == Bits(boundary.SolutionState.EndVN), "Trace/boundary raw force bits differ.");
         var projection = MooringShapeProjection.Build(shape);
-        var direct = MooringShapeForceAnalyzer.BuildWithDiagnosticTangents(result, projection, trace);
+        var direct = MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, projection, trace);
         var segments = result.SegmentRows.OrderBy(s => s.Number).ToArray();
         var points = sequence.Rows.OrderBy(s => s.Number).ToArray();
         var internalPoints = points.Skip(1).SkipLast(1).Where(p => p.IsDiscrete)

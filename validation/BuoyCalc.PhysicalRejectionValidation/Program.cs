@@ -66,8 +66,8 @@ internal static class Program
         var acceptedControls = results.Count(x => x.CandidateStatus == MooringSignedCandidateStatus.Accepted.ToString());
         var budgetControls = results.Count(x => x.CandidateStatus == MooringSignedCandidateStatus.BudgetExhausted.ToString());
 
-        if (results.Count != 8 || rejectedPhysical != 5 || dispositions != 5 || blocked != 5 ||
-            acceptedControls != 1 || budgetControls != 1)
+        if (results.Count != 9 || rejectedPhysical != 5 || dispositions != 5 || blocked != 5 ||
+            acceptedControls != 2 || budgetControls != 1)
         {
             throw new InvalidOperationException(
                 $"Validation #601 rollup mismatch: scenarios={results.Count}, rejected={rejectedPhysical}, dispositions={dispositions}, blocked={blocked}, accepted={acceptedControls}, budget={budgetControls}.");
@@ -81,7 +81,7 @@ internal static class Program
             $"RejectedPhysicalGeometryBlocked={blocked}",
             $"AcceptedControls={acceptedControls}",
             $"BudgetExhaustedControls={budgetControls}",
-            "SolverChanged=False",
+            "ExactCycleArithmeticRecovery=True",
             "EpsilonIntroduced=False",
             "F1F2F3F4Fabricated=False"));
 
@@ -163,10 +163,20 @@ internal static class Program
                 true),
             new ValidationScenario(
                 "V601-08",
-                "10% slack exact two-cycle BudgetExhausted control",
+                "Former exact two-cycle now requires real Accepted recovery and F1-F4",
                 20.0,
                 22.0,
                 0.2,
+                MooringSignedCandidateStatus.Accepted,
+                MooringSurfaceBoundaryInfoClassification.SolvedByBoundedBisection,
+                false,
+                true),
+            new ValidationScenario(
+                "V601-09",
+                "Unresolved non-Accepted budget control after recovery",
+                20.0,
+                21.0,
+                0.6,
                 MooringSignedCandidateStatus.BudgetExhausted,
                 MooringSurfaceBoundaryInfoClassification.SolvedByBoundedBisection,
                 false,

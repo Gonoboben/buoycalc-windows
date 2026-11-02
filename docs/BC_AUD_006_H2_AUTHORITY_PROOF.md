@@ -1,5 +1,7 @@
 # BC-AUD-006 H2 authority proof (validation only)
 
+Historical proof package: PR #635. Statements below about disabled production recovery describe that proof head; subsequent activation is governed by BC_AUD_006_EXACT_CYCLE_RECOVERY_RFC.md.
+
 Parent research: PR #634, exact head 1791b9c1e67d3d649986881d24e2bc321a6ec11a.
 Issue #602 remains open. Production numerics are unchanged.
 

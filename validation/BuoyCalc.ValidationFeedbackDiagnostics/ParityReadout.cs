@@ -162,7 +162,7 @@ internal sealed class ParityReadoutReport
         }
         _steps.AddRange(first);
         _production.AddRange(production);
-        Console.WriteLine($"BC_AUD_006_PARITY_READOUT|Scenario={scenario}|Steps={Budget}|ReplayBitsIdentical=True|ProductionStageParityBitIdentical=True|Scope=ObservedFieldsOnly|SolverModified=False");
+        Console.WriteLine($"BC_AUD_006_PARITY_READOUT|Scenario={scenario}|Steps={Budget}|ReplayBitsIdentical=True|LegacySharedCoreStageParityBitIdentical=True|Scope=ObservedFieldsOnly|ExperimentChangesProduction=False");
     }
 
     public void Write(string output)
@@ -233,9 +233,9 @@ internal sealed class ParityReadoutReport
             "Full raw 64-bit fields are in parity-readout-fields.csv.",
             "Recompute per-step SHA256 from UTF-8 lines: Stage/SegmentNumber/Field=RawBits followed by LF, in CSV row order within Scenario/Iteration; no BOM/header.",
             "parity-readout-orbit-differences.csv compares observed stage outputs at iterations 63 and 64, not a production trajectory.",
-            "Actual production observer and validation mirror matched by DIRECT raw-bit comparison across all instrumented fields.",
+            "Explicit legacy shared-core observer and validation mirror matched by DIRECT raw-bit comparison across all instrumented fields.",
             "This does not prove unobserved internal state equivalence, physical validity, root cause or F1-F4 equivalence.",
-            "parity-production-fields.csv / parity-production-step-sha256.csv publish actual production observer evidence.",
+            "parity-production-fields.csv / parity-production-step-sha256.csv publish the explicitly selected legacy shared-core observer evidence.",
             "parity-observer-controls.csv records direct A03 rejection/A05 Accepted candidate parity and F1-F4 authority preservation.",
             "The observer entry point is internal and only friend-accessible to the validation diagnostic assembly.",
             "Do not convert BudgetExhausted to Accepted. BC-AUD-006 remains OPEN.",

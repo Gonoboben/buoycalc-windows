@@ -32,12 +32,14 @@ public sealed record MooringShapeForceResult(
 public static class MooringShapeForceAnalyzer
 {
     private const double RelativeTolerance = 0.25;
+    internal const double TangentProjectionLengthFloorM = 0.0001;
 
     public static MooringShapeForceResult Build(CalculationResult result, MooringShapeProjectionResult projection) =>
         BuildCore(result, projection, null);
 
-    // BC-AUD-006 research ONLY: original tangent used directly; same physical force formula.
-    internal static MooringShapeForceResult BuildWithDiagnosticTangents(
+    // Same physical force formula with the original tension-trace tangent.
+    // Production uses this only after exact-cycle proof and above the legacy length floor.
+    internal static MooringShapeForceResult BuildFromTensionTraceTangents(
         CalculationResult result,
         MooringShapeProjectionResult projection,
         MooringSurfaceBoundaryTensionTraceResult trace) =>
@@ -77,7 +79,7 @@ public static class MooringShapeForceAnalyzer
                 continue;
             }
 
-            var segmentLengthM = Math.Max(0.0001, projectionRow.SegmentLengthM);
+            var segmentLengthM = Math.Max(TangentProjectionLengthFloorM, projectionRow.SegmentLengthM);
             var tx = diagnosticTrace is null
                 ? projectionRow.DeltaXM / segmentLengthM
                 : diagnosticTrace.Rows[rows.Count].TangentX!.Value;

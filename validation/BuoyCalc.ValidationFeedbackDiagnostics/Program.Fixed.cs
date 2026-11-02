@@ -85,20 +85,25 @@ internal static class FixedProgram
         {
             var (environment, buoy, assembly, anchor) = BuildInputs(scenario);
             var run = ApplicationCalculationRunner.Run(environment, buoy, assembly, anchor, 3.0);
-            var candidate = run.Snapshot.SignedCandidate
+            var productionCandidate = run.Snapshot.SignedCandidate
                 ?? throw new InvalidOperationException($"{scenario.Id}: production signed candidate missing.");
+            if (productionCandidate.Status != MooringSignedCandidateStatus.Accepted)
+                throw new InvalidOperationException($"{scenario.Id}: production recovery did not reach actual Accepted.");
+            // Preserve the original two-cycle experiment as an explicit legacy-map control.
+            var candidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
+                environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions, false, false);
 
             if (candidate.Status != MooringSignedCandidateStatus.BudgetExhausted)
             {
                 throw new InvalidOperationException(
-                    $"{scenario.Id}: expected production BudgetExhausted, got {candidate.Status} ({candidate.DiagnosticCode}).");
+                    $"{scenario.Id}: expected legacy-map BudgetExhausted, got {candidate.Status} ({candidate.DiagnosticCode}).");
             }
 
-            var productionSnapshot = run.Snapshot;
-            if (productionSnapshot.SelectedDesignTensionDemand is not null ||
-                productionSnapshot.SelectedAnchorReaction is not null ||
-                productionSnapshot.SelectedLocalStructuralCapacity is not null ||
-                productionSnapshot.SelectedEngineeringAssessment is not null)
+            var legacySnapshot = CalculationSnapshotBuilder.BuildWithDiagnosticCandidate(environment, buoy, run.Result, candidate);
+            if (legacySnapshot.SelectedDesignTensionDemand is not null ||
+                legacySnapshot.SelectedAnchorReaction is not null ||
+                legacySnapshot.SelectedLocalStructuralCapacity is not null ||
+                legacySnapshot.SelectedEngineeringAssessment is not null)
                 throw new InvalidOperationException($"{scenario.Id}: non-Accepted candidate unexpectedly owns selected F1-F4.");
 
             var firstPass = new List<ExactCycleSample>();
@@ -106,8 +111,9 @@ internal static class FixedProgram
             var parityFirst = new List<ParityStepSample>();
             var parityReplay = new List<ParityStepSample>();
             var productionSteps = new List<ParityStepSample>();
-            var observedCandidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticObserver(
+            var observedCandidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                 environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
+                false, false,
                 observed => productionSteps.Add(ParityReadoutReport.FromProduction(scenario.Id, observed)));
             if (observedCandidate.Status != candidate.Status ||
                 observedCandidate.FeedbackIterations != candidate.FeedbackIterations ||
@@ -116,7 +122,7 @@ internal static class FixedProgram
                 observedCandidate.Boundary?.Q0N != candidate.Boundary?.Q0N ||
                 observedCandidate.Boundary?.SolutionState?.EndpointXM != candidate.Boundary?.SolutionState?.EndpointXM ||
                 observedCandidate.Boundary?.SolutionState?.EndpointZM != candidate.Boundary?.SolutionState?.EndpointZM)
-                throw new InvalidOperationException($"{scenario.Id}: diagnostic observer changed production candidate.");
+                throw new InvalidOperationException($"{scenario.Id}: diagnostic observer changed the explicit legacy shared-core candidate.");
             var rows = Diagnose(
                 scenario,
                 environment,
@@ -298,7 +304,7 @@ internal static class FixedProgram
         {
             var projection = Projection(state.Trace, state.Geometry);
             var shapeForces = mode is "H2" or "H1H2"
-                ? MooringShapeForceAnalyzer.BuildWithDiagnosticTangents(state.Result, projection, state.Trace)
+                ? MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(state.Result, projection, state.Trace)
                 : MooringShapeForceAnalyzer.Build(state.Result, projection);
             var nextResult = ApplyShapeForces(
                 baseResult,
