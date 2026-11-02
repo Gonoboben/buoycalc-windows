@@ -28,7 +28,8 @@ internal static class H2AuthorityProof
         var fixtures = AuthorityProofFixtures.Build();
         if (args.Contains("--residual-only", StringComparer.Ordinal))
             fixtures = fixtures.Where(f => f.Id is "A03" or "A05" or "A06" or "A11" or "A15" or
-                "grid-20-1.05-0.6" or "grid-20-1.2-0.6" or "grid-380-1.1-0.45");
+                "grid-20-1.05-0.6" or "grid-20-1.2-0.6" or "grid-380-1.1-0.45" or "coeff-0.5-14-1030" or
+                "neighborhood-20-1.19-0.65" or "neighborhood-20-1.2-0.65" or "neighborhood-380-1.19-0.65");
         foreach (var scenario in fixtures)
         {
             var environment = scenario.Environment;
@@ -39,7 +40,7 @@ internal static class H2AuthorityProof
             var legacySnapshot = CalculationSnapshotBuilder.BuildWithDiagnosticCandidate(environment, buoy, run.Result, legacyCandidate);
             MooringSignedCandidateResult? previousRecovery = null;
             string? previousRecoveryAuthority = null;
-            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R", "H2R3", "H2R4" })
+            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R", "H2R3", "H2R4", "H2RF" })
             {
                 var fixedPointRawFieldCount = 0;
                 var transitions = new List<string>();
@@ -57,12 +58,12 @@ internal static class H2AuthorityProof
                 }
                 var candidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery);
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4" or "H2RF", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4" or "H2RF", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery, recoverKnownBuoyCycles: mode is "H2RF");
                 var firstTransitions = transitions.ToArray();
                 transitions.Clear();
                 var replay = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery);
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4" or "H2RF", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4" or "H2RF", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery, recoverKnownBuoyCycles: mode is "H2RF");
                 if (!transitions.SequenceEqual(firstTransitions))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: arithmetic transition replay differs.");
                 if (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(replay))
@@ -81,10 +82,10 @@ internal static class H2AuthorityProof
                 var authority = ObserverControlAudit.Canonical(Authority(snapshot));
                 var originalAuthority = ObserverControlAudit.Canonical(Authority(legacySnapshot));
                 if (mode == "H2R") { previousRecovery = candidate; previousRecoveryAuthority = authority; }
-                if ((mode is "H2R3" or "H2R4") && previousRecovery?.Status == MooringSignedCandidateStatus.Accepted &&
+                if ((mode is "H2R3" or "H2R4" or "H2RF") && previousRecovery?.Status == MooringSignedCandidateStatus.Accepted &&
                     (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(previousRecovery) || authority != previousRecoveryAuthority))
                     throw new InvalidOperationException($"{scenario.Id}: second-stage arithmetic changed an original H2R Accepted result.");
-                if ((mode is "H2R3" or "H2R4") && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
+                if ((mode is "H2R3" or "H2R4" or "H2RF") && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
                     (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
                      authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
                     throw new InvalidOperationException($"{scenario.Id}: second-stage recovery changed an existing production Accepted result.");
@@ -130,7 +131,8 @@ internal static class H2AuthorityProof
                         : "NoLegacySelectedF1F4Reference"
                 };
                 if (scenario.Id is "A03" or "A05" or "A06" or "A11" or "A15" or
-                    "grid-20-1.05-0.6" or "grid-20-1.2-0.6" or "grid-380-1.1-0.45")
+                    "grid-20-1.05-0.6" or "grid-20-1.2-0.6" or "grid-380-1.1-0.45" or "coeff-0.5-14-1030" or
+                "neighborhood-20-1.19-0.65" or "neighborhood-20-1.2-0.65" or "neighborhood-380-1.19-0.65")
                 {
                     File.WriteAllText(Path.Combine(output, $"{scenario.Id}-{mode}.json"),
                         JsonSerializer.Serialize(evidence, new JsonSerializerOptions { WriteIndented = true }));

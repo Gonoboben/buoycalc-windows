@@ -52,8 +52,9 @@ public static class MooringSignedCandidateEvaluator
         Action<IReadOnlyList<long>, IReadOnlyList<long>>? fixedPointObserver = null,
         bool recoverSquaredNormalCycles = false,
         bool recoverGroupedNormalCycles = false,
-        Action<int, string>? recoveryObserver = null) =>
-        BuildCore(environment, buoy, baseResult, sequence, observer, directTangents, fixedBuoyDrag, recoverExactTwoCycles, fixedPointObserver, recoverSquaredNormalCycles, recoverGroupedNormalCycles, recoveryObserver);
+        Action<int, string>? recoveryObserver = null,
+        bool recoverKnownBuoyCycles = false) =>
+        BuildCore(environment, buoy, baseResult, sequence, observer, directTangents, fixedBuoyDrag, recoverExactTwoCycles, fixedPointObserver, recoverSquaredNormalCycles, recoverGroupedNormalCycles, recoveryObserver, recoverKnownBuoyCycles);
 
     private static MooringSignedCandidateResult BuildCore(
         EnvironmentInput? environment,
@@ -67,7 +68,8 @@ public static class MooringSignedCandidateEvaluator
         Action<IReadOnlyList<long>, IReadOnlyList<long>>? fixedPointObserver = null,
         bool recoverSquaredNormalCycles = false,
         bool recoverGroupedNormalCycles = false,
-        Action<int, string>? recoveryObserver = null)
+        Action<int, string>? recoveryObserver = null,
+        bool recoverKnownBuoyCycles = false)
     {
         if (environment is null || baseResult is null || sequence is null)
         {
@@ -130,9 +132,11 @@ public static class MooringSignedCandidateEvaluator
         var useDirectTangents = directTangents;
         var useSquaredNormal = false;
         var groupNormalProduct = false;
+        var useKnownBuoyDrag = fixedBuoyDrag;
         int? recoveryStartedAt = null;
         int? squaredRecoveryStartedAt = null;
         int? groupedRecoveryStartedAt = null;
+        int? knownBuoyRecoveryStartedAt = null;
         long[]? olderBits = null;
         var currentBits = canRecover
             ? CaptureCycleStateBits(currentResult, currentBoundary, currentTrace, currentGeometry, currentLineForceN)
@@ -173,7 +177,7 @@ public static class MooringSignedCandidateEvaluator
                     forceDiagnostic);
             }
 
-            var nextBoundary = fixedBuoyDrag
+            var nextBoundary = useKnownBuoyDrag
                 ? MooringSurfaceBoundaryInfoAnalyzer.BuildWithDiagnosticBuoyDrag(
                     environment, buoy, nextResult, sequence, buoySteadyDragN)
                 : MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, nextResult, sequence);
@@ -268,12 +272,14 @@ public static class MooringSignedCandidateEvaluator
                     $"Signed boundary/shape-force feedback reached an exact deterministic fixed point at iteration {iteration} within the fixed production budget {MooringSignedCandidateResult.ProductionFeedbackBudget}." +
                         (recoveryStartedAt.HasValue ? $" Direct-tangent arithmetic recovery began after a raw-bit period-2 cycle at iteration {recoveryStartedAt.Value}; no orbit member was accepted." : string.Empty) +
                         (squaredRecoveryStartedAt.HasValue ? $" Secondary squared-normal recovery began after a second exact cycle at iteration {squaredRecoveryStartedAt.Value}." : string.Empty) +
+                        (knownBuoyRecoveryStartedAt.HasValue ? $" Known-buoy recovery began after a third exact cycle at iteration {knownBuoyRecoveryStartedAt.Value}." : string.Empty) +
                         (groupedRecoveryStartedAt.HasValue ? $" Experimental grouped-normal-product recovery began after a third exact cycle at iteration {groupedRecoveryStartedAt.Value}." : string.Empty),
                     nextTrace);
             }
 
             if (canRecover && (!useDirectTangents || (recoverSquaredNormalCycles && !useSquaredNormal) ||
-                (recoverGroupedNormalCycles && !groupNormalProduct)))
+                (recoverGroupedNormalCycles && !groupNormalProduct) ||
+                (recoverKnownBuoyCycles && !useKnownBuoyDrag)))
             {
                 var nextBits = CaptureCycleStateBits(nextResult, nextBoundary, nextTrace, nextGeometry, updatedLineForceN);
                 if (IsExactTwoCycle(olderBits, currentBits!, nextBits))
@@ -292,6 +298,12 @@ public static class MooringSignedCandidateEvaluator
                         useSquaredNormal = true;
                         squaredRecoveryStartedAt = iteration;
                         recoveryObserver?.Invoke(iteration, "SquaredNormal");
+                    }
+                    else if (recoverKnownBuoyCycles && !useKnownBuoyDrag)
+                    {
+                        useKnownBuoyDrag = true;
+                        knownBuoyRecoveryStartedAt = iteration;
+                        recoveryObserver?.Invoke(iteration, "KnownBuoyDrag");
                     }
                     else
                     {
