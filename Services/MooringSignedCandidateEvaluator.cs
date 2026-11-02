@@ -21,7 +21,7 @@ public static class MooringSignedCandidateEvaluator
         BuoyInput? buoy,
         CalculationResult? baseResult,
         MooringSequencePositionResult? sequence) =>
-        BuildCore(environment, buoy, baseResult, sequence, null, recoverExactTwoCycles: true);
+        BuildCore(environment, buoy, baseResult, sequence, null, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true);
 
     /// <summary>
     /// Diagnostics only: observes raw bit fields from the same production feedback loop.
@@ -35,7 +35,7 @@ public static class MooringSignedCandidateEvaluator
         Action<MooringSignedFeedbackObservedStep> observer)
     {
         ArgumentNullException.ThrowIfNull(observer);
-        return BuildCore(environment, buoy, baseResult, sequence, observer, recoverExactTwoCycles: true);
+        return BuildCore(environment, buoy, baseResult, sequence, observer, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true);
     }
 
     // Validation only: run an isolated arithmetic intervention through every existing
@@ -267,8 +267,8 @@ public static class MooringSignedCandidateEvaluator
                     "SignedCandidateExactFixedPoint",
                     $"Signed boundary/shape-force feedback reached an exact deterministic fixed point at iteration {iteration} within the fixed production budget {MooringSignedCandidateResult.ProductionFeedbackBudget}." +
                         (recoveryStartedAt.HasValue ? $" Direct-tangent arithmetic recovery began after a raw-bit period-2 cycle at iteration {recoveryStartedAt.Value}; no orbit member was accepted." : string.Empty) +
-                        (squaredRecoveryStartedAt.HasValue ? $" Diagnostic squared-normal recovery began after a second exact cycle at iteration {squaredRecoveryStartedAt.Value}." : string.Empty) +
-                        (groupedRecoveryStartedAt.HasValue ? $" Diagnostic grouped-normal-product recovery began after a third exact cycle at iteration {groupedRecoveryStartedAt.Value}." : string.Empty),
+                        (squaredRecoveryStartedAt.HasValue ? $" Secondary squared-normal recovery began after a second exact cycle at iteration {squaredRecoveryStartedAt.Value}." : string.Empty) +
+                        (groupedRecoveryStartedAt.HasValue ? $" Experimental grouped-normal-product recovery began after a third exact cycle at iteration {groupedRecoveryStartedAt.Value}." : string.Empty),
                     nextTrace);
             }
 

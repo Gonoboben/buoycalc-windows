@@ -37,6 +37,8 @@ internal static class H2AuthorityProof
             var legacyCandidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                 environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions, false, false);
             var legacySnapshot = CalculationSnapshotBuilder.BuildWithDiagnosticCandidate(environment, buoy, run.Result, legacyCandidate);
+            MooringSignedCandidateResult? previousRecovery = null;
+            string? previousRecoveryAuthority = null;
             foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R", "H2R3", "H2R4" })
             {
                 var fixedPointRawFieldCount = 0;
@@ -78,14 +80,18 @@ internal static class H2AuthorityProof
                 var f4 = snapshot.SelectedEngineeringAssessment;
                 var authority = ObserverControlAudit.Canonical(Authority(snapshot));
                 var originalAuthority = ObserverControlAudit.Canonical(Authority(legacySnapshot));
+                if (mode == "H2R") { previousRecovery = candidate; previousRecoveryAuthority = authority; }
+                if ((mode is "H2R3" or "H2R4") && previousRecovery?.Status == MooringSignedCandidateStatus.Accepted &&
+                    (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(previousRecovery) || authority != previousRecoveryAuthority))
+                    throw new InvalidOperationException($"{scenario.Id}: second-stage arithmetic changed an original H2R Accepted result.");
                 if ((mode is "H2R3" or "H2R4") && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
                     (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
                      authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
                     throw new InvalidOperationException($"{scenario.Id}: second-stage recovery changed an existing production Accepted result.");
-                if (mode == "H2R" && (ObserverControlAudit.Canonical(candidate) !=
+                if (mode == "H2R3" && (ObserverControlAudit.Canonical(candidate) !=
                     ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
                     authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
-                    throw new InvalidOperationException($"{scenario.Id}: production differs from the proven H2R candidate/F1-F4.");
+                    throw new InvalidOperationException($"{scenario.Id}: production differs from the proven second-stage candidate/F1-F4.");
                 if (authority != ObserverControlAudit.Canonical(Authority(repeatedSnapshot)))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: actual F1-F4 replay differs.");
                 if (mode == "B0" && authority != originalAuthority)
@@ -138,6 +144,10 @@ internal static class H2AuthorityProof
                 }
                 summaries.Add(new { scenario.Id, Mode = mode, evidence.LegacyStatus, evidence.ProductionStatus, evidence.Status,
                     candidate.FeedbackIterations, candidate.DiagnosticCode, evidence.BaselineComparison,
+                    InputHash = run.Snapshot.Provenance!.InputHash,
+                    OriginalRecoveryStatus = previousRecovery?.Status.ToString(),
+                    OriginalRecoveryCandidateSHA256 = previousRecovery is null ? null : Digest(ObserverControlAudit.Canonical(previousRecovery)),
+                    OriginalRecoveryAuthoritySHA256 = previousRecoveryAuthority is null ? null : Digest(previousRecoveryAuthority),
                     CandidateSHA256 = Digest(ObserverControlAudit.Canonical(candidate)),
                     LegacyCandidateSHA256 = Digest(ObserverControlAudit.Canonical(legacyCandidate)),
                     ProductionCandidateSHA256 = Digest(ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate)),

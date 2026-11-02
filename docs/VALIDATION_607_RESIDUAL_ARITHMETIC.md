@@ -17,8 +17,9 @@ area, current components, weights, point loads, root search and all actual
 production acceptance / snapshot / F1-F4 checks remain shared and unchanged.
 Cycle history is cleared when changing arithmetic maps; cycles are never inferred
 across different maps. All transitions consume the SAME original 64 steps.
-Sub-0.0001 m segments still disable recovery. Public production defaults leave
-this second intervention **disabled** throughout the proof package.
+Sub-0.0001 m segments still disable recovery. Proof heads left this second
+intervention disabled; the reviewed activation enables it only after the second
+exact cycle. The grouped-product alternative stays diagnostic-only and disabled.
 
 ## Local observations
 
@@ -69,3 +70,36 @@ wave-proxy combinations and 2 deep vertical-current cases. These are declared
 numerical test inputs, not environmental/field claims. Final counts for this
 wider matrix must come from its actual emitted evidence, not the earlier 105-row
 fixture totals. All previously Accepted production outputs must stay exact.
+
+## Expanded proof and production disposition
+
+Proof head e9a044f16093cd166934a7a1f932b21b6c28938f passed exact-head .NET
+41447160107, Validation601 41447160127, Selected Shape 41447160228 and Report
+Store 41447160276, plus classic Windows Build. Downloaded artifact 13142134971
+SHA256 f8994c645b28c0a2cf0ba484643b778ac948a823f4647f2f4f7df3cdb0ff1e16
+was independently inspected: 1,218 mode rows, 292,796 equal previous/next raw
+fixed-point fields, all original-map digests/parity and unchanged current
+Accepted outputs. All Windows/Linux selected-authority rows agreed.
+
+174 labelled fixtures contain intentional overlapping inputs; do not treat them
+as 174 independent physical validations. H2R: 143 Accepted / 10 BudgetExhausted;
+H2R3: 147 Accepted / 6 BudgetExhausted. Both preserve 12 RejectedPhysical,
+6 RejectedNumerical and 3 Indeterminate. The four improved fixture entries are
+two repeated input sets. An independently compiled original c3c06df core was
+also run on all 174 fixtures: all 143 original Accepted candidate/F1-F4 trees
+matched exactly. The maximum same-state force-expression delta was
+1.1102230246251565e-16 N. This is rounding evidence, not a convergence epsilon.
+H2R4 added no successful result, so it is not activated in production.
+
+The final public path enables H2R3; diagnostic H2R remains an explicit original
+recovery reference. Actual production must equal H2R3 across the full matrix,
+and every old H2R Accepted candidate/F1-F4 must stay exact. Actual retained
+InputHash values are emitted to identify repeated fixture inputs.
+
+Validation601 keeps 20/21/0.6 as a new real Accepted control, adds 20/24/0.6 as
+the remaining budget control and retains all five physical rejections: 10 cases,
+3 Accepted, 1 BudgetExhausted, 1 Indeterminate. The PDF identity regression also
+retains the recovered Accepted fixture and separately tests the actual unresolved
+BudgetExhausted fixture, instead of dropping non-acceptance/provenance coverage.
+No physical test, equation, acceptance threshold, selection policy or frozen
+baseline is weakened. Final activation-head CI/artifact review is still required.
