@@ -4,6 +4,7 @@ using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Models;
 using BuoyCalc.Windows.Services;
 using BuoyCalc.Windows.ViewModels;
+using UglyToad.PdfPig;
 
 internal static class CalculationRunIdentityRegression
 {
@@ -41,6 +42,24 @@ internal static class CalculationRunIdentityRegression
                 "BC-AUD-005: PDF export time is not separate from retained calculation time.");
         }
         ValidateRepeatedPdfExport(typedA, provenanceA);
+        foreach (var (fixture, expected) in new[]
+        {
+            (CreateFixture(20), MooringSignedCandidateStatus.RejectedPhysical),
+            (CreateFixture(20) with { Environment = fixtureA.Environment with
+                { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0, NorthCurrentMS = 0, VerticalCurrentMS = 0 }).ToArray() } },
+                MooringSignedCandidateStatus.Indeterminate),
+            (CreateFixture(21) with { Environment = fixtureA.Environment with
+                { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0.6 }).ToArray() } },
+                MooringSignedCandidateStatus.BudgetExhausted)
+        })
+        {
+            var statusRun = Run(fixture);
+            var statusReport = UserEngineeringReportReadModelProjector.Project(
+                "PDF status provenance", fixture.Environment, fixture.Buoy, fixture.Anchor, statusRun.Snapshot);
+            if (statusRun.Snapshot.SignedCandidate?.Status != expected || statusReport.CandidateStatus != expected)
+                throw new InvalidOperationException($"PDF status provenance: expected retained {expected}.");
+            ValidateRepeatedPdfExport(statusReport, statusReport.Provenance);
+        }
 
         var fullTextA = TechnicalReportBuilder.Build(
             "BC-AUD-005 Run A",
@@ -130,6 +149,44 @@ internal static class CalculationRunIdentityRegression
             }
 
             Same(provenance, report.Provenance, "repeated PDF export");
+            foreach (var path in new[] { pathA, pathB })
+            {
+                using var pdf = PdfDocument.Open(path);
+                var text = string.Concat(pdf.GetPages().SelectMany(page => page.Letters).Select(letter => letter.Value));
+                var compact = new string(text.Where(c => !char.IsWhiteSpace(c)).ToArray());
+                void RequireValue(string value, string label)
+                {
+                    if (!compact.Contains(new string(value.Where(c => !char.IsWhiteSpace(c)).ToArray()), StringComparison.Ordinal))
+                        throw new InvalidOperationException($"PDF provenance omitted/truncated {label}.");
+                }
+                RequireValue(provenance.RunId, "RunId");
+                foreach (var (value, width, label) in new[]
+                {
+                    (provenance.InputHash, 32, "InputHash"),
+                    (provenance.ResultHash, 32, "ResultHash"),
+                    (provenance.SourceIdentity, 48, "SourceIdentity")
+                })
+                    for (var offset = 0; offset < value.Length; offset += width)
+                        RequireValue(value.Substring(offset, Math.Min(width, value.Length - offset)), label);
+                if (report.CandidateStatus is null)
+                    throw new InvalidOperationException("PDF status provenance missing from typed report.");
+                RequireValue("Signed candidate status" + report.CandidateStatus, "actual signed candidate status");
+                if (report.PhysicalDisposition is not null)
+                {
+                    RequireValue(report.PhysicalDisposition.DiagnosticCode, "physical diagnostic code");
+                    RequireValue(report.PhysicalDisposition.DiagnosticText, "physical diagnostic text");
+                }
+            }
+            var evidenceDir = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "bc-aud-005-pdf-provenance");
+            Directory.CreateDirectory(evidenceDir);
+            var prefix = "pdf-provenance-" + report.CandidateStatus;
+            File.Copy(pathA, Path.Combine(evidenceDir, prefix + ".pdf"), overwrite: true);
+            File.WriteAllText(Path.Combine(evidenceDir, prefix + "-expected.json"), JsonSerializer.Serialize(new
+            {
+                Provenance = provenance, report.CandidateStatus,
+                DiagnosticCode = report.PhysicalDisposition?.DiagnosticCode,
+                DiagnosticText = report.PhysicalDisposition?.DiagnosticText
+            }, new JsonSerializerOptions { WriteIndented = true }));
         }
         finally
         {
