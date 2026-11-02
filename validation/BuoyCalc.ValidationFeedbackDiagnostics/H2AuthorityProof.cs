@@ -30,6 +30,9 @@ internal static class H2AuthorityProof
             var environment = scenario.Environment;
             var buoy = scenario.Buoy;
             var run = ApplicationCalculationRunner.Run(environment, buoy, scenario.Assembly, scenario.Anchor, scenario.SafetyFactor);
+            var legacyCandidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
+                environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions, false, false);
+            var legacySnapshot = CalculationSnapshotBuilder.BuildWithDiagnosticCandidate(environment, buoy, run.Result, legacyCandidate);
             foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R" })
             {
                 var fixedPointRawFieldCount = 0;
@@ -53,7 +56,7 @@ internal static class H2AuthorityProof
                 if (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(replay))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: candidate replay differs.");
                 if (mode == "B0" && ObserverControlAudit.Canonical(candidate) !=
-                    ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate))
+                    ObserverControlAudit.Canonical(legacyCandidate))
                     throw new InvalidOperationException($"{scenario.Id}: adapter changed baseline.");
 
                 // Actual snapshot orchestration: same fallback, arbitration, selection and F1-F4.
@@ -64,16 +67,20 @@ internal static class H2AuthorityProof
                 var f3 = snapshot.SelectedLocalStructuralCapacity;
                 var f4 = snapshot.SelectedEngineeringAssessment;
                 var authority = ObserverControlAudit.Canonical(Authority(snapshot));
-                var originalAuthority = ObserverControlAudit.Canonical(Authority(run.Snapshot));
+                var originalAuthority = ObserverControlAudit.Canonical(Authority(legacySnapshot));
+                if (mode == "H2R" && (ObserverControlAudit.Canonical(candidate) !=
+                    ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
+                    authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
+                    throw new InvalidOperationException($"{scenario.Id}: production differs from the proven H2R candidate/F1-F4.");
                 if (authority != ObserverControlAudit.Canonical(Authority(repeatedSnapshot)))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: actual F1-F4 replay differs.");
                 if (mode == "B0" && authority != originalAuthority)
                     throw new InvalidOperationException($"{scenario.Id}: actual B0 F1-F4 differ.");
-                if (mode == "H2R" && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
+                if (mode == "H2R" && legacyCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
                     (authority != originalAuthority || ObserverControlAudit.Canonical(candidate) !=
-                     ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate)))
+                     ObserverControlAudit.Canonical(legacyCandidate)))
                     throw new InvalidOperationException($"{scenario.Id}: recovery changed a previously Accepted candidate/F1-F4.");
-                if (run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.RejectedPhysical &&
+                if (legacyCandidate!.Status == MooringSignedCandidateStatus.RejectedPhysical &&
                     (candidate.Status != MooringSignedCandidateStatus.RejectedPhysical || snapshot.SelectedShape is not null))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: physical rejection changed.");
                 if (candidate.Status == MooringSignedCandidateStatus.Accepted &&
@@ -92,14 +99,15 @@ internal static class H2AuthorityProof
                     : null;
                 var evidence = new
                 {
-                    scenario.Id, Mode = mode, ProductionStatus = run.Snapshot.SignedCandidate!.Status.ToString(),
+                    scenario.Id, Mode = mode, LegacyStatus = legacyCandidate.Status.ToString(),
+                    ProductionStatus = run.Snapshot.SignedCandidate!.Status.ToString(),
                     Status = candidate.Status.ToString(), candidate.FeedbackIterations,
                     candidate.DiagnosticCode, candidate.DiagnosticText, ReplayBitIdentical = true,
                     Candidate = candidate, Selected = snapshot.ShadowSelectedCore, F1 = f1, F2 = f2, F3 = f3, F4 = f4,
-                    BaselineComparison = run.Snapshot.SignedCandidate.Status == MooringSignedCandidateStatus.Accepted
+                    BaselineComparison = legacyCandidate.Status == MooringSignedCandidateStatus.Accepted
                         ? authority == originalAuthority
                             ? "BitIdenticalF1F4" : "DifferentF1F4"
-                        : "NoProductionSelectedF1F4Reference"
+                        : "NoLegacySelectedF1F4Reference"
                 };
                 if (scenario.Id is "A03" or "A05" or "A06" or "A11" or "A15")
                 {
@@ -113,14 +121,16 @@ internal static class H2AuthorityProof
                             writer.WriteLine($"{i},{fixedBefore[i].ToString("X16", CultureInfo.InvariantCulture)},{fixedAfter![i].ToString("X16", CultureInfo.InvariantCulture)}");
                     }
                 }
-                summaries.Add(new { scenario.Id, Mode = mode, evidence.ProductionStatus, evidence.Status,
+                summaries.Add(new { scenario.Id, Mode = mode, evidence.LegacyStatus, evidence.ProductionStatus, evidence.Status,
                     candidate.FeedbackIterations, candidate.DiagnosticCode, evidence.BaselineComparison,
                     CandidateSHA256 = Digest(ObserverControlAudit.Canonical(candidate)),
+                    LegacyCandidateSHA256 = Digest(ObserverControlAudit.Canonical(legacyCandidate)),
                     ProductionCandidateSHA256 = Digest(ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate)),
-                    AuthoritySHA256 = Digest(authority), ProductionAuthoritySHA256 = Digest(originalAuthority),
+                    AuthoritySHA256 = Digest(authority), LegacyAuthoritySHA256 = Digest(originalAuthority),
+                    ProductionAuthoritySHA256 = Digest(ObserverControlAudit.Canonical(Authority(run.Snapshot))),
                     X = candidate.Shape?.AnchorPoint?.XOffsetM, Z = candidate.Shape?.AnchorPoint?.ZDepthM,
-                    F1N = f1?.DemandN, DeltaF1N = Delta(f1?.DemandN, run.Snapshot.SelectedDesignTensionDemand?.DemandN),
-                    DeltaX = Delta(candidate.Shape?.AnchorPoint?.XOffsetM, run.Snapshot.SignedCandidate.Shape?.AnchorPoint?.XOffsetM),
+                    F1N = f1?.DemandN, DeltaF1N = Delta(f1?.DemandN, legacySnapshot.SelectedDesignTensionDemand?.DemandN),
+                    DeltaX = Delta(candidate.Shape?.AnchorPoint?.XOffsetM, legacyCandidate.Shape?.AnchorPoint?.XOffsetM),
                     F2HorizontalN = f2?.HorizontalDemandN, F2NormalN = f2?.SignedNormalReactionN,
                     F4Verdict = f4?.Verdict, FixedPointRawFieldCount = fixedPointRawFieldCount, Metrics = metrics });
                 File.WriteAllText(Path.Combine(output, "summary.json"),

@@ -157,6 +157,15 @@ jobs:
               throw "BC-AUD-006 exact-cycle validation failed with exit code $LASTEXITCODE"
             }
 
+            dotnet run --project validation/BuoyCalc.ValidationCampaign/BuoyCalc.ValidationCampaign.csproj --configuration Release -- --output artifacts/bc-aud-006-production-series-a
+            if ($LASTEXITCODE -ne 0) {
+              throw "Production Series A could not execute/write evidence (exit $LASTEXITCODE)"
+            }
+            python tools/verify-bc-aud-006-production-series-a.py artifacts/bc-aud-006-production-series-a
+            if ($LASTEXITCODE -ne 0) {
+              throw "Production Series A selected-authority review failed (exit $LASTEXITCODE)"
+            }
+
             Set-BuoyCalcStatus "success" "Build succeeded"
           }
           catch {
@@ -193,4 +202,12 @@ jobs:
         with:
           name: bc-aud-006-parity-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/bc-aud-006-parity
+          if-no-files-found: error
+
+      - name: Upload BC-AUD-006 production Series A evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bc-aud-006-production-series-a-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/bc-aud-006-production-series-a
           if-no-files-found: error

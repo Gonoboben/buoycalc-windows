@@ -21,7 +21,7 @@ public static class MooringSignedCandidateEvaluator
         BuoyInput? buoy,
         CalculationResult? baseResult,
         MooringSequencePositionResult? sequence) =>
-        BuildCore(environment, buoy, baseResult, sequence, null);
+        BuildCore(environment, buoy, baseResult, sequence, null, recoverExactTwoCycles: true);
 
     /// <summary>
     /// Diagnostics only: observes raw bit fields from the same production feedback loop.
@@ -35,7 +35,7 @@ public static class MooringSignedCandidateEvaluator
         Action<MooringSignedFeedbackObservedStep> observer)
     {
         ArgumentNullException.ThrowIfNull(observer);
-        return BuildCore(environment, buoy, baseResult, sequence, observer);
+        return BuildCore(environment, buoy, baseResult, sequence, observer, recoverExactTwoCycles: true);
     }
 
     // Validation only: run an isolated arithmetic intervention through every existing
@@ -120,7 +120,7 @@ public static class MooringSignedCandidateEvaluator
         // Below the existing projection denominator floor, a direct unit tangent
         // is not the same mathematical force law. Keep the original path there.
         var canRecover = recoverExactTwoCycles && !directTangents && !fixedBuoyDrag &&
-            currentResult.SegmentRows.All(s => s.SegmentLengthM >= 0.0001);
+            currentResult.SegmentRows.All(s => s.SegmentLengthM >= MooringShapeForceAnalyzer.TangentProjectionLengthFloorM);
         var useDirectTangents = directTangents;
         int? recoveryStartedAt = null;
         long[]? olderBits = null;
@@ -142,7 +142,7 @@ public static class MooringSignedCandidateEvaluator
             }
 
             var shapeForces = useDirectTangents
-                ? MooringShapeForceAnalyzer.BuildWithDiagnosticTangents(currentResult, projection, currentTrace)
+                ? MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(currentResult, projection, currentTrace)
                 : MooringShapeForceAnalyzer.Build(currentResult, projection);
             if (!TryApplyShapeForces(
                     baseResult,

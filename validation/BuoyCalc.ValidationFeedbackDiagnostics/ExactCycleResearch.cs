@@ -147,10 +147,10 @@ internal sealed class ExactCycleResearchReport
             $"BitDifferentFields={different.Count}",
             "RepeatRunBitIdentical=True",
             "PeriodStableThrough64=True",
-            "ProductionDisposition=BudgetExhausted",
+            "LegacyMapDisposition=BudgetExhausted",
             "CanonicalRepresentative=NOT_AUTHORIZED",
             "F1F2F3F4Equivalence=NOT_PROVEN",
-            "SolverModified=False");
+            "ExperimentChangesProduction=False");
         _summaries.Add(summary);
         Console.WriteLine(summary);
     }
@@ -224,8 +224,8 @@ internal sealed class ExactCycleResearchReport
         var report = new StringBuilder();
         report.AppendLine("# BC-AUD-006 exact-bit cycle validation (research only)");
         report.AppendLine();
-        report.AppendLine("Observed using the existing validation mirror of production public feedback stages.");
-        report.AppendLine("A separate production run confirms BudgetExhausted; this mirror is not an independent physical solver.");
+        report.AppendLine("Observed using the explicit legacy-map validation mirror and observed shared-core stages.");
+        report.AppendLine("The explicit legacy shared-core run confirms BudgetExhausted; current production uses validated exact-cycle recovery. This mirror is not an independent physical solver.");
         report.AppendLine("Cycle identity is evaluated by direct ordered field-by-field bit comparison, not hash equality or epsilon.");
         report.AppendLine("All states (0..64) were compared against a second fresh deterministic replay.");
         report.AppendLine("Full named bit states: exact-cycle-full-states.csv. Per-state SHA-256: exact-cycle-state-sha256.csv.");

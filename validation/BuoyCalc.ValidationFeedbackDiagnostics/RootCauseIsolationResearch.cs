@@ -241,7 +241,7 @@ internal sealed class RootCauseIsolationResearch
             "No convergence epsilon or canonical representative.",
             "ExactFixedPointObserved is NOT production Accepted, F1-F4 equivalence or physical validation.",
             "First differences are earliest observed deviations, not proven causes.",
-            "Issue #602 remains OPEN. Release is NOT READY FOR v1.0.",
+            "This legacy-map isolation experiment alone does not resolve Issue #602; see the separately validated production recovery. Release readiness is a separate gate.",
             ""
         });
         File.WriteAllText(Path.Combine(_working, "method.md"), method, new UTF8Encoding(false));
@@ -249,6 +249,6 @@ internal sealed class RootCauseIsolationResearch
         if (File.Exists(outZip)) File.Delete(outZip);
         ZipFile.CreateFromDirectory(_working, outZip, CompressionLevel.Optimal, false);
         Directory.Delete(_working, true);
-        Console.WriteLine($"BC_AUD_006_ISOLATION_COMPLETE|Cases={_experiments}|ZIP={outZip}|ProductionAccepted=NOT_AUTHORIZED");
+        Console.WriteLine($"BC_AUD_006_ISOLATION_COMPLETE|Cases={_experiments}|ZIP={outZip}|BlanketH2ProductionPromotion=NOT_AUTHORIZED");
     }
 }
