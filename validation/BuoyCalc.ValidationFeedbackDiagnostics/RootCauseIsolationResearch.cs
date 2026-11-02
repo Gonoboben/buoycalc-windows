@@ -136,7 +136,8 @@ internal sealed class RootCauseIsolationResearch
                 scenario, environment, buoy, baseResult, sequence,
                 (iteration, state) => samples.Add(
                     ExactCycleResearchReport.Capture(scenario.Id, iteration, state)),
-                step => stages.Add(ParityReadoutReport.Capture(step)), mode);
+                step => stages.Add(ParityReadoutReport.Capture(
+                    step, allowDiagnosticBuoyOverride: mode is "H1" or "H1H2" or "H1N1" or "H1N2")), mode);
         }
         catch (IsolationExperimentStop ex) { stop = ex; }
         if (samples.Count == 0 || samples[0].Iteration != 0 ||
