@@ -45,7 +45,22 @@ public static class CalculationSnapshotBuilder
     public static CalculationSnapshot Build(
         EnvironmentInput environment,
         BuoyInput? buoy,
-        CalculationResult result)
+        CalculationResult result) => BuildCore(environment, buoy, result, null);
+
+    // Validation-only handoff into the SAME arbitration and F1-F4 chain.
+    // Candidate construction and all production acceptance checks remain in the evaluator.
+    internal static CalculationSnapshot BuildWithDiagnosticCandidate(
+        EnvironmentInput environment,
+        BuoyInput? buoy,
+        CalculationResult result,
+        MooringSignedCandidateResult candidate) =>
+        BuildCore(environment, buoy, result, candidate);
+
+    private static CalculationSnapshot BuildCore(
+        EnvironmentInput environment,
+        BuoyInput? buoy,
+        CalculationResult result,
+        MooringSignedCandidateResult? diagnosticCandidate)
     {
         var data = TechnicalReportDataBuilder.Build(environment, buoy, result);
 
@@ -69,7 +84,7 @@ public static class CalculationSnapshotBuilder
                 "Typed shadow mirror of the existing production primary-shape selection; user-facing authority is unchanged.");
         }
 
-        var signedCandidate = MooringSignedCandidateEvaluator.Build(
+        var signedCandidate = diagnosticCandidate ?? MooringSignedCandidateEvaluator.Build(
             environment,
             buoy,
             result,

@@ -32,3 +32,44 @@ dotnet run --project validation/BuoyCalc.ValidationFeedbackDiagnostics --configu
 The standard .NET Build also executes this package and emits its JSON in the
 existing parity artifact. This is a computational validation, not field evidence.
 Production change, acceptance-contract change and release are outside this PR.
+
+## Initial exact-head observations
+
+Head ec19c532fa29423ed88b49e54914c3bb19c7789d: .NET Build 41436065565,
+Validation 601 41436065597, Selected Shape Scan 41436065815 and Report Store Scan
+41436065665 succeeded. The .NET job checked out merge tree
+164d83656a557083594dd55ef3a6bb4b952c69fe; tree identity must be verified separately.
+Artifact 13134994832 SHA256
+7eee5c0295cad8765c0ad2e5045b76714d042e662ac8b47b95000667ce4f4881 was downloaded.
+H2 A06/A11/A15 passed actual Accepted + selected F1-F4 at 13/14/13 iterations.
+A03 stayed RejectedPhysical; all A05 modes preserved bit-identical F1-F4.
+All 20 Windows/Linux selected F1-F4 property trees matched. Some Atan2 display
+angles differ at libm rounding scale; cross-platform full-candidate bit identity
+is not claimed.
+
+Independent PR #634 artifact verification recalculated 650 research hashes over
+4,504,500 fields, 192 production and 192 mirror hashes and directly compared
+14,976 production/mirror fields. Reproduce with
+`python tools/verify-bc-aud-006-artifact.py <downloaded-parity-artifact.zip>`.
+
+## Broader experiment: blanket H2 is not an admissible production migration
+
+The first local expanded run used 105 fixtures (20 real Series A definitions,
+5 actual historical definitions, 72 explicit depth/ratio/current combinations,
+3 signed weights, 3 small line elements and 2 vertical-current variants), each
+with four twice-replayed modes. B0 had 67 Accepted, 17 BudgetExhausted,
+12 RejectedPhysical, 6 RejectedNumerical, 3 Indeterminate.
+Blanket H2 had 72 Accepted but **lost 9 previously Accepted cases** and changed
+selected F1-F4 property trees in 52 old Accepted cases. These failures/differences
+must remain visible; no frozen baseline is changed.
+
+A separate scope issue exists below the historical 0.0001 m tangent-denominator
+floor: a direct unit tangent is no longer merely an arithmetic reformulation of
+Delta/Max(0.0001,ds). Any recovery candidate must preserve this floor behavior or
+explicitly exclude those elements. No physical-model change is authorized here.
+
+Next hypothesis: enable H2 only after a directly compared raw-bit period-2 cycle
+has proved that the original deterministic map cannot reach its fixed point.
+Continue within the original total 64-step budget and still require the actual
+production fixed-point and Accepted-shape gates. Do not accept an orbit member.
+This is a new validation hypothesis, not an approved production fix.
