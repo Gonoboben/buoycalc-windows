@@ -19,7 +19,7 @@ internal static class AuthorityProofInspection
             Bits(trace.EndVN!.Value) == Bits(boundary.SolutionState.EndVN), "Trace/boundary raw force bits differ.");
         var projection = MooringShapeProjection.Build(shape);
         var direct = MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, projection, trace,
-            (mode is "H2R3" or "H2R4" or "H2RF") && candidate.DiagnosticText.Contains("squared-normal recovery", StringComparison.Ordinal),
+            (mode is "H2R3" or "H2R4" or "H2RF" or "H2RF3") && candidate.DiagnosticText.Contains("squared-normal recovery", StringComparison.Ordinal),
             mode == "H2R4" && candidate.DiagnosticText.Contains("grouped-normal-product recovery", StringComparison.Ordinal));
         var originalArithmetic = MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, projection, trace);
         var segments = result.SegmentRows.OrderBy(s => s.Number).ToArray();
@@ -46,7 +46,7 @@ internal static class AuthorityProofInspection
             maxJump = Math.Max(maxJump, Math.Max(Math.Abs((row.StartHN - previousH) - jumpH), Math.Abs((row.StartVN - previousV) - jumpV)));
             maxH = Math.Max(maxH, Math.Abs((row.EndHN - row.StartHN) - direct.Rows[i].ShapeForceN));
             maxV = Math.Max(maxV, Math.Abs((row.EndVN - row.StartVN) + segment.WeightWaterKg * MooringSurfaceBoundaryIntegrationKernel.GravityMS2));
-            if ((mode is "H2" or "H1H2") || ((mode is "H2R" or "H2R3" or "H2R4" or "H2RF") && candidate.DiagnosticText.Contains("recovery began", StringComparison.Ordinal)))
+            if ((mode is "H2" or "H1H2") || ((mode is "H2R" or "H2R3" or "H2R4" or "H2RF" or "H2RF3") && candidate.DiagnosticText.Contains("recovery began", StringComparison.Ordinal)))
                 Require(Bits(row.EndHN) == Bits(row.StartHN + direct.Rows[i].ShapeForceN), "H2 fixed-point segment H identity differs.");
             Require(Bits(row.EndVN) == Bits(row.StartVN - segment.WeightWaterKg * MooringSurfaceBoundaryIntegrationKernel.GravityMS2), "Signed submerged-weight update differs.");
             previousH = row.EndHN; previousV = row.EndVN;

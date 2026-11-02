@@ -13,6 +13,8 @@ internal static class H2AuthorityProof
         var outputIndex = Array.IndexOf(args, "--output");
         var output = outputIndex >= 0 ? args[outputIndex + 1] : "artifacts/h2-authority-proof";
         Directory.CreateDirectory(output);
+        if (args.Contains("--cycle-survey", StringComparer.Ordinal))
+            return RawCycleSurvey.Run(output);
         // Numerical detector controls only, not physical test evidence.
         long B(double value) => BitConverter.DoubleToInt64Bits(value);
         bool Cycle(long[]? a, long[] b, long[] c) => MooringSignedCandidateEvaluator.IsExactTwoCycle(a, b, c);
@@ -24,6 +26,16 @@ internal static class H2AuthorityProof
             !Cycle(new[] { B(1) }, new[] { B(2) }, new[] { B(1) }) ||
             !Cycle(new[] { B(0.0) }, new[] { B(-0.0) }, new[] { B(0.0) }))
             throw new InvalidOperationException("Exact two-cycle detector failed missing/drifting/fixed/one-ULP/schema/signed-zero controls.");
+        bool Cycle3(long[]? a, long[]? b, long[] c, long[] d) => MooringSignedCandidateEvaluator.IsExactThreeCycle(a, b, c, d);
+        if (Cycle(new[] { B(1) }, new[] { B(2), B(3) }, new[] { B(1) }) ||
+            !Cycle3(new[] { B(1) }, new[] { B(2) }, new[] { B(3) }, new[] { B(1) }) ||
+            Cycle3(null, new[] { B(2) }, new[] { B(3) }, new[] { B(1) }) ||
+            Cycle3(new[] { B(1) }, null, new[] { B(3) }, new[] { B(1) }) ||
+            Cycle3(new[] { B(1) }, new[] { B(2) }, new[] { B(3) }, new[] { B(Math.BitIncrement(1)) }) ||
+            Cycle3(new[] { B(1) }, new[] { B(2) }, new[] { B(1) }, new[] { B(1) }) ||
+            Cycle3(new[] { B(1) }, new[] { B(2), B(3) }, new[] { B(3) }, new[] { B(1) }) ||
+            !Cycle3(new[] { B(0.0) }, new[] { B(-0.0) }, new[] { B(1) }, new[] { B(0.0) }))
+            throw new InvalidOperationException("Exact three-cycle detector failed raw/schema/drift/fixed/period-2/signed-zero controls.");
         var summaries = new List<object>();
         var fixtures = AuthorityProofFixtures.Build();
         if (args.Contains("--residual-only", StringComparer.Ordinal))
@@ -40,7 +52,7 @@ internal static class H2AuthorityProof
             var legacySnapshot = CalculationSnapshotBuilder.BuildWithDiagnosticCandidate(environment, buoy, run.Result, legacyCandidate);
             MooringSignedCandidateResult? previousRecovery = null;
             string? previousRecoveryAuthority = null;
-            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R", "H2R3", "H2R4", "H2RF" })
+            foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R", "H2R3", "H2R4", "H2RF", "H2RF3" })
             {
                 var fixedPointRawFieldCount = 0;
                 var transitions = new List<string>();
@@ -58,12 +70,12 @@ internal static class H2AuthorityProof
                 }
                 var candidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4" or "H2RF", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4" or "H2RF", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery, recoverKnownBuoyCycles: mode is "H2RF");
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4" or "H2RF" or "H2RF3", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4" or "H2RF" or "H2RF3", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery, recoverKnownBuoyCycles: mode is "H2RF" or "H2RF3", recoverExactThreeCycles: mode is "H2RF3");
                 var firstTransitions = transitions.ToArray();
                 transitions.Clear();
                 var replay = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
                     environment, buoy, run.Result, run.Snapshot.TechnicalReportData.SequencePositions,
-                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4" or "H2RF", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4" or "H2RF", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery, recoverKnownBuoyCycles: mode is "H2RF");
+                    mode is "H2" or "H1H2", mode is "H1" or "H1H2", recoverExactTwoCycles: mode is "H2R" or "H2R3" or "H2R4" or "H2RF" or "H2RF3", fixedPointObserver: VerifyFixedPoint, recoverSquaredNormalCycles: mode is "H2R3" or "H2R4" or "H2RF" or "H2RF3", recoverGroupedNormalCycles: mode == "H2R4", recoveryObserver: ObserveRecovery, recoverKnownBuoyCycles: mode is "H2RF" or "H2RF3", recoverExactThreeCycles: mode is "H2RF3");
                 if (!transitions.SequenceEqual(firstTransitions))
                     throw new InvalidOperationException($"{scenario.Id}/{mode}: arithmetic transition replay differs.");
                 if (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(replay))
@@ -82,10 +94,10 @@ internal static class H2AuthorityProof
                 var authority = ObserverControlAudit.Canonical(Authority(snapshot));
                 var originalAuthority = ObserverControlAudit.Canonical(Authority(legacySnapshot));
                 if (mode == "H2R") { previousRecovery = candidate; previousRecoveryAuthority = authority; }
-                if ((mode is "H2R3" or "H2R4" or "H2RF") && previousRecovery?.Status == MooringSignedCandidateStatus.Accepted &&
+                if ((mode is "H2R3" or "H2R4" or "H2RF" or "H2RF3") && previousRecovery?.Status == MooringSignedCandidateStatus.Accepted &&
                     (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(previousRecovery) || authority != previousRecoveryAuthority))
                     throw new InvalidOperationException($"{scenario.Id}: second-stage arithmetic changed an original H2R Accepted result.");
-                if ((mode is "H2R3" or "H2R4" or "H2RF") && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
+                if ((mode is "H2R3" or "H2R4" or "H2RF" or "H2RF3") && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
                     (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
                      authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
                     throw new InvalidOperationException($"{scenario.Id}: second-stage recovery changed an existing production Accepted result.");
