@@ -263,8 +263,7 @@ public static class MooringSignedCandidateEvaluator
             if (canRecover && !useDirectTangents)
             {
                 var nextBits = CaptureCycleStateBits(nextResult, nextBoundary, nextTrace, nextGeometry, updatedLineForceN);
-                if (olderBits is not null && nextBits.AsSpan().SequenceEqual(olderBits) &&
-                    !nextBits.AsSpan().SequenceEqual(currentBits))
+                if (IsExactTwoCycle(olderBits, currentBits!, nextBits))
                 {
                     // Change only the subsequent arithmetic map, never accept this
                     // repeated state. The unchanged fixed-point gate above is still
@@ -340,6 +339,9 @@ public static class MooringSignedCandidateEvaluator
         foreach (var node in geometry.Nodes) { D(node.XM); D(node.ZM); }
         return bits.ToArray();
     }
+
+    internal static bool IsExactTwoCycle(long[]? older, long[] current, long[] next) =>
+        older is not null && next.AsSpan().SequenceEqual(older) && !next.AsSpan().SequenceEqual(current);
 
     private static MooringSignedCandidateResult FromBoundary(
         MooringSurfaceBoundaryInfoResult boundary,

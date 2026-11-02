@@ -1,4 +1,7 @@
 using System.Text.Json;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using BuoyCalc.Windows.ApplicationModel;
 using BuoyCalc.Windows.Services;
 
@@ -10,6 +13,17 @@ internal static class H2AuthorityProof
         var outputIndex = Array.IndexOf(args, "--output");
         var output = outputIndex >= 0 ? args[outputIndex + 1] : "artifacts/h2-authority-proof";
         Directory.CreateDirectory(output);
+        // Numerical detector controls only, not physical test evidence.
+        long B(double value) => BitConverter.DoubleToInt64Bits(value);
+        bool Cycle(long[]? a, long[] b, long[] c) => MooringSignedCandidateEvaluator.IsExactTwoCycle(a, b, c);
+        if (Cycle(null, new[] { B(1) }, new[] { B(1) }) ||
+            Cycle(new[] { B(1) }, new[] { B(1) }, new[] { B(1) }) ||
+            Cycle(new[] { B(1) }, new[] { B(2) }, new[] { B(3) }) ||
+            Cycle(new[] { B(1) }, new[] { B(2) }, new[] { B(Math.BitIncrement(1)) }) ||
+            Cycle(new[] { B(1), B(2) }, new[] { B(3) }, new[] { B(1) }) ||
+            !Cycle(new[] { B(1) }, new[] { B(2) }, new[] { B(1) }) ||
+            !Cycle(new[] { B(0.0) }, new[] { B(-0.0) }, new[] { B(0.0) }))
+            throw new InvalidOperationException("Exact two-cycle detector failed missing/drifting/fixed/one-ULP/schema/signed-zero controls.");
         var summaries = new List<object>();
         foreach (var scenario in AuthorityProofFixtures.Build())
         {
@@ -19,10 +33,15 @@ internal static class H2AuthorityProof
             foreach (var mode in new[] { "B0", "H1", "H2", "H1H2", "H2R" })
             {
                 var fixedPointRawFieldCount = 0;
+                long[]? fixedBefore = null;
+                long[]? fixedAfter = null;
                 void VerifyFixedPoint(IReadOnlyList<long> before, IReadOnlyList<long> after)
                 {
                     if (!before.SequenceEqual(after))
                         throw new InvalidOperationException($"{scenario.Id}/{mode}: Accepted fixed-point raw states differ.");
+                    if (fixedBefore is not null && (!before.SequenceEqual(fixedBefore) || !after.SequenceEqual(fixedAfter!)))
+                        throw new InvalidOperationException($"{scenario.Id}/{mode}: fixed-point raw-state replay differs.");
+                    fixedBefore = before.ToArray(); fixedAfter = after.ToArray();
                     fixedPointRawFieldCount = before.Count;
                 }
                 var candidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(
@@ -83,10 +102,22 @@ internal static class H2AuthorityProof
                         : "NoProductionSelectedF1F4Reference"
                 };
                 if (scenario.Id is "A03" or "A05" or "A06" or "A11" or "A15")
+                {
                     File.WriteAllText(Path.Combine(output, $"{scenario.Id}-{mode}.json"),
                         JsonSerializer.Serialize(evidence, new JsonSerializerOptions { WriteIndented = true }));
+                    if (fixedBefore is not null)
+                    {
+                        using var writer = new StreamWriter(Path.Combine(output, $"{scenario.Id}-{mode}-fixed-point.csv"), false, new UTF8Encoding(false));
+                        writer.WriteLine("FieldIndex,PreviousRawBits,NextRawBits");
+                        for (var i = 0; i < fixedBefore.Length; i++)
+                            writer.WriteLine($"{i},{fixedBefore[i].ToString("X16", CultureInfo.InvariantCulture)},{fixedAfter![i].ToString("X16", CultureInfo.InvariantCulture)}");
+                    }
+                }
                 summaries.Add(new { scenario.Id, Mode = mode, evidence.ProductionStatus, evidence.Status,
                     candidate.FeedbackIterations, candidate.DiagnosticCode, evidence.BaselineComparison,
+                    CandidateSHA256 = Digest(ObserverControlAudit.Canonical(candidate)),
+                    ProductionCandidateSHA256 = Digest(ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate)),
+                    AuthoritySHA256 = Digest(authority), ProductionAuthoritySHA256 = Digest(originalAuthority),
                     X = candidate.Shape?.AnchorPoint?.XOffsetM, Z = candidate.Shape?.AnchorPoint?.ZDepthM,
                     F1N = f1?.DemandN, DeltaF1N = Delta(f1?.DemandN, run.Snapshot.SelectedDesignTensionDemand?.DemandN),
                     DeltaX = Delta(candidate.Shape?.AnchorPoint?.XOffsetM, run.Snapshot.SignedCandidate.Shape?.AnchorPoint?.XOffsetM),
@@ -102,6 +133,7 @@ internal static class H2AuthorityProof
         return 0;
     }
 
+    private static string Digest(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
     private static double? Delta(double? actual, double? original) => actual.HasValue && original.HasValue ? actual.Value - original.Value : null;
     private static object?[] Authority(CalculationSnapshot s) => new object?[]
     { s.SelectedDesignTensionDemand, s.SelectedAnchorReaction, s.SelectedLocalStructuralCapacity, s.SelectedEngineeringAssessment };

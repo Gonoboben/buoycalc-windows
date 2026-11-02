@@ -103,3 +103,18 @@ handoff. This was not a numerical test failure. The guards now explicitly requir
 the public path to pass null, keep the original evaluator as default, preserve
 construction order, and reject every production caller of the internal handoff.
 No physical check, baseline or regression expectation was removed.
+
+For A03/A05/A06/A11/A15, emitted `*-fixed-point.csv` files contain both actual
+consecutive raw numeric state vectors in the exact order of
+`CaptureCycleStateBits`. Independent inspection must compare every row directly.
+The 105-fixture summary retains candidate/authority SHA256 and their actual
+production-reference SHA256, plus measured geometry and force residuals.
+Synthetic detector controls cover absent history, fixed/drifting states,
+one-ULP differences, schema lengths and distinct signed zero; these are numerical
+unit controls and are not physical experiments.
+
+The four required PR workflows explicitly check out `pull_request.head.sha`
+(push/dispatch retain `github.sha`). The classic Windows Build status and
+calculation artifacts also use that tested SHA. This removes the earlier
+synthetic-merge-ref ambiguity; a prior green merge-tree run cannot authorize a
+different head. Main-push release checks keep their existing source identity.

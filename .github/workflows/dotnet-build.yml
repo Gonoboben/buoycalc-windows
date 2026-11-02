@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -33,7 +35,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = "Stop"
-          $statusUrl = "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}"
+          $statusUrl = "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha || github.sha }}"
           $targetUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $headers = @{
             Authorization = "Bearer $env:GITHUB_TOKEN"
@@ -165,7 +167,7 @@ jobs:
       - name: Upload BC-AUD-009 preflight report evidence
         uses: actions/upload-artifact@v4
         with:
-          name: bc-aud-009-preflight-${{ github.sha }}
+          name: bc-aud-009-preflight-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/bc-aud-009
           if-no-files-found: error
 
@@ -173,7 +175,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: bc-aud-008-user-pdf-${{ github.sha }}
+          name: bc-aud-008-user-pdf-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/bc-aud-008
           if-no-files-found: error
 
@@ -181,7 +183,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: bc-aud-006-cycle-${{ github.sha }}
+          name: bc-aud-006-cycle-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/bc-aud-006
           if-no-files-found: error
 
@@ -189,6 +191,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bc-aud-006-parity-${{ github.sha }}
+          name: bc-aud-006-parity-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/bc-aud-006-parity
           if-no-files-found: error
