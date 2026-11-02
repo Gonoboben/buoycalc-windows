@@ -186,7 +186,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload BC-AUD-006 mirror parity readout
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bc-aud-006-parity-${{ github.sha }}

@@ -38,12 +38,26 @@ public static class MooringSignedCandidateEvaluator
         return BuildCore(environment, buoy, baseResult, sequence, observer);
     }
 
+    // Validation only: run an isolated arithmetic intervention through every existing
+    // production trace, projection, fixed-point and Accepted-shape gate unchanged.
+    internal static MooringSignedCandidateResult BuildWithDiagnosticNumerics(
+        EnvironmentInput? environment,
+        BuoyInput? buoy,
+        CalculationResult? baseResult,
+        MooringSequencePositionResult? sequence,
+        bool directTangents,
+        bool fixedBuoyDrag,
+        Action<MooringSignedFeedbackObservedStep>? observer = null) =>
+        BuildCore(environment, buoy, baseResult, sequence, observer, directTangents, fixedBuoyDrag);
+
     private static MooringSignedCandidateResult BuildCore(
         EnvironmentInput? environment,
         BuoyInput? buoy,
         CalculationResult? baseResult,
         MooringSequencePositionResult? sequence,
-        Action<MooringSignedFeedbackObservedStep>? observer)
+        Action<MooringSignedFeedbackObservedStep>? observer,
+        bool directTangents = false,
+        bool fixedBuoyDrag = false)
     {
         if (environment is null || baseResult is null || sequence is null)
         {
@@ -113,7 +127,9 @@ public static class MooringSignedCandidateEvaluator
                     projectionDiagnostic);
             }
 
-            var shapeForces = MooringShapeForceAnalyzer.Build(currentResult, projection);
+            var shapeForces = directTangents
+                ? MooringShapeForceAnalyzer.BuildWithDiagnosticTangents(currentResult, projection, currentTrace)
+                : MooringShapeForceAnalyzer.Build(currentResult, projection);
             if (!TryApplyShapeForces(
                     baseResult,
                     currentResult,
@@ -133,11 +149,10 @@ public static class MooringSignedCandidateEvaluator
                     forceDiagnostic);
             }
 
-            var nextBoundary = MooringSurfaceBoundaryInfoAnalyzer.Build(
-                environment,
-                buoy,
-                nextResult,
-                sequence);
+            var nextBoundary = fixedBuoyDrag
+                ? MooringSurfaceBoundaryInfoAnalyzer.BuildWithDiagnosticBuoyDrag(
+                    environment, buoy, nextResult, sequence, buoySteadyDragN)
+                : MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, nextResult, sequence);
             if (!IsUniqueSolvedBoundary(nextBoundary))
                 return FromBoundary(nextBoundary, iteration);
 

@@ -69,6 +69,8 @@ internal static class FixedProgram
 
     public static int Main(string[] args)
     {
+        if (args.Contains("--authority-proof", StringComparer.Ordinal))
+            return H2AuthorityProof.Run(args);
         var output = ResolveOutput(args);
         Directory.CreateDirectory(output);
 
@@ -165,6 +167,7 @@ internal static class FixedProgram
             Path.Combine(parityOutput, "parity-observer-controls.csv"),
             cycleResearch.ObserverControlEvidence,
             new UTF8Encoding(false));
+        H2AuthorityProof.Run(new[] { "--output", Path.Combine(parityOutput, "h2-authority-proof") });
         WriteCsv(Path.Combine(output, "feedback-budget-diagnostics.csv"), allRows);
         WriteMarkdown(Path.Combine(output, "feedback-budget-diagnostics.md"), allRows, summaries);
 
@@ -190,7 +193,7 @@ internal static class FixedProgram
         return Path.Combine(output, "parity-readout");
     }
 
-    private static IReadOnlyList<FixedDiagnosticScenario> Scenarios() =>
+    internal static IReadOnlyList<FixedDiagnosticScenario> Scenarios() =>
         new[]
         {
             new FixedDiagnosticScenario("A06", 20.0, 22.0, 0.2),
@@ -198,7 +201,7 @@ internal static class FixedProgram
             new FixedDiagnosticScenario("A15", 100.0, 110.0, 0.3, true, 20.0, 0.002, 0.05, 1.0)
         };
 
-    private static (EnvironmentInput, BuoyInput, IReadOnlyList<AssemblyItemInput>, AnchorInput) BuildInputs(
+    internal static (EnvironmentInput, BuoyInput, IReadOnlyList<AssemblyItemInput>, AnchorInput) BuildInputs(
         FixedDiagnosticScenario scenario)
     {
         var environment = new EnvironmentInput(
