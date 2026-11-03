@@ -44,16 +44,22 @@ public static class MooringShapeForceAnalyzer
         MooringShapeProjectionResult projection,
         MooringSurfaceBoundaryTensionTraceResult trace,
         bool useSquaredNormal = false,
-        bool groupNormalProduct = false) =>
-        BuildCore(result, projection, trace, useSquaredNormal, groupNormalProduct);
+        bool groupNormalProduct = false,
+        bool usePerpendicularNormal = false,
+        bool useNormalForceRatio = false) =>
+        BuildCore(result, projection, trace, useSquaredNormal, groupNormalProduct, usePerpendicularNormal, useNormalForceRatio);
 
     private static MooringShapeForceResult BuildCore(
         CalculationResult result,
         MooringShapeProjectionResult projection,
         MooringSurfaceBoundaryTensionTraceResult? diagnosticTrace,
         bool useSquaredNormal = false,
-        bool groupNormalProduct = false)
+        bool groupNormalProduct = false,
+        bool usePerpendicularNormal = false,
+        bool useNormalForceRatio = false)
     {
+        if (usePerpendicularNormal && diagnosticTrace is null)
+            throw new InvalidOperationException("Perpendicular normal arithmetic requires the source tension-trace tangent.");
         if (diagnosticTrace is not null &&
             (diagnosticTrace.Rows.Count != projection.Rows.Count ||
              diagnosticTrace.Rows.Where((row, i) =>
@@ -96,6 +102,18 @@ public static class MooringShapeForceAnalyzer
             var speed = Math.Sqrt(currentX * currentX + currentZ * currentZ);
             var dot = currentX * tx + currentZ * tz;
             var normalSquared = Math.Max(0, speed * speed - dot * dot);
+            if (usePerpendicularNormal)
+            {
+                var normalComponent = currentX * tz - currentZ * tx;
+                normalSquared = normalComponent * normalComponent;
+                if (useNormalForceRatio)
+                {
+                    var source = diagnosticTrace!.Rows[rows.Count];
+                    var normalForce = currentX * source.MidVN - currentZ * source.MidHN;
+                    normalSquared = normalForce * normalForce /
+                        (source.MidHN * source.MidHN + source.MidVN * source.MidVN);
+                }
+            }
             var normalSpeed = Math.Sqrt(normalSquared);
 
             var shapeForceN = groupNormalProduct

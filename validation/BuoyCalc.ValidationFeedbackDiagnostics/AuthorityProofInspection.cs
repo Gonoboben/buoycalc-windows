@@ -5,7 +5,8 @@ using BuoyCalc.Windows.Services;
 internal static class AuthorityProofInspection
 {
     internal static object Inspect(CalculationResult result, MooringSequencePositionResult sequence,
-        MooringSignedCandidateResult candidate, string mode)
+        MooringSignedCandidateResult candidate, string mode,
+        MooringShapeProjectionResult actualFeedbackProjection, MooringShapeForceResult actualFeedbackForces)
     {
         var shape = candidate.Shape!;
         var trace = candidate.FinalTensionTrace!;
@@ -19,9 +20,27 @@ internal static class AuthorityProofInspection
             Bits(trace.EndVN!.Value) == Bits(boundary.SolutionState.EndVN), "Trace/boundary raw force bits differ.");
         var projection = MooringShapeProjection.Build(shape);
         var direct = MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, projection, trace,
-            (mode is "H2R3" or "H2R4" or "H2RF" or "H2RF3") && candidate.DiagnosticText.Contains("squared-normal recovery", StringComparison.Ordinal),
-            mode == "H2R4" && candidate.DiagnosticText.Contains("grouped-normal-product recovery", StringComparison.Ordinal));
+            (mode is "H2R3" or "H2R4" or "H2RF" or "H2RF3" or "H2RF3P" or "H2RF3Q" or "H2RF3QK") && candidate.DiagnosticText.Contains("squared-normal recovery", StringComparison.Ordinal) &&
+                !candidate.DiagnosticText.Contains("Canonical H1 restart", StringComparison.Ordinal),
+            mode == "H2R4" && candidate.DiagnosticText.Contains("grouped-normal-product recovery", StringComparison.Ordinal),
+            (mode is "H2RF3P" or "H2RF3Q" or "H2RF3QK") && candidate.DiagnosticText.Contains("Perpendicular-normal recovery", StringComparison.Ordinal) &&
+                !candidate.DiagnosticText.Contains("Canonical H1 restart", StringComparison.Ordinal),
+            mode is "H2RF3Q" or "H2RF3QK");
         var originalArithmetic = MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, projection, trace);
+        var canonicalH1 = candidate.DiagnosticText.Contains("Canonical H1 restart", StringComparison.Ordinal);
+        var traceMap = !canonicalH1 && ((mode is "H2" or "H1H2") ||
+            candidate.DiagnosticText.Contains("Direct-tangent arithmetic recovery", StringComparison.Ordinal));
+        var recomputedActualForces = traceMap
+            ? MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, actualFeedbackProjection, trace,
+                candidate.DiagnosticText.Contains("squared-normal recovery", StringComparison.Ordinal),
+                mode == "H2R4" && candidate.DiagnosticText.Contains("grouped-normal-product recovery", StringComparison.Ordinal),
+                (mode is "H2RF3P" or "H2RF3Q" or "H2RF3QK") && candidate.DiagnosticText.Contains("Perpendicular-normal recovery", StringComparison.Ordinal),
+                mode is "H2RF3Q" or "H2RF3QK")
+            : MooringShapeForceAnalyzer.Build(result, actualFeedbackProjection);
+        Require(actualFeedbackForces.Rows.Count == trace.Rows.Count && recomputedActualForces.Rows.Count == trace.Rows.Count,
+            "Actual fixed-point force/projection row count differs.");
+        var maxAcceptedVsFeedbackChord = 0.0;
+
         var segments = result.SegmentRows.OrderBy(s => s.Number).ToArray();
         var points = sequence.Rows.OrderBy(s => s.Number).ToArray();
         var internalPoints = points.Skip(1).SkipLast(1).Where(p => p.IsDiscrete)
@@ -33,6 +52,15 @@ internal static class AuthorityProofInspection
         {
             var row = trace.Rows[i]; var segment = segments[i]; var p = projection.Rows[i];
             Require(row.SegmentNumber == segment.Number && p.SegmentNumber == segment.Number, "Segment identity mismatch.");
+            var actual = actualFeedbackForces.Rows[i];
+            Require(actual.SegmentNumber == row.SegmentNumber && recomputedActualForces.Rows[i].SegmentNumber == row.SegmentNumber,
+                "Actual force segment identity differs.");
+            Require(Bits(actual.ShapeForceN) == Bits(recomputedActualForces.Rows[i].ShapeForceN) &&
+                Bits(row.EndHN) == Bits(row.StartHN + actual.ShapeForceN), "Actual feedback force/trace raw identity differs.");
+            maxAcceptedVsFeedbackChord = Math.Max(maxAcceptedVsFeedbackChord,
+                Math.Max(Math.Abs(p.DeltaXM - actualFeedbackProjection.Rows[i].DeltaXM),
+                    Math.Abs(p.DeltaZM - actualFeedbackProjection.Rows[i].DeltaZM)));
+
             maxLength = Math.Max(maxLength, p.LengthResidualM);
             maxTangent = Math.Max(maxTangent, Math.Max(Math.Abs(p.DeltaXM / segment.SegmentLengthM - row.TangentX!.Value),
                 Math.Abs(p.DeltaZM / segment.SegmentLengthM - row.TangentZ!.Value)));
@@ -46,7 +74,7 @@ internal static class AuthorityProofInspection
             maxJump = Math.Max(maxJump, Math.Max(Math.Abs((row.StartHN - previousH) - jumpH), Math.Abs((row.StartVN - previousV) - jumpV)));
             maxH = Math.Max(maxH, Math.Abs((row.EndHN - row.StartHN) - direct.Rows[i].ShapeForceN));
             maxV = Math.Max(maxV, Math.Abs((row.EndVN - row.StartVN) + segment.WeightWaterKg * MooringSurfaceBoundaryIntegrationKernel.GravityMS2));
-            if ((mode is "H2" or "H1H2") || ((mode is "H2R" or "H2R3" or "H2R4" or "H2RF" or "H2RF3") && candidate.DiagnosticText.Contains("recovery began", StringComparison.Ordinal)))
+            if (traceMap)
                 Require(Bits(row.EndHN) == Bits(row.StartHN + direct.Rows[i].ShapeForceN), "H2 fixed-point segment H identity differs.");
             Require(Bits(row.EndVN) == Bits(row.StartVN - segment.WeightWaterKg * MooringSurfaceBoundaryIntegrationKernel.GravityMS2), "Signed submerged-weight update differs.");
             previousH = row.EndHN; previousV = row.EndVN;
@@ -64,6 +92,7 @@ internal static class AuthorityProofInspection
         return new
         {
             EndpointRawBitsEqual = true, TraceBoundaryForceRawBitsEqual = true,
+            ActualFeedbackForceRawBitsEqual = true, MaxAcceptedVsFeedbackChordDeltaM = maxAcceptedVsFeedbackChord,
             MaxSegmentLengthResidualM = maxLength, TotalArcLengthResidualM = projection.LengthResidualM,
             MaxCoordinateTangentDelta = maxTangent, MaxTangentUnitNormResidual = unitNorm,
             MaxDirectTangentForceVsTraceResidualN = maxH, MaxSignedWeightVerticalForceResidualN = maxV,
