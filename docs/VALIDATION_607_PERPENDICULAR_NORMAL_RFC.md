@@ -36,9 +36,9 @@ arbitration and F1-F4 projectors. Every149 previously Accepted full candidate an
 authority tree must remain exact. Newly Accepted cases have no legacy selected
 F1-F4 reference; validate actual production construction instead.
 
-Pilot12 targeted fixtures, then full174 labelled/165 distinct-input matrix with
-10 twice-replayed modes, full raw-cycle survey and exact-head Windows CI/artifact
-inspection. Measure unit-tangent and force residuals independently; do not create
+Pilot12 targeted fixtures, then full198 labelled fixtures with12 twice-replayed
+modes (the original174 contain165 distinct hashes; new overlaps are measured),
+30 raw-cycle survey trajectories and exact-head Windows CI/artifact inspection. Measure unit-tangent and force residuals independently; do not create
 a weaker replacement gate. If the identity requires an altered physical contract,
 stop for owner decision. Discard the intervention if its real gates fail.
 
@@ -54,3 +54,46 @@ multiplication by the unchanged drag coefficient/area/density factor.
 20/(20*1.19)/0.65 remains BudgetExhausted. Existing Accepted controls remain
 exact in both pilots. Public H2RF3 remains unchanged. Full174×11 matrix and
 25 raw-cycle survey trajectories are pending. No physical PASS is inferred.
+
+## Canonical restart hypothesis and negative precision control
+
+A12-fixture fused-denominator pilot avoided one intermediate rounding of the
+dominant squared-norm term using Math.FusedMultiplyAdd (documented semantics:
+https://learn.microsoft.com/dotnet/api/system.math.fusedmultiplyadd). It added
+no success and lost the Q gains; that hook is omitted. Higher local accuracy
+is not proof of an exact floating-point fixed point.
+
+FACT:the remaining20/(20*1.19)/0.65 input already reaches real Accepted in the
+existing H1 experiment from the original signed state (15 steps). New
+validation-only QK first runs Q; only after a further directly proven cycle,
+restore the ORIGINAL initial signed result/boundary/trace/geometry, use the
+existing coordinate-projection/known-buoy H1 map with original square-root force
+arithmetic, and continue the SAME global counter. Never reset/increase64.
+This is canonical initial-state reseeding, not selection of an orbit member,
+fallback shape or precomputed engineering result. Require all real gates again.
+An Accepted restart must have the exact same complete terminal physical raw
+vector as the independently executed H1 reference. Prior Q Accepted results
+must remain exact. This changes numerical initialization/arithmetic only; no
+physical equation, force source, root predicate, acceptance or selection change.
+
+FACT:the corrected H1 canonical-restart pilot reached Accepted at global48
+(restart at33 plus15 H1 steps), full physical raw vector and all four F1-F4
+objects exactly equal to the actual H1 reference. An earlier H1/H2-labelled
+pilot failed; the reference label was corrected, not its acceptance criterion.
+Actual final feedback projection/forces are captured read-only at a real fixed
+point; every Accepted mode verifies their raw force/trace identities using the
+real force producer. This replaces no physical/shape acceptance gate.
+
+The next proof expands174 to198 labelled fixtures with24 one-ULP perturbations
+of residual lengths/currents. Existing overlaps remain explicit. The frozen
+149 prior Accepted records come from exact main66e4327 actual artifact13262020512
+SHA256 fa7fa500aca0dadcf19d52c0ca3bfef934e00deec1c88f5bf736acd5366ddbd1;
+canonical engineering-baseline.json is untouched. New cases have no fabricated
+legacy selected F1-F4. Public remains H2RF3 pending complete proof/activation.
+
+The canonical reset records a separate complete raw-vector witness equal to
+iteration0; no precomputed H1 result enters production. Accepted reset state
+and actual F1-F4 are compared with independently executed H1 in diagnostics.
+Raw exact-point transcripts may also document a later RejectedNumerical shape
+gate; they never imply Accepted by themselves. The completeness checker counts
+actual observed fixed points separately from Accepted authority.

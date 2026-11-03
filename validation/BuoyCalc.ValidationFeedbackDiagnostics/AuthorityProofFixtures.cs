@@ -81,5 +81,19 @@ internal static class AuthorityProofFixtures
             yield return new(FormattableString.Invariant($"deep-vertical-{vertical}"), deepEnv with
                 { CurrentProfile = deepEnv.CurrentProfile!.Select(p => p with { VerticalCurrentMS = vertical }).ToArray() },
                 deepBuoy, deepAssembly, deepAnchor);
+        // Exact-neighbor perturbations test IEEE-sensitive roots and segmentation boundaries.
+        foreach (var basis in new[] { (Depth: 20.0, Length: 20.0 * 1.19, Speed: 0.65),
+                     (Depth: 20.0, Length: 24.0, Speed: 0.6),
+                     (Depth: 380.0, Length: 380.0 * 1.19, Speed: 0.65),
+                     (Depth: 380.0, Length: 418.0, Speed: 0.45) })
+        foreach (var offset in new[] { (-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1) })
+        {
+            double Adjacent(double value, int direction) => direction < 0 ? Math.BitDecrement(value) : direction > 0 ? Math.BitIncrement(value) : value;
+            var id = FormattableString.Invariant($"ulp-{basis.Depth}-{basis.Length}-{basis.Speed}-{offset.Item1}-{offset.Item2}");
+            var (env, buoy, assembly, anchor) = FixedProgram.BuildInputs(new FixedDiagnosticScenario(id, basis.Depth,
+                Adjacent(basis.Length, offset.Item1), Adjacent(basis.Speed, offset.Item2)));
+            yield return new(id, env, buoy, assembly, anchor);
+        }
+
     }
 }

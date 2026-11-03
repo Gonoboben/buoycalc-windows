@@ -57,8 +57,11 @@ public static class MooringSignedCandidateEvaluator
         Action<int, IReadOnlyList<long>>? rawStateObserver = null,
         bool recoverExactThreeCycles = false,
         bool recoverPerpendicularNormalCycles = false,
-        bool useNormalForceRatio = false) =>
-        BuildCore(environment, buoy, baseResult, sequence, observer, directTangents, fixedBuoyDrag, recoverExactTwoCycles, fixedPointObserver, recoverSquaredNormalCycles, recoverGroupedNormalCycles, recoveryObserver, recoverKnownBuoyCycles, rawStateObserver, recoverExactThreeCycles, recoverPerpendicularNormalCycles, useNormalForceRatio);
+        bool useNormalForceRatio = false,
+        bool recoverCanonicalRestartCycles = false,
+        Action<MooringShapeProjectionResult, MooringShapeForceResult>? fixedPointForceObserver = null,
+        Action<int, IReadOnlyList<long>>? canonicalResetObserver = null) =>
+        BuildCore(environment, buoy, baseResult, sequence, observer, directTangents, fixedBuoyDrag, recoverExactTwoCycles, fixedPointObserver, recoverSquaredNormalCycles, recoverGroupedNormalCycles, recoveryObserver, recoverKnownBuoyCycles, rawStateObserver, recoverExactThreeCycles, recoverPerpendicularNormalCycles, useNormalForceRatio, recoverCanonicalRestartCycles, fixedPointForceObserver, canonicalResetObserver);
 
     private static MooringSignedCandidateResult BuildCore(
         EnvironmentInput? environment,
@@ -77,7 +80,10 @@ public static class MooringSignedCandidateEvaluator
         Action<int, IReadOnlyList<long>>? rawStateObserver = null,
         bool recoverExactThreeCycles = false,
         bool recoverPerpendicularNormalCycles = false,
-        bool useNormalForceRatio = false)
+        bool useNormalForceRatio = false,
+        bool recoverCanonicalRestartCycles = false,
+        Action<MooringShapeProjectionResult, MooringShapeForceResult>? fixedPointForceObserver = null,
+        Action<int, IReadOnlyList<long>>? canonicalResetObserver = null)
     {
         if (environment is null || baseResult is null || sequence is null)
         {
@@ -137,6 +143,11 @@ public static class MooringSignedCandidateEvaluator
         // is not the same mathematical force law. Keep the original path there.
         var canRecover = recoverExactTwoCycles && !directTangents && !fixedBuoyDrag &&
             currentResult.SegmentRows.All(s => s.SegmentLengthM >= MooringShapeForceAnalyzer.TangentProjectionLengthFloorM);
+        var initialResult = currentResult;
+        var initialBoundary = currentBoundary;
+        var initialTrace = currentTrace;
+        var initialGeometry = currentGeometry;
+        var initialLineForceN = currentLineForceN;
         var useDirectTangents = directTangents;
         var useSquaredNormal = false;
         var groupNormalProduct = false;
@@ -148,6 +159,7 @@ public static class MooringSignedCandidateEvaluator
         int? groupedRecoveryStartedAt = null;
         int? knownBuoyRecoveryStartedAt = null;
         int? perpendicularRecoveryStartedAt = null;
+        int? canonicalRestartStartedAt = null;
         long[]? oldestBits = null;
         long[]? olderBits = null;
         var currentBits = canRecover
@@ -260,6 +272,7 @@ public static class MooringSignedCandidateEvaluator
                     nextGeometry,
                     updatedLineForceN))
             {
+                fixedPointForceObserver?.Invoke(projection, shapeForces);
                 fixedPointObserver?.Invoke(
                     CaptureCycleStateBits(currentResult, currentBoundary, currentTrace, currentGeometry, currentLineForceN),
                     CaptureCycleStateBits(nextResult, nextBoundary, nextTrace, nextGeometry, updatedLineForceN));
@@ -292,14 +305,15 @@ public static class MooringSignedCandidateEvaluator
                         (squaredRecoveryStartedAt.HasValue ? $" Secondary squared-normal recovery began after a second exact cycle at iteration {squaredRecoveryStartedAt.Value}." : string.Empty) +
                         (knownBuoyRecoveryStartedAt.HasValue ? $" Known-buoy recovery began after a third exact cycle at iteration {knownBuoyRecoveryStartedAt.Value}." : string.Empty) +
                         (perpendicularRecoveryStartedAt.HasValue ? $" Perpendicular-normal recovery began after a fourth exact cycle at iteration {perpendicularRecoveryStartedAt.Value}." + (useNormalForceRatio ? " Force-ratio normal arithmetic is active." : string.Empty) : string.Empty) +
+                        (canonicalRestartStartedAt.HasValue ? $" Canonical H1 restart from the original signed state occurred after an exact cycle at iteration {canonicalRestartStartedAt.Value}; the global budget was not reset." : string.Empty) +
                         (groupedRecoveryStartedAt.HasValue ? $" Experimental grouped-normal-product recovery began after a third exact cycle at iteration {groupedRecoveryStartedAt.Value}." : string.Empty),
                     nextTrace);
             }
 
-            if (canRecover && (!useDirectTangents || (recoverSquaredNormalCycles && !useSquaredNormal) ||
+            if (canRecover && !canonicalRestartStartedAt.HasValue && (!useDirectTangents || (recoverSquaredNormalCycles && !useSquaredNormal) ||
                 (recoverGroupedNormalCycles && !groupNormalProduct) ||
                 (recoverKnownBuoyCycles && !useKnownBuoyDrag) ||
-                (recoverPerpendicularNormalCycles && !usePerpendicularNormal)))
+                (recoverPerpendicularNormalCycles && !usePerpendicularNormal) || recoverCanonicalRestartCycles))
             {
                 var nextBits = CaptureCycleStateBits(nextResult, nextBoundary, nextTrace, nextGeometry, updatedLineForceN);
                 var cyclePeriod = IsExactTwoCycle(olderBits, currentBits!, nextBits) ? 2 :
@@ -333,6 +347,26 @@ public static class MooringSignedCandidateEvaluator
                         usePerpendicularNormal = true;
                         perpendicularRecoveryStartedAt = iteration;
                         recoveryObserver?.Invoke(iteration, "PerpendicularNormal");
+                    }
+                    else if (recoverCanonicalRestartCycles)
+                    {
+                        useDirectTangents = false;
+                        useKnownBuoyDrag = true;
+                        useSquaredNormal = false;
+                        usePerpendicularNormal = false;
+                        groupNormalProduct = false;
+                        canonicalRestartStartedAt = iteration;
+                        currentResult = initialResult;
+                        currentBoundary = initialBoundary;
+                        currentTrace = initialTrace;
+                        currentGeometry = initialGeometry;
+                        currentLineForceN = initialLineForceN;
+                        oldestBits = olderBits = null;
+                        currentBits = null;
+                        canonicalResetObserver?.Invoke(iteration,
+                            CaptureCycleStateBits(currentResult, currentBoundary, currentTrace, currentGeometry, currentLineForceN));
+                        recoveryObserver?.Invoke(iteration, "CanonicalH1RestartFromState0");
+                        continue; // Consume this step; never restart the global64-step counter.
                     }
                     else
                     {
