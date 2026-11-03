@@ -42,18 +42,21 @@ internal static class CalculationRunIdentityRegression
                 "BC-AUD-005: PDF export time is not separate from retained calculation time.");
         }
         ValidateRepeatedPdfExport(typedA, provenanceA);
-        foreach (var (fixture, expected) in new[]
+        foreach (var (fixture, expected, suffix) in new[]
         {
-            (CreateFixture(20), MooringSignedCandidateStatus.RejectedPhysical),
+            (CreateFixture(20), MooringSignedCandidateStatus.RejectedPhysical, ""),
             (CreateFixture(20) with { Environment = fixtureA.Environment with
                 { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0, NorthCurrentMS = 0, VerticalCurrentMS = 0 }).ToArray() } },
-                MooringSignedCandidateStatus.Indeterminate),
+                MooringSignedCandidateStatus.Indeterminate, ""),
             (CreateFixture(21) with { Environment = fixtureA.Environment with
                 { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0.6 }).ToArray() } },
-                MooringSignedCandidateStatus.Accepted),
+                MooringSignedCandidateStatus.Accepted, "-Recovered"),
             (CreateFixture(24) with { Environment = fixtureA.Environment with
                 { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0.6 }).ToArray() } },
-                MooringSignedCandidateStatus.BudgetExhausted)
+                MooringSignedCandidateStatus.BudgetExhausted, ""),
+            (CreateFixture(24) with { Environment = fixtureA.Environment with
+                { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0.65 }).ToArray() } },
+                MooringSignedCandidateStatus.Accepted, "-Recovered-Period3")
         })
         {
             var statusRun = Run(fixture);
@@ -61,7 +64,7 @@ internal static class CalculationRunIdentityRegression
                 "PDF status provenance", fixture.Environment, fixture.Buoy, fixture.Anchor, statusRun.Snapshot);
             if (statusRun.Snapshot.SignedCandidate?.Status != expected || statusReport.CandidateStatus != expected)
                 throw new InvalidOperationException($"PDF status provenance: expected retained {expected}.");
-            ValidateRepeatedPdfExport(statusReport, statusReport.Provenance, expected == MooringSignedCandidateStatus.Accepted ? "-Recovered" : "");
+            ValidateRepeatedPdfExport(statusReport, statusReport.Provenance, suffix);
         }
 
         var fullTextA = TechnicalReportBuilder.Build(

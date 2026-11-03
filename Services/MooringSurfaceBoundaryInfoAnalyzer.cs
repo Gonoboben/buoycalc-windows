@@ -80,26 +80,27 @@ public static class MooringSurfaceBoundaryInfoAnalyzer
         MooringSequencePositionResult sequence) =>
         BuildCore(environment, buoy, result, sequence, null);
 
-    // BC-AUD-006 research ONLY; existing physical root solve and checks are shared.
-    internal static MooringSurfaceBoundaryInfoResult BuildWithDiagnosticBuoyDrag(
+    // Preserve a known buoy-force source already used to assemble the feedback total.
+    // The physical root solve and all boundary checks remain shared.
+    internal static MooringSurfaceBoundaryInfoResult BuildWithKnownBuoyDrag(
         EnvironmentInput environment,
         BuoyInput? buoy,
         CalculationResult result,
         MooringSequencePositionResult sequence,
-        double diagnosticBuoyDragN) =>
-        BuildCore(environment, buoy, result, sequence, diagnosticBuoyDragN);
+        double knownBuoyDragN) =>
+        BuildCore(environment, buoy, result, sequence, knownBuoyDragN);
 
     private static MooringSurfaceBoundaryInfoResult BuildCore(
         EnvironmentInput environment,
         BuoyInput? buoy,
         CalculationResult result,
         MooringSequencePositionResult sequence,
-        double? diagnosticBuoyDragN)
+        double? knownBuoyDragN)
     {
         if (buoy is null)
             return Unavailable(MooringSurfaceBoundaryInfoClassification.UnavailableMissingBuoyInput);
 
-        if (!TryPrepare(environment, buoy, result, sequence, diagnosticBuoyDragN, out var prepared, out var unavailableClassification))
+        if (!TryPrepare(environment, buoy, result, sequence, knownBuoyDragN, out var prepared, out var unavailableClassification))
             return Unavailable(unavailableClassification);
 
         var low = Integrate(prepared!, 0.0, prepared!.BuoySteadyDragN);
@@ -326,7 +327,7 @@ public static class MooringSurfaceBoundaryInfoAnalyzer
         BuoyInput buoy,
         CalculationResult result,
         MooringSequencePositionResult sequence,
-        double? diagnosticBuoyDragN,
+        double? knownBuoyDragN,
         out PreparedInput? prepared,
         out MooringSurfaceBoundaryInfoClassification classification)
     {
@@ -385,7 +386,7 @@ public static class MooringSurfaceBoundaryInfoAnalyzer
 
         var segmentCurrentForceN = segments.Sum(x => x.CurrentForceN);
         var internalPointCurrentForceN = points.Sum(x => x.CurrentForceN);
-        var buoySteadyDragN = diagnosticBuoyDragN ?? (result.CurrentForceN - segmentCurrentForceN - internalPointCurrentForceN);
+        var buoySteadyDragN = knownBuoyDragN ?? (result.CurrentForceN - segmentCurrentForceN - internalPointCurrentForceN);
         if (!double.IsFinite(buoySteadyDragN) || buoySteadyDragN < -1e-6)
             return false;
         buoySteadyDragN = Math.Max(0.0, buoySteadyDragN);

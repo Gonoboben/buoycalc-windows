@@ -21,7 +21,7 @@ public static class MooringSignedCandidateEvaluator
         BuoyInput? buoy,
         CalculationResult? baseResult,
         MooringSequencePositionResult? sequence) =>
-        BuildCore(environment, buoy, baseResult, sequence, null, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true);
+        BuildCore(environment, buoy, baseResult, sequence, null, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: true, recoverExactThreeCycles: true);
 
     /// <summary>
     /// Diagnostics only: observes raw bit fields from the same production feedback loop.
@@ -35,7 +35,7 @@ public static class MooringSignedCandidateEvaluator
         Action<MooringSignedFeedbackObservedStep> observer)
     {
         ArgumentNullException.ThrowIfNull(observer);
-        return BuildCore(environment, buoy, baseResult, sequence, observer, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true);
+        return BuildCore(environment, buoy, baseResult, sequence, observer, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: true, recoverExactThreeCycles: true);
     }
 
     // Validation only: run an isolated arithmetic intervention through every existing
@@ -187,7 +187,7 @@ public static class MooringSignedCandidateEvaluator
             }
 
             var nextBoundary = useKnownBuoyDrag
-                ? MooringSurfaceBoundaryInfoAnalyzer.BuildWithDiagnosticBuoyDrag(
+                ? MooringSurfaceBoundaryInfoAnalyzer.BuildWithKnownBuoyDrag(
                     environment, buoy, nextResult, sequence, buoySteadyDragN)
                 : MooringSurfaceBoundaryInfoAnalyzer.Build(environment, buoy, nextResult, sequence);
             if (!IsUniqueSolvedBoundary(nextBoundary))
@@ -239,7 +239,7 @@ public static class MooringSignedCandidateEvaluator
                             currentResult, currentBoundary, currentTrace,
                             new MooringSignedFeedbackProbeGeometry(geometryNodes)),
                         projection, shapeForces, nextResult, nextBoundary, nextTrace,
-                        sequence, buoySteadyDragN, updatedLineForceN)));
+                        sequence, buoySteadyDragN, updatedLineForceN, useKnownBuoyDrag)));
             }
 
             if (IsExactFixedPoint(

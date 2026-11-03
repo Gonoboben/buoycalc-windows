@@ -66,3 +66,24 @@ case over H2RF3; the extra arithmetic hook is omitted. The retained proposal is
 only known-buoy source preservation plus exact period-3 detection. The two new
 inputs accepted in the pilot are coeff-0.5-14-1030 at 26 and
 neighborhood-20-1.2-0.65 at 22. Three distinct residual inputs remain failures.
+
+## Reviewed proof and activation
+
+FACT: proof cfe69fa1b81a93dd58353c9af4e51fb43e5730d2 passed exact-head .NET
+41452464874, Validation60141452464844, SelectedShape41452464811,
+ReportStore41452464832 and classic Windows Build. Real artifact13145019189,
+SHA256 d143938fc1c77a67b7632d9b5003b1c42f6b4c0a4b1938dff1e17b6dd30bd856,
+was independently inspected:1566 rows, all147 prior Accepted full candidate and
+F1-F4 hashes exact,50 final-state CSVs/646379 equal field pairs,15 raw cycle
+witnesses/885242 raw vector fields with verified digests and distinct period
+members. H2RF3 has149 Accepted/4 Budget,12 physical/6 numerical/3 indeterminate.
+
+The activation enables only known-buoy recovery and strict period3 detection.
+No grouped-product or discarded experimental expression is enabled. The public
+observer uses the actual known-buoy source to check boundary force identity; its
+old reconstructed-force identity remains mandatory for the old map. Every
+fixture compares observed public and unobserved candidate trees exactly.
+Validation601 retains all5 physical controls, all prior numerical controls and
+adds actual period3 recovery:11 cases,4 Accepted/1 Indeterminate/1 Budget. PDF
+identity coverage adds a sixth real PDF for the period3-recovered input.
+New activation-head exact CI and actual artifact review remain required.
