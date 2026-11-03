@@ -13,16 +13,18 @@ internal static class RawCycleSurvey
         var summaries = new List<object>();
         var ids = new[] { "grid-20-1.2-0.6", "neighborhood-20-1.19-0.65", "neighborhood-20-1.2-0.65", "neighborhood-380-1.19-0.65", "coeff-0.5-14-1030" };
         foreach (var fixture in AuthorityProofFixtures.Build().Where(f => ids.Contains(f.Id, StringComparer.Ordinal)))
-        foreach (var variant in new[] { 0, 1, 2 })
+        foreach (var variant in new[] { 0, 1, 2, 3, 4 })
         {
             var known = variant != 0;
-            var allowThree = variant == 2;
+            var allowThree = variant >= 2;
+            var perpendicular = variant >= 3;
+            var forceRatio = variant == 4;
             var run = ApplicationCalculationRunner.Run(fixture.Environment, fixture.Buoy, fixture.Assembly, fixture.Anchor, fixture.SafetyFactor);
             var states = new List<long[]>();
             var transitions = new List<int>();
             var candidate = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(fixture.Environment, fixture.Buoy,
                 run.Result, run.Snapshot.TechnicalReportData.SequencePositions, false, false,
-                recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: known, recoverExactThreeCycles: allowThree,
+                recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: known, recoverExactThreeCycles: allowThree, recoverPerpendicularNormalCycles: perpendicular, useNormalForceRatio: forceRatio,
                 recoveryObserver: (i, _) => transitions.Add(i), rawStateObserver: (i, state) =>
                 {
                     if (i != states.Count) throw new InvalidOperationException("Nonconsecutive raw observation.");
@@ -31,11 +33,11 @@ internal static class RawCycleSurvey
             var replayStates = new List<long[]>();
             var replay = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(fixture.Environment, fixture.Buoy,
                 run.Result, run.Snapshot.TechnicalReportData.SequencePositions, false, false,
-                recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: known, recoverExactThreeCycles: allowThree,
+                recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: known, recoverExactThreeCycles: allowThree, recoverPerpendicularNormalCycles: perpendicular, useNormalForceRatio: forceRatio,
                 rawStateObserver: (_, state) => replayStates.Add(state.ToArray()));
             var unobserved = MooringSignedCandidateEvaluator.BuildWithDiagnosticNumerics(fixture.Environment, fixture.Buoy,
                 run.Result, run.Snapshot.TechnicalReportData.SequencePositions, false, false,
-                recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: known, recoverExactThreeCycles: allowThree);
+                recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: known, recoverExactThreeCycles: allowThree, recoverPerpendicularNormalCycles: perpendicular, useNormalForceRatio: forceRatio);
             if (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(replay) ||
                 ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(unobserved) ||
                 states.Count != replayStates.Count || states.Where((state, i) => !state.SequenceEqual(replayStates[i])).Any())
@@ -46,7 +48,7 @@ internal static class RawCycleSurvey
             {
                 if (states[^1].SequenceEqual(states[states.Count - 1 - p])) { period = p; break; }
             }
-            var mode = allowThree ? "H2RF3" : known ? "H2RF" : "H2R3";
+            var mode = forceRatio ? "H2RF3Q" : perpendicular ? "H2RF3P" : allowThree ? "H2RF3" : known ? "H2RF" : "H2R3";
             if (period > 0)
             {
                 using var writer = new StreamWriter(Path.Combine(output, fixture.Id + "-" + mode + "-terminal-period.csv"), false, new UTF8Encoding(false));

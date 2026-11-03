@@ -13,10 +13,12 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def verify(root, production_mode, prior_summary=None, prior_mode=None):
+def verify(root, production_mode, prior_summary=None, prior_mode=None, perpendicular_research=False):
     proof = root / 'h2-authority-proof'
     rows = json.loads((proof / 'summary.json').read_text(encoding='utf-8-sig'))
     modes = {'B0', 'H1', 'H2', 'H1H2', 'H2R', 'H2R3', 'H2R4', 'H2RF', 'H2RF3'}
+    if perpendicular_research:
+        modes |= {'H2RF3P', 'H2RF3Q'}
     ids = {r['Id'] for r in rows}
     require(len(ids) == 174, 'Expected the declared 174-fixture matrix')
     require(len(rows) == len(ids) * len(modes), 'Incomplete mode/fixture matrix')
@@ -45,7 +47,12 @@ def verify(root, production_mode, prior_summary=None, prior_mode=None):
                         f"{r['Id']}: prior Accepted changed")
                 prior_count += 1
     fixed_files = list(proof.glob('*-fixed-point.csv'))
-    require(len(fixed_files) == 50, 'Missing declared core/residual fixed-point transcripts')
+    public_full_files = list(proof.glob('*-' + production_mode + '.json'))
+    core_ids = {json.loads(path.read_text(encoding='utf-8-sig'))['Id'] for path in public_full_files}
+    require(len(core_ids) == 12, 'Missing declared core/residual fixture evidence')
+    expected_fixed = {(r['Id'], r['Mode']) for r in rows if r['Id'] in core_ids and r['Status'] == 'Accepted'}
+    actual_fixed = {tuple(path.name.removesuffix('-fixed-point.csv').rsplit('-', 1)) for path in fixed_files}
+    require(actual_fixed == expected_fixed, 'Missing or unexpected fixed-point transcript')
     fixed_pairs = 0
     for path in fixed_files:
         count = 0
@@ -81,18 +88,27 @@ def verify(root, production_mode, prior_summary=None, prior_mode=None):
     require(observed_known_steps > 0, 'Known-buoy production recovery was not observed')
     survey = root / 'raw-cycle-survey'
     witnesses = json.loads((survey / 'raw-cycle-summary.json').read_text(encoding='utf-8-sig'))
-    require(len(witnesses) == 15 and len({(r['Id'], r['Mode']) for r in witnesses}) == 15, 'Incomplete cycle survey')
+    survey_modes = {'H2R3', 'H2RF', 'H2RF3'} | ({'H2RF3P', 'H2RF3Q'} if perpendicular_research else set())
+    survey_ids = {r['Id'] for r in witnesses}
+    require(len(survey_ids) == 5 and len(witnesses) == len(survey_modes) * 5 and
+            {(r['Id'], r['Mode']) for r in witnesses} == {(i, m) for i in survey_ids for m in survey_modes},
+            'Incomplete cycle survey')
     vector_fields = 0
     for r in witnesses:
         require(r['RawReplayIdentical'] and r['ObserverNoninterference'], 'Missing raw replay/noninterference evidence')
         states = {s['Iteration']: s for s in r['States']}
         require(set(states) == set(range(r['FeedbackIterations'] + 1)), 'Incomplete observed trajectory')
-        with (survey / f"{r['Id']}-{r['Mode']}-terminal-period.csv").open(encoding='utf-8-sig', newline='') as stream:
+        witness_file = survey / f"{r['Id']}-{r['Mode']}-terminal-period.csv"
+        if r['TerminalRawPeriod'] == 0 and perpendicular_research and r['Mode'] in {'H2RF3P', 'H2RF3Q'}:
+            require(r['Status'] != 'Accepted' and not witness_file.exists(), 'Nonrepeating trajectory falsely labelled Accepted')
+            continue
+        with witness_file.open(encoding='utf-8-sig', newline='') as stream:
             raw = list(csv.DictReader(stream))
         require(raw and all(int(row['FieldIndex']) == i for i, row in enumerate(raw)), 'Invalid cycle field sequence')
         keys = list(raw[0])[1:]
         period = r['TerminalRawPeriod']
-        require(period in (1, 2, 3) and len(keys) == period + 1, 'Unexpected terminal witness schema')
+        require(1 <= period <= 64 and (perpendicular_research or period in (1, 2, 3)) and len(keys) == period + 1,
+                'Unexpected terminal witness schema')
         vectors = [[row[key] for row in raw] for key in keys]
         require(vectors[0] == vectors[-1] and len({tuple(v) for v in vectors[:-1]}) == period,
                 'Cycle endpoint/intermediate raw vectors disagree')
@@ -117,9 +133,10 @@ def main():
     parser.add_argument('--production-mode', required=True)
     parser.add_argument('--prior-summary', type=Path)
     parser.add_argument('--prior-mode')
+    parser.add_argument('--perpendicular-research', action='store_true')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
-    result = verify(args.artifact_directory, args.production_mode, args.prior_summary, args.prior_mode)
+    result = verify(args.artifact_directory, args.production_mode, args.prior_summary, args.prior_mode, args.perpendicular_research)
     output = json.dumps(result, indent=2) + '\n'
     if args.output:
         args.output.write_text(output)
