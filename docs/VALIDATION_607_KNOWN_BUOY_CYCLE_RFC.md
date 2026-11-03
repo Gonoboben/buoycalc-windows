@@ -87,3 +87,22 @@ Validation601 retains all5 physical controls, all prior numerical controls and
 adds actual period3 recovery:11 cases,4 Accepted/1 Indeterminate/1 Budget. PDF
 identity coverage adds a sixth real PDF for the period3-recovered input.
 New activation-head exact CI and actual artifact review remain required.
+
+## Evidence completeness gate
+
+The .NET workflow independently checks emitted artifacts using
+`tools/verify-bc-aud-006-authority-artifacts.py`: complete174×9 matrix, unique
+mode/fixture rows, actual public/observed candidate evidence,50 complete final
+fixed-point transcripts and15 raw-cycle witnesses/digests. Optional prior-summary
+comparison checks all old Accepted hashes against independently retained same-OS
+evidence. This validates recorded bytes/completeness, never replaces any physical
+acceptance gate and never establishes field suitability. Truncation, duplicate
+rows or changed raw vectors fail this gate.
+
+Byte-verifier validation against real activation artifact13256723896
+(SHA256 d80fe78cc5c0ae3078f6c52fb5366dca7e1b2346069f86767e35d0ae1c6f3b00)
+passed all1566 rows,147 prior same-OS Accepted hashes,646379 fixed-point fields,
+885242 cycle witness fields and117 observed known-buoy source identities. Five
+controlled corruptions were rejected: missing/duplicate row, truncated fixed
+vector, corrupted cycle vector and corrupted known-buoy source. These are
+artifact-integrity controls only, never synthetic physical tests.

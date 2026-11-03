@@ -162,6 +162,11 @@ jobs:
               throw "Full raw-cycle survey failed with exit code $LASTEXITCODE"
             }
 
+            python tools/verify-bc-aud-006-authority-artifacts.py artifacts/bc-aud-006-parity --production-mode H2RF3 --output artifacts/bc-aud-006-parity/authority-byte-verification.json
+            if ($LASTEXITCODE -ne 0) {
+              throw "Recovery authority evidence is incomplete or inconsistent (exit $LASTEXITCODE)"
+            }
+
             dotnet run --project validation/BuoyCalc.ValidationCampaign/BuoyCalc.ValidationCampaign.csproj --configuration Release -- --output artifacts/bc-aud-006-production-series-a
             if ($LASTEXITCODE -ne 0) {
               throw "Production Series A could not execute/write evidence (exit $LASTEXITCODE)"
