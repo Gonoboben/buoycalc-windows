@@ -19,7 +19,7 @@ internal sealed record MooringSignedFeedbackProbeInput(
     MooringShapeProjectionResult Projection, MooringShapeForceResult ShapeForces,
     CalculationResult NextResult, MooringSurfaceBoundaryInfoResult NextBoundary,
     MooringSurfaceBoundaryTensionTraceResult NextTrace, MooringSequencePositionResult Sequence,
-    double FixedBuoyDragN, double UpdatedLineForceN);
+    double FixedBuoyDragN, double UpdatedLineForceN, bool BoundaryUsesKnownBuoyDrag = false);
 
 /// <summary>Only called by explicit diagnostic observer; normal production path bypasses it.</summary>
 internal static class MooringSignedFeedbackParityProbe
@@ -73,11 +73,15 @@ internal static class MooringSignedFeedbackParityProbe
         Record("After", 0, "TraceInitialHN", traceStart);
         Record("After", 0, "BoundaryQ0N", step.NextBoundary.Q0N ?? double.NaN);
 
-        // These are exact arithmetic identities for this validation mirror.
+        if (step.BoundaryUsesKnownBuoyDrag)
+            Record("After", 0, "KnownBuoyDragSourceN", step.FixedBuoyDragN);
+        var expectedBoundaryDrag = step.BoundaryUsesKnownBuoyDrag ? step.FixedBuoyDragN : Math.Max(0.0, recovered);
+
+        // These are exact arithmetic identities for the observed arithmetic map.
         // No tolerance is used to accept or correct any floating-point state.
         if (Bits(step.UpdatedLineForceN) != Bits(nextLine) ||
             Bits(recomposed) != Bits(step.NextResult.CurrentForceN) ||
-            Bits(boundaryDrag) != Bits(Math.Max(0.0, recovered)) ||
+            Bits(boundaryDrag) != Bits(expectedBoundaryDrag) ||
             Bits(traceStart) != Bits(boundaryDrag))
             throw new InvalidOperationException(
                 $"{step.Scenario} iteration {step.Iteration}: failed observed force-recomposition identity.");

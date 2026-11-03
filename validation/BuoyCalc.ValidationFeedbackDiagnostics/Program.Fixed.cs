@@ -329,7 +329,7 @@ internal static class FixedProgram
                     "H1N2" => (nextResult.CurrentForceN - pointSum) - lineSum,
                     _ => throw new InvalidOperationException("Invalid isolation mode.")
                 };
-                nextBoundary = MooringSurfaceBoundaryInfoAnalyzer.BuildWithDiagnosticBuoyDrag(
+                nextBoundary = MooringSurfaceBoundaryInfoAnalyzer.BuildWithKnownBuoyDrag(
                     environment, buoy, nextResult, sequence, injectedDrag);
             }
             else

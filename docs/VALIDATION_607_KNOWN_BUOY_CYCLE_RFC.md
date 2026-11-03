@@ -1,0 +1,108 @@
+# Validation #607 known-buoy recovery control / RFC
+
+## Question and allowed scope
+
+After H2R3 itself enters a directly raw-bit-proven strict period-2 orbit, can
+passing the retained initial buoy steady drag into the SAME existing boundary
+solver remove cancellation from `(buoy + line + points) - line - points`?
+This is H1, previously exercised from iteration one, now proposed only after
+three proven cycles. Units N; positive horizontal drag; signed line weight and
+vertical convention unchanged. It does not choose a member of an orbit.
+
+## Contracts
+
+The input is the initial solved boundary's retained BuoySteadyDragN already
+used by TryApplyShapeForces to assemble every feedback total. No new buoy force
+is calculated. All segment/point forces, physical root equations, trace and
+geometry checks, accepted-shape construction, exact endpoint equality, selected
+shape and F1-F4 authority remain the real production implementations. Same
+0.20 m segmentation, sub-0.0001 m exclusion and total 64-step budget. Reset raw
+history on every map transition. No epsilon, no damping, no frozen-baseline edit.
+
+## Validation and decision
+
+Initially validation-only, public H2R3 unchanged. Replay every experiment twice,
+observe transitions, inspect final raw state and real geometry/force residuals.
+Cover all 174 labelled fixtures / 165 distinct current input hashes, especially
+all five distinct residual BudgetExhausted inputs and A03/A05/A06/A11/A15.
+Every one of the 147 current Accepted candidate/F1-F4 trees must be identical
+against retained independent H2R3 evidence. A new candidate has no selected
+legacy F1-F4 reference: require real authority construction instead. Confirm
+exact-head Windows CI and actual artifacts before deciding production scope.
+If it requires changing physical force ownership/acceptance, stop for owner
+engineering decision. Remaining nonconvergence must remain non-Accepted.
+
+## Local pilot (FACT, computational only)
+
+Twelve targeted fixtures × eight modes × two replays. The known-buoy stage
+recovers coeff-0.5-14-1030 at iteration 26 after transitions 15:TraceTangents,
+20:SquaredNormal, 23:KnownBuoyDrag; other residual failures remain failures.
+A separate negative pilot also restored the square-root expression at the known
+buoy transition: it adds no successful case, so that extra hook is omitted.
+The public production path still uses H2R3. Full matrix and Windows proof pending.
+
+## Full-state cycle survey and period-3 hypothesis
+
+Read-only observation of the exact state vector used by the production detector,
+with independently repeated vectors and comparison to unobserved execution,
+found strict terminal period 3 in neighborhood-20-1.2-0.65. Every other residual
+H2R3 input has period 2. Terminal vectors and all state digests are emitted.
+The proposed optional period-3 detector requires four same-schema full raw
+vectors A,B,C,A with pairwise-distinct A/B/C; this triggers only arithmetic
+recovery, never acceptance. Keep it validation-only until the complete matrix
+and exact-head Windows proof show every prior Accepted candidate/authority exact.
+The same deterministic-map argument applies to strict finite cycles: an orbit
+with period >1 cannot later reach that same map's fixed point. History is cleared
+at map transitions. No new physical assumption or convergence tolerance.
+
+A local full run was invalidated by rebuilding its mapped DLL while it ran; its
+partial output is excluded. All final runs must use an immutable compiled copy.
+
+## Additional minimality control
+
+A twelve-fixture pilot also replaced the current magnitude square-root round
+trip with direct speedSquared at the known-buoy stage. It added no successful
+case over H2RF3; the extra arithmetic hook is omitted. The retained proposal is
+only known-buoy source preservation plus exact period-3 detection. The two new
+inputs accepted in the pilot are coeff-0.5-14-1030 at 26 and
+neighborhood-20-1.2-0.65 at 22. Three distinct residual inputs remain failures.
+
+## Reviewed proof and activation
+
+FACT: proof cfe69fa1b81a93dd58353c9af4e51fb43e5730d2 passed exact-head .NET
+41452464874, Validation60141452464844, SelectedShape41452464811,
+ReportStore41452464832 and classic Windows Build. Real artifact13145019189,
+SHA256 d143938fc1c77a67b7632d9b5003b1c42f6b4c0a4b1938dff1e17b6dd30bd856,
+was independently inspected:1566 rows, all147 prior Accepted full candidate and
+F1-F4 hashes exact,50 final-state CSVs/646379 equal field pairs,15 raw cycle
+witnesses/885242 raw vector fields with verified digests and distinct period
+members. H2RF3 has149 Accepted/4 Budget,12 physical/6 numerical/3 indeterminate.
+
+The activation enables only known-buoy recovery and strict period3 detection.
+No grouped-product or discarded experimental expression is enabled. The public
+observer uses the actual known-buoy source to check boundary force identity; its
+old reconstructed-force identity remains mandatory for the old map. Every
+fixture compares observed public and unobserved candidate trees exactly.
+Validation601 retains all5 physical controls, all prior numerical controls and
+adds actual period3 recovery:11 cases,4 Accepted/1 Indeterminate/1 Budget. PDF
+identity coverage adds a sixth real PDF for the period3-recovered input.
+New activation-head exact CI and actual artifact review remain required.
+
+## Evidence completeness gate
+
+The .NET workflow independently checks emitted artifacts using
+`tools/verify-bc-aud-006-authority-artifacts.py`: complete174×9 matrix, unique
+mode/fixture rows, actual public/observed candidate evidence,50 complete final
+fixed-point transcripts and15 raw-cycle witnesses/digests. Optional prior-summary
+comparison checks all old Accepted hashes against independently retained same-OS
+evidence. This validates recorded bytes/completeness, never replaces any physical
+acceptance gate and never establishes field suitability. Truncation, duplicate
+rows or changed raw vectors fail this gate.
+
+Byte-verifier validation against real activation artifact13256723896
+(SHA256 d80fe78cc5c0ae3078f6c52fb5366dca7e1b2346069f86767e35d0ae1c6f3b00)
+passed all1566 rows,147 prior same-OS Accepted hashes,646379 fixed-point fields,
+885242 cycle witness fields and117 observed known-buoy source identities. Five
+controlled corruptions were rejected: missing/duplicate row, truncated fixed
+vector, corrupted cycle vector and corrupted known-buoy source. These are
+artifact-integrity controls only, never synthetic physical tests.
