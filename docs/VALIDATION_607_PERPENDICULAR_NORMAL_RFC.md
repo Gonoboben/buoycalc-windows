@@ -97,3 +97,37 @@ and actual F1-F4 are compared with independently executed H1 in diagnostics.
 Raw exact-point transcripts may also document a later RejectedNumerical shape
 gate; they never imply Accepted by themselves. The completeness checker counts
 actual observed fixed points separately from Accepted authority.
+
+## Alternate perpendicular arithmetic before canonical restart
+
+QK leaves `ulp-20-24-0.6--1--1` at BudgetExhausted64 even though the isolated
+P trajectory accepts at31. The QPK experiment runs Q first. On a further
+exact two- or three-cycle under Q, it switches to P from the just-computed
+state and clears the cycle history. A further exact cycle under P can trigger
+the existing canonical H1 restart. Every stage shares the total64 counter
+and must pass the same exact fixed-point and engineering acceptance gates.
+
+FACT, local .NET 8.0.427 pilot (13 fixtures × 13 modes): the one-ULP input
+accepts at34 after the Q→P transition at30. The original canonical case
+20/(20*1.19)/0.65 accepts at51 after P at33 and state0 restart at36.
+Its complete terminal raw state and actual F1–F4 equal the separate 15-step
+H1 result. The existing Q Accepted prefix remains exact. These are observed
+numerical results from the real evaluator and authority projectors.
+
+The added negative fixture has depth20 m, line21 m, constant horizontal
+current0.3 m/s, and signed vertical current+0.3 m/s. The same reference
+buoy, 14 mm line (signed weight+0.15 kg/m), density1025 kg/m³ and
+zero-wave environment apply. A numerical stress sweep tested vertical
+speeds −0.6, −0.3 and +0.3 m/s at these inputs. The first two accepted.
+The positive fixture deterministically exhausts64, with no selected F1–F4.
+Its local terminal witness has exact period5 in all seven surveyed recovery
+modes. The period2/3 detector leaves this trajectory on the original map.
+This fixture exercises the numerical budget using supported inputs.
+
+The Windows proof covers199 labelled inputs × 13 twice-replayed modes, with
+the retained149 frozen Windows candidates and 49 raw survey trajectories.
+Each QPK switch has a separate complete consecutive-state witness, checked
+against the surveyed digests, the active map interval, the stage sequence,
+and the actual authority summary. The accepted projection and feedback
+chords are compared at the existing geometry identity scale. Public
+H2RF3 is retained pending review of the completed Windows proof.

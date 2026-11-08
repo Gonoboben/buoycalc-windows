@@ -5,7 +5,7 @@ using BuoyCalc.Windows.Services;
 internal static class AuthorityProofInspection
 {
     internal static object Inspect(CalculationResult result, MooringSequencePositionResult sequence,
-        MooringSignedCandidateResult candidate, string mode,
+        MooringSignedCandidateResult candidate, string mode, IReadOnlyList<string> transitions,
         MooringShapeProjectionResult actualFeedbackProjection, MooringShapeForceResult actualFeedbackForces)
     {
         var shape = candidate.Shape!;
@@ -19,23 +19,19 @@ internal static class AuthorityProofInspection
             Bits(trace.EndHN!.Value) == Bits(boundary.SolutionState.EndHN) &&
             Bits(trace.EndVN!.Value) == Bits(boundary.SolutionState.EndVN), "Trace/boundary raw force bits differ.");
         var projection = MooringShapeProjection.Build(shape);
+        bool Took(string stage) => transitions.Any(t => t.EndsWith(":" + stage, StringComparison.Ordinal));
+        var canonicalH1 = Took("CanonicalH1RestartFromState0");
+        var traceMap = !canonicalH1 && (mode is "H2" or "H1H2" || Took("TraceTangents"));
+        var squared = !canonicalH1 && Took("SquaredNormal");
+        var grouped = Took("GroupedNormalProduct");
+        var perpendicular = !canonicalH1 && Took("PerpendicularNormal");
+        var ratio = (mode is "H2RF3Q" or "H2RF3QK" or "H2RF3QPK") && !Took("TangentPerpendicularAlternate");
         var direct = MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, projection, trace,
-            (mode is "H2R3" or "H2R4" or "H2RF" or "H2RF3" or "H2RF3P" or "H2RF3Q" or "H2RF3QK") && candidate.DiagnosticText.Contains("squared-normal recovery", StringComparison.Ordinal) &&
-                !candidate.DiagnosticText.Contains("Canonical H1 restart", StringComparison.Ordinal),
-            mode == "H2R4" && candidate.DiagnosticText.Contains("grouped-normal-product recovery", StringComparison.Ordinal),
-            (mode is "H2RF3P" or "H2RF3Q" or "H2RF3QK") && candidate.DiagnosticText.Contains("Perpendicular-normal recovery", StringComparison.Ordinal) &&
-                !candidate.DiagnosticText.Contains("Canonical H1 restart", StringComparison.Ordinal),
-            mode is "H2RF3Q" or "H2RF3QK");
+            squared, grouped, perpendicular, ratio);
         var originalArithmetic = MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, projection, trace);
-        var canonicalH1 = candidate.DiagnosticText.Contains("Canonical H1 restart", StringComparison.Ordinal);
-        var traceMap = !canonicalH1 && ((mode is "H2" or "H1H2") ||
-            candidate.DiagnosticText.Contains("Direct-tangent arithmetic recovery", StringComparison.Ordinal));
         var recomputedActualForces = traceMap
             ? MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, actualFeedbackProjection, trace,
-                candidate.DiagnosticText.Contains("squared-normal recovery", StringComparison.Ordinal),
-                mode == "H2R4" && candidate.DiagnosticText.Contains("grouped-normal-product recovery", StringComparison.Ordinal),
-                (mode is "H2RF3P" or "H2RF3Q" or "H2RF3QK") && candidate.DiagnosticText.Contains("Perpendicular-normal recovery", StringComparison.Ordinal),
-                mode is "H2RF3Q" or "H2RF3QK")
+                squared, grouped, perpendicular, ratio)
             : MooringShapeForceAnalyzer.Build(result, actualFeedbackProjection);
         Require(actualFeedbackForces.Rows.Count == trace.Rows.Count && recomputedActualForces.Rows.Count == trace.Rows.Count,
             "Actual fixed-point force/projection row count differs.");
@@ -88,7 +84,9 @@ internal static class AuthorityProofInspection
         maxJump = Math.Max(maxJump, Math.Max(Math.Abs(trace.EndHN!.Value - previousH - terminalJumpH), Math.Abs(trace.EndVN!.Value - previousV - terminalJumpV)));
         Require(pointIndex == candidate.PointLoadCrossings && pointIndex == trace.PointLoadCrossings, "Discrete load crossings differ.");
         // Same published identity scales as evaluator/kernel. No feedback convergence tolerance.
-        Require(maxJump <= 1e-6 && maxLength <= MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM, "Existing point-load/geometry identity bound exceeded.");
+        Require(maxJump <= 1e-6 && maxLength <= MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM &&
+            maxAcceptedVsFeedbackChord <= MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM,
+            "Existing point-load/geometry identity bound exceeded.");
         return new
         {
             EndpointRawBitsEqual = true, TraceBoundaryForceRawBitsEqual = true,

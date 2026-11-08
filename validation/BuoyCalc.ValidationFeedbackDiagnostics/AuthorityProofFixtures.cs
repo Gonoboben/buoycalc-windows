@@ -8,6 +8,8 @@ internal sealed record AuthorityProofFixture(string Id, EnvironmentInput Environ
 internal static class AuthorityProofFixtures
 {
     private const BindingFlags PrivateStatic = BindingFlags.NonPublic | BindingFlags.Static;
+    internal const string AlternateControl = "ulp-20-24-0.6--1--1";
+    internal const string BudgetControl = "vertical-budget-20-21-0.3";
 
     internal static IEnumerable<AuthorityProofFixture> Build()
     {
@@ -48,6 +50,11 @@ internal static class AuthorityProofFixtures
             yield return new(FormattableString.Invariant($"vertical-current-{vertical}"), basisEnv with
                 { CurrentProfile = basisEnv.CurrentProfile!.Select(p => p with { VerticalCurrentMS = vertical }).ToArray() },
                 basisBuoy, basisAssembly, basisAnchor);
+        var (budgetEnv, budgetBuoy, budgetAssembly, budgetAnchor) =
+            FixedProgram.BuildInputs(new FixedDiagnosticScenario(BudgetControl, 20, 21, 0.3));
+        yield return new(BudgetControl, budgetEnv with
+            { CurrentProfile = budgetEnv.CurrentProfile!.Select(p => p with { VerticalCurrentMS = 0.3 }).ToArray() },
+            budgetBuoy, budgetAssembly, budgetAnchor);
 
         // Focus on neighborhoods of newly exposed arithmetic cycles rather than
         // fitting only the original three residual fixtures.
