@@ -14,7 +14,8 @@ internal sealed record ValidationScenario(
     MooringSignedCandidateStatus ExpectedCandidateStatus,
     MooringSurfaceBoundaryInfoClassification ExpectedBoundaryClassification,
     bool AnalyticallyPhysicallyImpossible,
-    bool ExpectAcceptedAuthorityChain);
+    bool ExpectAcceptedAuthorityChain,
+    double VerticalCurrentMS = 0.0);
 
 internal sealed record ValidationResult(
     string Id,
@@ -22,6 +23,7 @@ internal sealed record ValidationResult(
     double DepthM,
     double LineLengthM,
     double CurrentMS,
+    double VerticalCurrentMS,
     double ProductionCurrentForceN,
     string CandidateStatus,
     string BoundaryClassification,
@@ -66,8 +68,8 @@ internal static class Program
         var acceptedControls = results.Count(x => x.CandidateStatus == MooringSignedCandidateStatus.Accepted.ToString());
         var budgetControls = results.Count(x => x.CandidateStatus == MooringSignedCandidateStatus.BudgetExhausted.ToString());
 
-        if (results.Count != 11 || rejectedPhysical != 5 || dispositions != 5 || blocked != 5 ||
-            acceptedControls != 4 || budgetControls != 1)
+        if (results.Count != 13 || rejectedPhysical != 5 || dispositions != 5 || blocked != 5 ||
+            acceptedControls != 6 || budgetControls != 1)
         {
             throw new InvalidOperationException(
                 $"Validation #601 rollup mismatch: scenarios={results.Count}, rejected={rejectedPhysical}, dispositions={dispositions}, blocked={blocked}, accepted={acceptedControls}, budget={budgetControls}.");
@@ -186,14 +188,14 @@ internal static class Program
                 true),
             new ValidationScenario(
                 "V601-10",
-                "Unresolved 20/24/0.6 remains non-Accepted after all production stages",
+                "Former 20/24/0.6 budget control requires real ratio recovery",
                 20.0,
                 24.0,
                 0.6,
-                MooringSignedCandidateStatus.BudgetExhausted,
+                MooringSignedCandidateStatus.Accepted,
                 MooringSurfaceBoundaryInfoClassification.SolvedByBoundedBisection,
                 false,
-                false),
+                true),
             new ValidationScenario(
                 "V601-11",
                 "Former strict period-three control requires real Accepted and F1-F4",
@@ -203,7 +205,28 @@ internal static class Program
                 MooringSignedCandidateStatus.Accepted,
                 MooringSurfaceBoundaryInfoClassification.SolvedByBoundedBisection,
                 false,
-                true)
+                true),
+            new ValidationScenario(
+                "V601-12",
+                "Canonical H1 restart must produce real Accepted within the same budget",
+                20.0,
+                20.0 * 1.19,
+                0.65,
+                MooringSignedCandidateStatus.Accepted,
+                MooringSurfaceBoundaryInfoClassification.SolvedByBoundedBisection,
+                false,
+                true),
+            new ValidationScenario(
+                "V601-13",
+                "Signed vertical current exercises a real non-Accepted period-five budget case",
+                20.0,
+                21.0,
+                0.3,
+                MooringSignedCandidateStatus.BudgetExhausted,
+                MooringSurfaceBoundaryInfoClassification.SolvedByBoundedBisection,
+                false,
+                false,
+                VerticalCurrentMS: 0.3)
         };
 
     private static ValidationResult RunScenario(ValidationScenario scenario)
@@ -222,8 +245,8 @@ internal static class Program
             true,
             new[]
             {
-                new CurrentProfilePointInput(0.0, scenario.CurrentMS, 0.0, 0.0, 1025.0),
-                new CurrentProfilePointInput(scenario.DepthM, scenario.CurrentMS, 0.0, 0.0, 1025.0)
+                new CurrentProfilePointInput(0.0, scenario.CurrentMS, 0.0, scenario.VerticalCurrentMS, 1025.0),
+                new CurrentProfilePointInput(scenario.DepthM, scenario.CurrentMS, 0.0, scenario.VerticalCurrentMS, 1025.0)
             });
 
         var buoy = new BuoyInput(
@@ -397,6 +420,7 @@ internal static class Program
             scenario.DepthM,
             scenario.LineLengthM,
             scenario.CurrentMS,
+            scenario.VerticalCurrentMS,
             run.Result.CurrentForceN,
             candidate.Status.ToString(),
             boundary.Classification.ToString(),
@@ -468,12 +492,12 @@ internal static class Program
         sb.AppendLine();
         sb.AppendLine("This report verifies the production typed disposition over unchanged signed-candidate truth. It does not modify solver physics or acceptance semantics.");
         sb.AppendLine();
-        sb.AppendLine("| ID | D | L | U | Candidate | Boundary | Physical disposition | Selected X/Z | Conv | F4 | Geometry contract | Diagnostic |");
-        sb.AppendLine("|---|---:|---:|---:|---|---|---|---|---|---|---|---|");
+        sb.AppendLine("| ID | D | L | U horizontal | W vertical | Candidate | Boundary | Physical disposition | Selected X/Z | Conv | F4 | Geometry contract | Diagnostic |");
+        sb.AppendLine("|---|---:|---:|---:|---:|---|---|---|---|---|---|---|---|");
 
         foreach (var result in results)
         {
-            sb.AppendLine($"| {result.Id} | {F(result.DepthM)} | {F(result.LineLengthM)} | {F(result.CurrentMS)} | {result.CandidateStatus} | {result.BoundaryClassification} | {result.PhysicalVerdict ?? "none"} | {result.SelectedShapeSource ?? "none"} | {result.SelectedShapeConverged?.ToString() ?? "n/a"} | {result.F4Verdict ?? "none"} | {(result.CandidateStatus == MooringSignedCandidateStatus.RejectedPhysical.ToString() ? (result.RejectedPhysicalGeometryBlocked ? "BLOCKED" : "DEFECT") : "unchanged")} | `{result.CandidateDiagnosticCode}` |");
+            sb.AppendLine($"| {result.Id} | {F(result.DepthM)} | {F(result.LineLengthM)} | {F(result.CurrentMS)} | {F(result.VerticalCurrentMS)} | {result.CandidateStatus} | {result.BoundaryClassification} | {result.PhysicalVerdict ?? "none"} | {result.SelectedShapeSource ?? "none"} | {result.SelectedShapeConverged?.ToString() ?? "n/a"} | {result.F4Verdict ?? "none"} | {(result.CandidateStatus == MooringSignedCandidateStatus.RejectedPhysical.ToString() ? (result.RejectedPhysicalGeometryBlocked ? "BLOCKED" : "DEFECT") : "unchanged")} | `{result.CandidateDiagnosticCode}` |");
         }
 
         sb.AppendLine();
@@ -483,8 +507,8 @@ internal static class Program
         sb.AppendLine("- Every production `RejectedPhysical` candidate has no selected engineering X/Z authority.");
         sb.AppendLine("- F1/F2/F3/F4 are not fabricated for physical rejection.");
         sb.AppendLine("- `Indeterminate` and `BudgetExhausted` controls retain their existing non-physical fallback behavior and receive no physical disposition.");
-        sb.AppendLine("- The Accepted control retains SignedBoundaryFeedback and the complete existing X/Z/F1/F2/F3/F4 chain.");
-        sb.AppendLine("- No convergence epsilon is used and the signed solver/evaluator is unchanged by this production fix.");
+        sb.AppendLine("- Accepted controls retain SignedBoundaryFeedback and the complete X/Z/F1/F2/F3/F4 chain.");
+        sb.AppendLine("- Numerical recovery uses the same strict fixed-point criterion and total 64-step budget.");
 
         File.WriteAllText(
             Path.Combine(outputDirectory, "validation-601-report.md"),

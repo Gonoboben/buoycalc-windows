@@ -162,7 +162,7 @@ jobs:
               throw "Full raw-cycle survey failed with exit code $LASTEXITCODE"
             }
 
-            python tools/verify-bc-aud-006-authority-artifacts.py artifacts/bc-aud-006-parity --production-mode H2RF3 --output artifacts/bc-aud-006-parity/authority-byte-verification.json
+            python tools/verify-bc-aud-006-authority-artifacts.py artifacts/bc-aud-006-parity --production-mode H2RF3QPK --perpendicular-research --fixture-count 199 --accepted-baseline validation/BuoyCalc.ValidationFeedbackDiagnostics/baselines/accepted-main-66e4327.json --require-candidate-baseline --output artifacts/bc-aud-006-parity/authority-byte-verification.json
             if ($LASTEXITCODE -ne 0) {
               throw "Recovery authority evidence is incomplete or inconsistent (exit $LASTEXITCODE)"
             }

@@ -5,7 +5,8 @@ using BuoyCalc.Windows.Services;
 internal static class AuthorityProofInspection
 {
     internal static object Inspect(CalculationResult result, MooringSequencePositionResult sequence,
-        MooringSignedCandidateResult candidate, string mode)
+        MooringSignedCandidateResult candidate, string mode, IReadOnlyList<string> transitions,
+        MooringShapeProjectionResult actualFeedbackProjection, MooringShapeForceResult actualFeedbackForces)
     {
         var shape = candidate.Shape!;
         var trace = candidate.FinalTensionTrace!;
@@ -18,10 +19,24 @@ internal static class AuthorityProofInspection
             Bits(trace.EndHN!.Value) == Bits(boundary.SolutionState.EndHN) &&
             Bits(trace.EndVN!.Value) == Bits(boundary.SolutionState.EndVN), "Trace/boundary raw force bits differ.");
         var projection = MooringShapeProjection.Build(shape);
+        bool Took(string stage) => transitions.Any(t => t.EndsWith(":" + stage, StringComparison.Ordinal));
+        var canonicalH1 = Took("CanonicalH1RestartFromState0");
+        var traceMap = !canonicalH1 && (mode is "H2" or "H1H2" || Took("TraceTangents"));
+        var squared = !canonicalH1 && Took("SquaredNormal");
+        var grouped = Took("GroupedNormalProduct");
+        var perpendicular = !canonicalH1 && Took("PerpendicularNormal");
+        var ratio = (mode is "H2RF3Q" or "H2RF3QK" or "H2RF3QPK") && !Took("TangentPerpendicularAlternate");
         var direct = MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, projection, trace,
-            (mode is "H2R3" or "H2R4" or "H2RF" or "H2RF3") && candidate.DiagnosticText.Contains("squared-normal recovery", StringComparison.Ordinal),
-            mode == "H2R4" && candidate.DiagnosticText.Contains("grouped-normal-product recovery", StringComparison.Ordinal));
+            squared, grouped, perpendicular, ratio);
         var originalArithmetic = MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, projection, trace);
+        var recomputedActualForces = traceMap
+            ? MooringShapeForceAnalyzer.BuildFromTensionTraceTangents(result, actualFeedbackProjection, trace,
+                squared, grouped, perpendicular, ratio)
+            : MooringShapeForceAnalyzer.Build(result, actualFeedbackProjection);
+        Require(actualFeedbackForces.Rows.Count == trace.Rows.Count && recomputedActualForces.Rows.Count == trace.Rows.Count,
+            "Actual fixed-point force/projection row count differs.");
+        var maxAcceptedVsFeedbackChord = 0.0;
+
         var segments = result.SegmentRows.OrderBy(s => s.Number).ToArray();
         var points = sequence.Rows.OrderBy(s => s.Number).ToArray();
         var internalPoints = points.Skip(1).SkipLast(1).Where(p => p.IsDiscrete)
@@ -33,6 +48,15 @@ internal static class AuthorityProofInspection
         {
             var row = trace.Rows[i]; var segment = segments[i]; var p = projection.Rows[i];
             Require(row.SegmentNumber == segment.Number && p.SegmentNumber == segment.Number, "Segment identity mismatch.");
+            var actual = actualFeedbackForces.Rows[i];
+            Require(actual.SegmentNumber == row.SegmentNumber && recomputedActualForces.Rows[i].SegmentNumber == row.SegmentNumber,
+                "Actual force segment identity differs.");
+            Require(Bits(actual.ShapeForceN) == Bits(recomputedActualForces.Rows[i].ShapeForceN) &&
+                Bits(row.EndHN) == Bits(row.StartHN + actual.ShapeForceN), "Actual feedback force/trace raw identity differs.");
+            maxAcceptedVsFeedbackChord = Math.Max(maxAcceptedVsFeedbackChord,
+                Math.Max(Math.Abs(p.DeltaXM - actualFeedbackProjection.Rows[i].DeltaXM),
+                    Math.Abs(p.DeltaZM - actualFeedbackProjection.Rows[i].DeltaZM)));
+
             maxLength = Math.Max(maxLength, p.LengthResidualM);
             maxTangent = Math.Max(maxTangent, Math.Max(Math.Abs(p.DeltaXM / segment.SegmentLengthM - row.TangentX!.Value),
                 Math.Abs(p.DeltaZM / segment.SegmentLengthM - row.TangentZ!.Value)));
@@ -46,7 +70,7 @@ internal static class AuthorityProofInspection
             maxJump = Math.Max(maxJump, Math.Max(Math.Abs((row.StartHN - previousH) - jumpH), Math.Abs((row.StartVN - previousV) - jumpV)));
             maxH = Math.Max(maxH, Math.Abs((row.EndHN - row.StartHN) - direct.Rows[i].ShapeForceN));
             maxV = Math.Max(maxV, Math.Abs((row.EndVN - row.StartVN) + segment.WeightWaterKg * MooringSurfaceBoundaryIntegrationKernel.GravityMS2));
-            if ((mode is "H2" or "H1H2") || ((mode is "H2R" or "H2R3" or "H2R4" or "H2RF" or "H2RF3") && candidate.DiagnosticText.Contains("recovery began", StringComparison.Ordinal)))
+            if (traceMap)
                 Require(Bits(row.EndHN) == Bits(row.StartHN + direct.Rows[i].ShapeForceN), "H2 fixed-point segment H identity differs.");
             Require(Bits(row.EndVN) == Bits(row.StartVN - segment.WeightWaterKg * MooringSurfaceBoundaryIntegrationKernel.GravityMS2), "Signed submerged-weight update differs.");
             previousH = row.EndHN; previousV = row.EndVN;
@@ -60,10 +84,13 @@ internal static class AuthorityProofInspection
         maxJump = Math.Max(maxJump, Math.Max(Math.Abs(trace.EndHN!.Value - previousH - terminalJumpH), Math.Abs(trace.EndVN!.Value - previousV - terminalJumpV)));
         Require(pointIndex == candidate.PointLoadCrossings && pointIndex == trace.PointLoadCrossings, "Discrete load crossings differ.");
         // Same published identity scales as evaluator/kernel. No feedback convergence tolerance.
-        Require(maxJump <= 1e-6 && maxLength <= MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM, "Existing point-load/geometry identity bound exceeded.");
+        Require(maxJump <= 1e-6 && maxLength <= MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM &&
+            maxAcceptedVsFeedbackChord <= MooringSurfaceBoundaryIntegrationKernel.LengthToleranceM,
+            "Existing point-load/geometry identity bound exceeded.");
         return new
         {
             EndpointRawBitsEqual = true, TraceBoundaryForceRawBitsEqual = true,
+            ActualFeedbackForceRawBitsEqual = true, MaxAcceptedVsFeedbackChordDeltaM = maxAcceptedVsFeedbackChord,
             MaxSegmentLengthResidualM = maxLength, TotalArcLengthResidualM = projection.LengthResidualM,
             MaxCoordinateTangentDelta = maxTangent, MaxTangentUnitNormResidual = unitNorm,
             MaxDirectTangentForceVsTraceResidualN = maxH, MaxSignedWeightVerticalForceResidualN = maxV,
