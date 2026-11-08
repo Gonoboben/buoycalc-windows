@@ -17,7 +17,16 @@ For Accepted `SignedBoundaryFeedback` selected cases:
 - F4 supplies selected checks, Verdict and MainRisk from validated upstream selected state;
 - UI, 2D, PDF and technical report remain read-model/presentation consumers only.
 
-For non-Accepted signed candidates, the validated legacy selected read-model fallback remains in force.
+`RejectedPhysical` produces the terminal engineering verdict «Не подходит»
+with the original signed diagnostic. It blocks selected X/Z and F1–F4.
+Other non-Accepted statuses may retain legacy geometry under the existing
+fallback rules. Selected signed F1–F4 authority requires an Accepted result.
+
+Exact period-2/3 feedback cycles can trigger subsequent arithmetic recovery.
+The recovery can switch the normal-current expression and, after a further
+proven cycle, rerun H1 from the original signed state. Every step counts
+toward the total budget of 64, and Accepted still requires a strict fixed
+point and the existing engineering gates.
 
 ## Anchor capacity boundary
 

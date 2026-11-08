@@ -21,7 +21,10 @@ public static class MooringSignedCandidateEvaluator
         BuoyInput? buoy,
         CalculationResult? baseResult,
         MooringSequencePositionResult? sequence) =>
-        BuildCore(environment, buoy, baseResult, sequence, null, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: true, recoverExactThreeCycles: true);
+        BuildCore(environment, buoy, baseResult, sequence, null, recoverExactTwoCycles: true,
+            recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: true, recoverExactThreeCycles: true,
+            recoverPerpendicularNormalCycles: true, useNormalForceRatio: true, recoverCanonicalRestartCycles: true,
+            recoverAlternatePerpendicularCycles: true);
 
     /// <summary>
     /// Diagnostics only: observes raw bit fields from the same production feedback loop.
@@ -35,7 +38,10 @@ public static class MooringSignedCandidateEvaluator
         Action<MooringSignedFeedbackObservedStep> observer)
     {
         ArgumentNullException.ThrowIfNull(observer);
-        return BuildCore(environment, buoy, baseResult, sequence, observer, recoverExactTwoCycles: true, recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: true, recoverExactThreeCycles: true);
+        return BuildCore(environment, buoy, baseResult, sequence, observer, recoverExactTwoCycles: true,
+            recoverSquaredNormalCycles: true, recoverKnownBuoyCycles: true, recoverExactThreeCycles: true,
+            recoverPerpendicularNormalCycles: true, useNormalForceRatio: true, recoverCanonicalRestartCycles: true,
+            recoverAlternatePerpendicularCycles: true);
     }
 
     // Validation only: run an isolated arithmetic intervention through every existing

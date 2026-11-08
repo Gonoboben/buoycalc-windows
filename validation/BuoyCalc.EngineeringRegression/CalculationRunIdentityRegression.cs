@@ -42,21 +42,31 @@ internal static class CalculationRunIdentityRegression
                 "BC-AUD-005: PDF export time is not separate from retained calculation time.");
         }
         ValidateRepeatedPdfExport(typedA, provenanceA);
+        Fixture WithCurrent(double length, double horizontal, double vertical = 0)
+        {
+            var fixture = CreateFixture(length);
+            return fixture with
+            {
+                Environment = fixture.Environment with
+                {
+                    CurrentProfile = fixture.Environment.CurrentProfile!.Select(p => p with
+                    {
+                        EastCurrentMS = horizontal,
+                        NorthCurrentMS = 0,
+                        VerticalCurrentMS = vertical
+                    }).ToArray()
+                }
+            };
+        }
         foreach (var (fixture, expected, suffix) in new[]
         {
             (CreateFixture(20), MooringSignedCandidateStatus.RejectedPhysical, ""),
-            (CreateFixture(20) with { Environment = fixtureA.Environment with
-                { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0, NorthCurrentMS = 0, VerticalCurrentMS = 0 }).ToArray() } },
-                MooringSignedCandidateStatus.Indeterminate, ""),
-            (CreateFixture(21) with { Environment = fixtureA.Environment with
-                { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0.6 }).ToArray() } },
-                MooringSignedCandidateStatus.Accepted, "-Recovered"),
-            (CreateFixture(24) with { Environment = fixtureA.Environment with
-                { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0.6 }).ToArray() } },
-                MooringSignedCandidateStatus.BudgetExhausted, ""),
-            (CreateFixture(24) with { Environment = fixtureA.Environment with
-                { CurrentProfile = fixtureA.Environment.CurrentProfile!.Select(p => p with { EastCurrentMS = 0.65 }).ToArray() } },
-                MooringSignedCandidateStatus.Accepted, "-Recovered-Period3")
+            (WithCurrent(20, 0), MooringSignedCandidateStatus.Indeterminate, ""),
+            (WithCurrent(21, 0.6), MooringSignedCandidateStatus.Accepted, "-Recovered"),
+            (WithCurrent(24, 0.6), MooringSignedCandidateStatus.Accepted, "-Recovered-Ratio"),
+            (WithCurrent(24, 0.65), MooringSignedCandidateStatus.Accepted, "-Recovered-Period3"),
+            (WithCurrent(20.0 * 1.19, 0.65), MooringSignedCandidateStatus.Accepted, "-Recovered-Canonical"),
+            (WithCurrent(21, 0.3, 0.3), MooringSignedCandidateStatus.BudgetExhausted, "")
         })
         {
             var statusRun = Run(fixture);

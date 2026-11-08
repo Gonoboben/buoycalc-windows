@@ -55,6 +55,8 @@ internal static class H2AuthorityProof
             string? previousRecoveryAuthority = null;
             MooringSignedCandidateResult? previousSquaredRecovery = null;
             string? previousSquaredAuthority = null;
+            MooringSignedCandidateResult? previousProduction = null;
+            string? previousProductionAuthority = null;
             long[]? referenceH1Bits = null;
             string? referenceH1Engineering = null;
             MooringSignedCandidateResult? previousRatio = null;
@@ -134,11 +136,12 @@ internal static class H2AuthorityProof
                 if (productionRecovery && previousSquaredRecovery?.Status == MooringSignedCandidateStatus.Accepted &&
                     (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(previousSquaredRecovery) || authority != previousSquaredAuthority))
                     throw new InvalidOperationException($"{scenario.Id}: recovery changed an original H2R3 Accepted result.");
-                if (productionRecovery && run.Snapshot.SignedCandidate!.Status == MooringSignedCandidateStatus.Accepted &&
-                    (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
-                     authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
+                if (mode == "H2RF3") { previousProduction = candidate; previousProductionAuthority = authority; }
+                if (perpendicularRecovery && previousProduction?.Status == MooringSignedCandidateStatus.Accepted &&
+                    (ObserverControlAudit.Canonical(candidate) != ObserverControlAudit.Canonical(previousProduction) ||
+                     authority != previousProductionAuthority))
                     throw new InvalidOperationException($"{scenario.Id}: second-stage recovery changed an existing production Accepted result.");
-                if (mode == "H2RF3" && (ObserverControlAudit.Canonical(candidate) !=
+                if (mode == "H2RF3QPK" && (ObserverControlAudit.Canonical(candidate) !=
                     ObserverControlAudit.Canonical(run.Snapshot.SignedCandidate) ||
                     authority != ObserverControlAudit.Canonical(Authority(run.Snapshot))))
                     throw new InvalidOperationException($"{scenario.Id}: production differs from the proven second-stage candidate/F1-F4.");
@@ -173,7 +176,7 @@ internal static class H2AuthorityProof
                 if ((scenario.Id is "A06" or "A11" or "A15") && (mode is "H2" or "H2R") && candidate.Status != MooringSignedCandidateStatus.Accepted)
                     throw new InvalidOperationException($"{scenario.Id}: H2 failed actual acceptance.");
                 var observedStages = new List<MooringSignedFeedbackObservedStep>();
-                if (mode == "H2RF3")
+                if (mode == "H2RF3QPK")
                 {
                     var observed = MooringSignedCandidateEvaluator.BuildWithDiagnosticObserver(environment, buoy, run.Result,
                         run.Snapshot.TechnicalReportData.SequencePositions, observedStages.Add);

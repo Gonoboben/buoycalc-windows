@@ -129,5 +129,31 @@ the retained149 frozen Windows candidates and 49 raw survey trajectories.
 Each QPK switch has a separate complete consecutive-state witness, checked
 against the surveyed digests, the active map interval, the stage sequence,
 and the actual authority summary. The accepted projection and feedback
-chords are compared at the existing geometry identity scale. Public
-H2RF3 is retained pending review of the completed Windows proof.
+chords are compared at the existing geometry identity scale.
+
+## Windows proof and production activation
+
+Research head 96f374baa430c0eb9f5e5b0f059415dc9ed13b80 kept public H2RF3.
+Downloaded Windows artifact 13614177827, SHA-256
+`9952906dffb2909310806c5cff5841b62697229ec84d2d1d9c1b0dde19b136b2`,
+contains 2,587 rows for 199 fixture labels and 189 distinct inputs. All 2,376
+previous Windows proof rows retain their statuses, iteration counts, input
+hashes, full candidate hashes and authority hashes. QPK preserves all 171
+existing H2RF3 Accepted results, including the 149 frozen prior Windows
+records. Six previously exhausted rows (five distinct inputs) accept.
+The period-five control remains the single BudgetExhausted row under QPK.
+
+The checked evidence includes 93 fixed-point transcripts, 49 raw surveys,
+23 transition witnesses and three canonical reset witnesses. The accepted
+canonical QPK case matches the 2,820 raw terminal fields and all F1–F4 from
+the independently executed H1. Its 51 steps include 36 steps before reset
+and 15 after it. Every numerical result is subject to the existing
+production shape and engineering checks.
+
+The activation uses the same proven QPK sequence in both public entry points.
+The authority proof compares the real public candidate with QPK and protects
+the H2RF3 Accepted prefix. Validation 601 retains the old 20/24/0.6 fixture
+as a recovery control and adds canonical H1 and genuine period-five budget
+controls. PDF regressions exercise the real ratio/canonical Accepted and
+remaining BudgetExhausted paths. Activation requires fresh exact-head
+Windows workflows and inspection of their actual artifacts.
