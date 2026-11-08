@@ -1,0 +1,64 @@
+{
+  "SchemaVersion": 1,
+  "SourceCommit": "66e4327a3b93fe577725465f4a6368d0aedf3c01",
+  "SourceArtifactId": 13261370670,
+  "SourceArtifactSHA256": "9c87f03ca31dfae6079e0596e0b13f0d6438bb90d7e38ddd9b1594119abb9ba4",
+  "Findings": [
+    {
+      "Code": "FallbackChordExceedsLineLength",
+      "Severity": "CRITICAL",
+      "Category": "Geometry",
+      "ScenarioIds": [
+        "A01",
+        "A03",
+        "A04",
+        "A07",
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A16",
+        "A19"
+      ],
+      "Disposition": "NONSELECTED_DIAGNOSTIC_GEOMETRY_LIMITATION"
+    },
+    {
+      "Code": "IterativeChordExceedsLineLength",
+      "Severity": "CRITICAL",
+      "Category": "Geometry",
+      "ScenarioIds": [
+        "A01",
+        "A03",
+        "A04",
+        "A06",
+        "A07",
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A16",
+        "A19"
+      ],
+      "Disposition": "NONSELECTED_DIAGNOSTIC_GEOMETRY_LIMITATION"
+    },
+    {
+      "Code": "PhysicalRejectionNotPromotedToF4HardFailure",
+      "Severity": "HIGH",
+      "Category": "Presentation",
+      "ScenarioIds": [
+        "A01",
+        "A03",
+        "A04",
+        "A07",
+        "A09",
+        "A12",
+        "A13",
+        "A16",
+        "A19"
+      ],
+      "Disposition": "LEGACY_EXPECTATION_USES_F4_INSTEAD_OF_TERMINAL_PHYSICAL_DISPOSITION"
+    }
+  ]
+}

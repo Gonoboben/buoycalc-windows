@@ -12,6 +12,10 @@ CURRENT RELEASE STATUS = NOT READY FOR v1.0
 
 Обязательный persistent audit record: [docs/PRE_RELEASE_ADVERSARIAL_AUDIT_2026-09-22.md](docs/PRE_RELEASE_ADVERSARIAL_AUDIT_2026-09-22.md).
 
+Решение по фактическим находкам Series A проверяется отдельно от запуска
+кампании. Правила сопоставления записей и основания для их изменения
+описаны в [политике Series A](docs/VALIDATION_SERIES_A_FINDING_POLICY.md).
+
 Аудит выполнен против `main` commit `0db1e7cc17e309fc1402fe58b265d2e95c2d4d39` и содержит unresolved P0/P1 release blockers. Зелёные CI/RC packaging checks сами по себе не снимают этот статус. Перед любыми действиями по v1.0 необходимо закрыть audit blockers фактическим regression/validation evidence на exact candidate SHA и повторить Windows RC end-to-end verification.
 
 Запрещено создавать git tag `v1.0.0` или GitHub Release до явного подтверждения пользователя после ручной проверки Windows RC.
