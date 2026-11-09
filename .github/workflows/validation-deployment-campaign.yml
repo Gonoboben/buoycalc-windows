@@ -1,0 +1,61 @@
+name: BuoyCalc Deployment Campaign
+on:
+  push:
+    branches:
+      - opt/607-deployment-validation
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  campaign:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [DeploymentCampaign, ValidationCampaign, ValidationFeedbackDiagnostics, PhysicalRejectionValidation]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Verify frozen production source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $coreSha = "0db1e7cc17e309fc1402fe58b265d2e95c2d4d39"
+          $actualHead = git rev-parse HEAD
+          if ($actualHead -ne "${{ github.sha }}") { throw "Checkout SHA mismatch" }
+          $changed = @(git diff --name-only $coreSha HEAD)
+          foreach ($path in $changed) {
+            if ($path -notmatch '^(validation/BuoyCalc.DeploymentCampaign/|docs/VALIDATION_DEPLOYMENT_607|\.github/workflows/validation-deployment-campaign\.yml$)') {
+              throw "Outside validation-only package: $path"
+            }
+          }
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          @{ coreSha=$coreSha; campaignSha=$actualHead; runId="${{ github.run_id }}"; runnerOS=$env:RUNNER_OS; changed=$changed; baseline=(git rev-parse "HEAD:validation/BuoyCalc.EngineeringRegression/baselines/engineering-baseline.json") } | ConvertTo-Json -Depth 5 | Set-Content artifacts/provenance.json
+      - name: Run production campaign
+        shell: pwsh
+        run: |
+          $project = "validation/BuoyCalc.${{ matrix.package }}/BuoyCalc.${{ matrix.package }}.csproj"
+          $arguments = @("--output", "artifacts/${{ matrix.package }}")
+          if ("${{ matrix.package }}" -eq "DeploymentCampaign") {
+            $arguments += @("--source-sha", "${{ github.sha }}")
+          }
+          dotnet run --project $project --configuration Release -- @arguments
+          exit $LASTEXITCODE
+      - name: Print readable evidence
+        if: always()
+        shell: pwsh
+        run: |
+          Get-ChildItem artifacts -Filter *.md -Recurse | ForEach-Object { Get-Content $_.FullName }
+      - name: Upload evidence including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-607-${{ matrix.package }}-${{ github.sha }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 30
